@@ -1,0 +1,259 @@
+package service
+
+import (
+	"context"
+	"strconv"
+	"strings"
+
+	"github.com/baaaki/mydreamcampus/grades-service/internal/dto"
+	"github.com/baaaki/mydreamcampus/grades-service/internal/errors"
+	"github.com/baaaki/mydreamcampus/grades-service/internal/repository"
+	"github.com/baaaki/mydreamcampus/shared/logger"
+	"github.com/baaaki/mydreamcampus/shared/utils"
+	"github.com/google/uuid"
+	"go.uber.org/zap"
+)
+
+type StudentGradesService struct {
+	cacheRepo         *repository.CacheRepository
+	registrationRepo  *repository.RegistrationRepository
+	scoreRepo         *repository.ScoreRepository
+	completedRepo     *repository.CompletedRepository
+}
+
+func NewStudentGradesService(
+	cacheRepo *repository.CacheRepository,
+	registrationRepo *repository.RegistrationRepository,
+	scoreRepo *repository.ScoreRepository,
+	completedRepo *repository.CompletedRepository,
+) *StudentGradesService {
+	return &StudentGradesService{
+		cacheRepo:        cacheRepo,
+		registrationRepo: registrationRepo,
+		scoreRepo:        scoreRepo,
+		completedRepo:    completedRepo,
+	}
+}
+
+func (s *StudentGradesService) GetMyGrades(ctx context.Context, studentID uuid.UUID) (*dto.MyGradesResponse, error) {
+	// 1. Check if student is active
+	student, err := s.cacheRepo.GetStudentCacheByID(ctx, studentID)
+	if err != nil {
+		logger.Error("failed to get student", zap.Error(err))
+		return nil, errors.ErrStudentNotFound
+	}
+
+	if !utils.PgBoolToBool(student.IsActive) {
+		return nil, errors.ErrStudentDeactivated
+	}
+
+	// 2. Get active courses (registrations with scores)
+	// Note: This requires a custom query, but for now we'll skip active courses
+	// since they require joining with courses_cache which might not have the registration
+	activeCourses := []dto.ActiveCourse{}
+
+	// 3. Get completed courses
+	completedCourses, err := s.completedRepo.GetCompletedCoursesByStudent(ctx, studentID)
+	if err != nil {
+		logger.Error("failed to get completed courses", zap.Error(err))
+		return nil, err
+	}
+
+	var completedCoursesDTO []dto.CompletedCourse
+	for _, cc := range completedCourses {
+		weightedAvg, err := utils.PgNumericToFloat64(cc.WeightedAverage)
+		if err != nil {
+			logger.Error("failed to convert weighted average", zap.Error(err))
+			weightedAvg = 0.0
+		}
+
+		completedCoursesDTO = append(completedCoursesDTO, dto.CompletedCourse{
+			CourseCode:      cc.CourseCode,
+			CourseName:      cc.CourseName,
+			Semester:        cc.Semester,
+			Credits:         int(cc.Credits),
+			WeightedAverage: weightedAvg,
+			GradePoint:      string(cc.GradePoint),
+		})
+	}
+
+	// 4. Calculate GPA
+	gpaResult, err := s.completedRepo.CalculateStudentGPA(ctx, studentID)
+	if err != nil {
+		logger.Error("failed to calculate GPA", zap.Error(err))
+		return nil, err
+	}
+
+	var gpa float64
+	var totalCredits int64
+	if gpaResult.Gpa != nil {
+		if gpaFloat, ok := gpaResult.Gpa.(float64); ok {
+			gpa = gpaFloat
+		}
+	}
+	if gpaResult.TotalCredits != nil {
+		if creditsInt, ok := gpaResult.TotalCredits.(int64); ok {
+			totalCredits = creditsInt
+		}
+	}
+
+	return &dto.MyGradesResponse{
+		StudentID:        studentID,
+		StudentNumber:    student.StudentNumber,
+		ActiveCourses:    activeCourses,
+		CompletedCourses: completedCoursesDTO,
+		CumulativeGPA:    gpa,
+		TotalCredits:     int(totalCredits),
+	}, nil
+}
+
+func (s *StudentGradesService) GetTranscript(ctx context.Context, requesterID uuid.UUID, requesterRole string, studentID uuid.UUID) (*dto.TranscriptResponse, error) {
+	// 1. Authorization check
+	if requesterRole == "student" && requesterID != studentID {
+		return nil, errors.ErrNotCourseInstructor // Reusing error for unauthorized access
+	}
+
+	// 2. Check if student is active (only for student role)
+	student, err := s.cacheRepo.GetStudentCacheByID(ctx, studentID)
+	if err != nil {
+		logger.Error("failed to get student", zap.Error(err))
+		return nil, errors.ErrStudentNotFound
+	}
+
+	if requesterRole == "student" && !utils.PgBoolToBool(student.IsActive) {
+		return nil, errors.ErrStudentDeactivated
+	}
+
+	// 3. Get transcript data
+	transcriptData, err := s.completedRepo.GetTranscriptData(ctx, studentID)
+	if err != nil {
+		logger.Error("failed to get transcript data", zap.Error(err))
+		return nil, err
+	}
+
+	// 4. Group by semester
+	semesterMap := make(map[string]*dto.SemesterGrades)
+	for _, td := range transcriptData {
+		semester := td.Semester
+
+		if _, exists := semesterMap[semester]; !exists {
+			semesterMap[semester] = &dto.SemesterGrades{
+				Semester:        semester,
+				SemesterDisplay: formatSemesterDisplay(semester),
+				Courses:         []dto.CourseGrade{},
+			}
+		}
+
+		semesterMap[semester].Courses = append(semesterMap[semester].Courses, dto.CourseGrade{
+			CourseCode: td.CourseCode,
+			CourseName: td.CourseName,
+			Credits:    int(td.Credits),
+			GradePoint: string(td.GradePoint),
+		})
+	}
+
+	// 5. Calculate semester GPAs and credits
+	var semesters []dto.SemesterGrades
+	for _, sem := range semesterMap {
+		semesterCredits := 0
+		semesterWeightedSum := 0.0
+
+		for _, course := range sem.Courses {
+			semesterCredits += course.Credits
+			gradeValue := gradePointToFloat(course.GradePoint)
+			semesterWeightedSum += gradeValue * float64(course.Credits)
+		}
+
+		sem.SemesterCredits = semesterCredits
+		if semesterCredits > 0 {
+			sem.SemesterGPA = semesterWeightedSum / float64(semesterCredits)
+		}
+
+		semesters = append(semesters, *sem)
+	}
+
+	// 6. Calculate overall GPA
+	gpaResult, err := s.completedRepo.CalculateStudentGPA(ctx, studentID)
+	if err != nil {
+		logger.Error("failed to calculate GPA", zap.Error(err))
+		return nil, err
+	}
+
+	var gpa float64
+	var totalCredits int64
+	if gpaResult.Gpa != nil {
+		if gpaFloat, ok := gpaResult.Gpa.(float64); ok {
+			gpa = gpaFloat
+		}
+	}
+	if gpaResult.TotalCredits != nil {
+		if creditsInt, ok := gpaResult.TotalCredits.(int64); ok {
+			totalCredits = creditsInt
+		}
+	}
+
+	// 7. Extract enrollment year from student number (assuming format: 2021123456)
+	enrollmentYear := 0
+	if len(student.StudentNumber) >= 4 {
+		if year, err := strconv.Atoi(student.StudentNumber[:4]); err == nil {
+			enrollmentYear = year
+		}
+	}
+
+	return &dto.TranscriptResponse{
+		Student: dto.StudentInfo{
+			StudentNumber:  student.StudentNumber,
+			FirstName:      student.FirstName.String,
+			LastName:       student.LastName.String,
+			Department:     student.Department.String,
+			EnrollmentYear: enrollmentYear,
+		},
+		Semesters: semesters,
+		Summary: dto.TranscriptSummary{
+			TotalCredits:  int(totalCredits),
+			CumulativeGPA: gpa,
+		},
+	}, nil
+}
+
+// Helper functions
+
+func formatSemesterDisplay(semester string) string {
+	// Convert "2024_fall" to "2024-2025 Güz"
+	parts := strings.Split(semester, "_")
+	if len(parts) != 2 {
+		return semester
+	}
+
+	year, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return semester
+	}
+
+	season := parts[1]
+	seasonTR := map[string]string{
+		"fall":   "Güz",
+		"spring": "Bahar",
+		"summer": "Yaz",
+	}
+
+	seasonName := seasonTR[season]
+	if seasonName == "" {
+		seasonName = season
+	}
+
+	if season == "fall" {
+		return strconv.Itoa(year) + "-" + strconv.Itoa(year+1) + " " + seasonName
+	}
+
+	return strconv.Itoa(year) + " " + seasonName
+}
+
+func gradePointToFloat(gp string) float64 {
+	// Convert "4.00" to 4.0
+	val, err := strconv.ParseFloat(gp, 64)
+	if err != nil {
+		return 0.0
+	}
+	return val
+}

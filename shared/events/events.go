@@ -1,0 +1,94 @@
+package events
+
+// ============================================================================
+// EVENT NAMES (Used in outbox publisher & consumer handlers)
+// ============================================================================
+
+// Staff Service Events
+const (
+	EventStaffCreated = "staff.created"
+	EventStaffUpdated = "staff.updated"
+	EventStaffDeleted = "staff.deleted"
+)
+
+// Student Service Events
+const (
+	EventStudentCreated = "student.created"
+	EventStudentUpdated = "student.updated"
+	EventStudentDeleted = "student.deleted"
+)
+
+// Course Catalog Service Events
+const (
+	// Semester Course Events
+	EventCourseSemesterCreated         = "course.semester.created"
+	EventCourseSemesterUpdated         = "course.semester.updated"
+	EventCourseSemesterDeleted         = "course.semester.deleted"
+	EventCourseInstructorChanged       = "course.instructor.changed"
+	EventCourseScheduleChanged         = "course.schedule.changed"
+	EventCourseAssessmentSchemaChanged = "course.assessment.schema.changed"
+
+	// Master Catalog Events
+	EventCourseCatalogCreated = "course.catalog.created"
+	EventCourseCatalogUpdated = "course.catalog.updated"
+)
+
+// Enrollment Service Events
+const (
+	EventEnrollmentProgramSubmitted = "enrollment.program.submitted"
+	EventEnrollmentProgramApproved  = "enrollment.program.approved"
+	EventEnrollmentProgramRejected  = "enrollment.program.rejected"
+	EventEnrollmentProgramCancelled = "enrollment.program.cancelled"
+)
+
+// ============================================================================
+// RABBITMQ QUEUE NAMES (Used in consumer setup)
+// ============================================================================
+
+const (
+	// Auth Service Queues (consumes from other services)
+	QueueAuthStaffEvents   = "auth.staff_events"
+	QueueAuthStudentEvents = "auth.student_events"
+
+	// Student Service Queues (consumes from staff service)
+	QueueStudentStaffEvents = "student.staff_events"
+
+	// Course Catalog Service Queues (future use)
+	QueueCatalogStaffEvents   = "catalog.staff_events"
+	QueueCatalogStudentEvents = "catalog.student_events"
+
+	// Enrollment Service Queues (future use)
+	QueueEnrollmentCourseEvents  = "enrollment.course_events"
+	QueueEnrollmentStudentEvents = "enrollment.student_events"
+)
+
+// ============================================================================
+// RABBITMQ ROUTING KEYS (Used for topic exchange routing - future use)
+// ============================================================================
+
+const (
+	// Staff events routing keys
+	RoutingKeyStaffCreated = "staff.created"
+	RoutingKeyStaffUpdated = "staff.updated"
+	RoutingKeyStaffDeleted = "staff.deleted"
+	RoutingKeyStaffAll     = "staff.*"
+
+	// Student events routing keys
+	RoutingKeyStudentCreated = "student.created"
+	RoutingKeyStudentUpdated = "student.updated"
+	RoutingKeyStudentDeleted = "student.deleted"
+	RoutingKeyStudentAll     = "student.*"
+
+	// Course events routing keys
+	RoutingKeyCourseCreated = "course.*.created"
+	RoutingKeyCourseUpdated = "course.*.updated"
+	RoutingKeyCourseDeleted = "course.*.deleted"
+	RoutingKeyCourseAll     = "course.#"
+
+	// Enrollment events routing keys
+	RoutingKeyEnrollmentProgramSubmitted = "enrollment.program.submitted"
+	RoutingKeyEnrollmentProgramApproved  = "enrollment.program.approved"
+	RoutingKeyEnrollmentProgramRejected  = "enrollment.program.rejected"
+	RoutingKeyEnrollmentProgramCancelled = "enrollment.program.cancelled"
+	RoutingKeyEnrollmentAll              = "enrollment.#"
+)

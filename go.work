@@ -1,0 +1,13 @@
+go 1.25.5
+
+use (
+	./services/attendance-service
+	./services/auth-service
+	./services/course-catalog-service
+	./services/enrollment-service
+	./services/grades-service
+	./services/meal-service
+	./services/staff-service
+	./services/student-service
+	./shared
+)

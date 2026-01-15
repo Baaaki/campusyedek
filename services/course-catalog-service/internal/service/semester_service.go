@@ -1,0 +1,1016 @@
+package service
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"time"
+
+	"github.com/baaaki/mydreamcampus/course-catalog-service/internal/db"
+	"github.com/baaaki/mydreamcampus/course-catalog-service/internal/dto"
+	catalogErrors "github.com/baaaki/mydreamcampus/course-catalog-service/internal/errors"
+	"github.com/baaaki/mydreamcampus/course-catalog-service/internal/repository"
+	sharedErrors "github.com/baaaki/mydreamcampus/shared/errors"
+	"github.com/baaaki/mydreamcampus/shared/events"
+	"github.com/baaaki/mydreamcampus/shared/logger"
+	"github.com/baaaki/mydreamcampus/shared/utils"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
+	"go.uber.org/zap"
+)
+
+type SemesterService struct {
+	catalogRepo   *repository.CatalogRepository
+	semesterRepo  *repository.SemesterRepository
+	scheduleRepo  *repository.ScheduleRepository
+	outboxRepo    *repository.OutboxRepository
+	staffClient   StaffClient
+}
+
+func NewSemesterService(
+	catalogRepo *repository.CatalogRepository,
+	semesterRepo *repository.SemesterRepository,
+	scheduleRepo *repository.ScheduleRepository,
+	outboxRepo *repository.OutboxRepository,
+	staffClient StaffClient,
+) *SemesterService {
+	return &SemesterService{
+		catalogRepo:  catalogRepo,
+		semesterRepo: semesterRepo,
+		scheduleRepo: scheduleRepo,
+		outboxRepo:   outboxRepo,
+		staffClient:  staffClient,
+	}
+}
+
+// CreateSemesterCourse creates a new semester course (manual course opening)
+func (s *SemesterService) CreateSemesterCourse(ctx context.Context, semester string, req dto.CreateSemesterCourseRequest) (dto.SemesterCourseResponse, error) {
+	serviceLogger := logger.WithContextAndFields(ctx,
+		zap.String("service", "SemesterService"),
+		zap.String("method", "CreateSemesterCourse"),
+		zap.String("semester", semester),
+		zap.String("course_code", req.CourseCode),
+	)
+
+	// Validate course_code exists and is active
+	catalogCourse, err := s.catalogRepo.GetCourseByCourseCode(ctx, req.CourseCode)
+	if err != nil {
+		if sharedErrors.Is(err, catalogErrors.ErrCourseNotFoundRepo) {
+			serviceLogger.Warn("course not found in catalog",
+				zap.Error(err),
+			)
+			return dto.SemesterCourseResponse{}, catalogErrors.ErrCourseNotFound
+		}
+
+		if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
+			return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+		}
+
+		return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+	}
+
+	// Check if course is active
+	if !catalogCourse.Status.Valid || catalogCourse.Status.CourseCatalogStatusEnum != db.CourseCatalogStatusEnumActive {
+		serviceLogger.Warn("course is not active",
+			zap.String("status", string(catalogCourse.Status.CourseCatalogStatusEnum)),
+		)
+		return dto.SemesterCourseResponse{}, catalogErrors.ErrCourseNotActive
+	}
+
+	// Check class_level consistency
+	if catalogCourse.ClassLevel != req.ClassLevel {
+		serviceLogger.Warn("class level mismatch",
+			zap.Int16("catalog_class_level", catalogCourse.ClassLevel),
+			zap.Int16("request_class_level", req.ClassLevel),
+		)
+		return dto.SemesterCourseResponse{}, catalogErrors.ErrClassLevelMismatch
+	}
+
+	// Note: We don't check if course already exists here to avoid race condition
+	// Instead, we rely on database UNIQUE(semester, course_code) constraint
+	// The constraint violation will be caught during insert
+
+	// Validate instructor and get actual fullname
+	instructor, err := s.staffClient.GetInstructor(ctx, req.InstructorID, catalogCourse.Department)
+	if err != nil {
+		return dto.SemesterCourseResponse{}, err
+	}
+
+	// Validate slot numbers
+	for _, session := range req.ScheduleSessions {
+		if err := ValidateSlotNumbers(session.SlotNumbers); err != nil {
+			return dto.SemesterCourseResponse{}, err
+		}
+		if err := ValidateDayOfWeek(session.DayOfWeek); err != nil {
+			return dto.SemesterCourseResponse{}, err
+		}
+	}
+
+	// Apply default assessment schema if not provided
+	if len(req.AssessmentSchema) == 0 {
+		req.AssessmentSchema = []dto.AssessmentItem{
+			{Slug: "midterm", Name: "Vize", Weight: 40},
+			{Slug: "final", Name: "Final", Weight: 60},
+		}
+	}
+
+	// Validate assessment schema
+	if err := ValidateAssessmentSchema(req.AssessmentSchema); err != nil {
+		return dto.SemesterCourseResponse{}, err
+	}
+
+	// Check instructor schedule conflict
+	if err := s.checkInstructorConflict(ctx, semester, req.InstructorID, req.ScheduleSessions, uuid.Nil); err != nil {
+		return dto.SemesterCourseResponse{}, err
+	}
+
+	// Convert assessment schema to JSONB
+	assessmentSchemaJSON, err := repository.AssessmentSchemaToJSON(req.AssessmentSchema)
+	if err != nil {
+		serviceLogger.Error("failed to convert assessment schema to JSON",
+			zap.Error(err),
+		)
+		return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+	}
+
+	// Parse and snapshot prerequisites from catalog
+	prerequisites, err := repository.JSONToPrerequisites(catalogCourse.Prerequisites)
+	if err != nil {
+		serviceLogger.Error("failed to parse prerequisites",
+			zap.Error(err),
+		)
+		return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+	}
+
+	// Convert prerequisites to JSONB for snapshot
+	prerequisitesJSON, err := repository.PrerequisitesToJSON(prerequisites)
+	if err != nil {
+		serviceLogger.Error("failed to convert prerequisites to JSON",
+			zap.Error(err),
+		)
+		return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+	}
+
+	// Begin transaction
+	tx, err := s.outboxRepo.BeginTx(ctx)
+	if err != nil {
+		serviceLogger.Error("failed to begin transaction", zap.Error(err))
+		return dto.SemesterCourseResponse{}, catalogErrors.ErrTransactionFailed
+	}
+	defer tx.Rollback(ctx)
+
+	// Get transaction-aware repositories
+	semesterRepoTx := s.semesterRepo.WithTx(tx)
+	scheduleRepoTx := s.scheduleRepo.WithTx(tx)
+
+	// Create semester course
+	semesterCourseParams := db.CreateSemesterCourseParams{
+		Semester:           semester,
+		CourseCode:         req.CourseCode,
+		Credits:            catalogCourse.Credits,
+		ClassLevel:         req.ClassLevel,
+		InstructorID:       utils.UUIDToPgtype(req.InstructorID),
+		InstructorFullname: instructor.FullName,
+		ClassroomLocation:  req.ClassroomLocation,
+		MaxCapacity:        req.MaxCapacity,
+		AssessmentSchema:   assessmentSchemaJSON,
+		Prerequisites:      prerequisitesJSON,
+	}
+
+	semesterCourse, err := semesterRepoTx.CreateSemesterCourse(ctx, semesterCourseParams)
+	if err != nil {
+		// Check if course already opened (unique constraint violation)
+		if sharedErrors.Is(err, catalogErrors.ErrCourseAlreadyOpenedRepo) {
+			serviceLogger.Warn("course already opened for this semester (race condition caught)",
+				zap.Error(err),
+			)
+			return dto.SemesterCourseResponse{}, catalogErrors.ErrCourseAlreadyOpened
+		}
+
+		if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
+			return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+		}
+		return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+	}
+
+	// Create schedule sessions (bulk insert for performance)
+	var sessionParams []db.CreateScheduleSessionParams
+	for _, session := range req.ScheduleSessions {
+		for _, slotNumber := range session.SlotNumbers {
+			sessionParams = append(sessionParams, db.CreateScheduleSessionParams{
+				SemesterCourseID: semesterCourse.ID,
+				DayOfWeek:        db.DayOfWeekEnum(session.DayOfWeek),
+				SlotNumber:       slotNumber,
+			})
+		}
+	}
+
+	if err := scheduleRepoTx.BulkCreateScheduleSessions(ctx, sessionParams); err != nil {
+		return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+	}
+
+	// prerequisites already parsed above (line 137)
+
+	// Create outbox event: course.semester.created
+	eventPayload := map[string]interface{}{
+		"event_id":           uuid.New().String(),
+		"event_type":         events.EventCourseSemesterCreated,
+		"timestamp":          time.Now().Format(time.RFC3339),
+		"semester_course_id": utils.PgtypeToUUIDString(semesterCourse.ID),
+		"semester":           semester,
+		"course_code":        req.CourseCode,
+		"course_name":        catalogCourse.Name,
+		"faculty":            catalogCourse.Faculty,
+		"department":         catalogCourse.Department,
+		"credits":            catalogCourse.Credits,
+		"class_level":        req.ClassLevel,
+		"course_type":        string(catalogCourse.CourseType),
+		"instructor_id":      req.InstructorID.String(),
+		"instructor_fullname": req.InstructorFullname,
+		"classroom_location": req.ClassroomLocation,
+		"max_capacity":       req.MaxCapacity,
+		"assessment_schema":  req.AssessmentSchema,
+		"prerequisites":      prerequisites,
+		"schedule_sessions":  req.ScheduleSessions,
+	}
+
+	eventPayloadJSON, err := json.Marshal(map[string]interface{}{
+		"event_id":   eventPayload["event_id"],
+		"event_type": eventPayload["event_type"],
+		"timestamp":  eventPayload["timestamp"],
+		"data":       eventPayload,
+	})
+	if err != nil {
+		serviceLogger.Error("failed to marshal event payload",
+			zap.Error(err),
+		)
+		return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+	}
+
+	outboxParams := db.CreateOutboxEventParams{
+		EventType:  events.EventCourseSemesterCreated,
+		RoutingKey: events.EventCourseSemesterCreated,
+		Payload:    eventPayloadJSON,
+	}
+
+	_, err = s.outboxRepo.CreateOutboxEventWithTx(ctx, tx, outboxParams)
+	if err != nil {
+		if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
+			return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+		}
+		return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+	}
+
+	// Commit transaction
+	if err := tx.Commit(ctx); err != nil {
+		serviceLogger.Error("failed to commit transaction",
+			zap.Error(err),
+		)
+		return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, fmt.Errorf("transaction commit failed: %w", err))
+	}
+
+	serviceLogger.Info("semester course created successfully",
+		zap.String("semester_course_id", utils.PgtypeToUUIDString(semesterCourse.ID)),
+		zap.String("instructor_id", req.InstructorID.String()),
+	)
+
+	return s.toSemesterCourseResponse(semesterCourse, catalogCourse.Name, req.ScheduleSessions, prerequisites)
+}
+
+// GetSemesterCourseByID retrieves a semester course by ID
+func (s *SemesterService) GetSemesterCourseByID(ctx context.Context, semester, courseID string) (dto.SemesterCourseResponse, error) {
+	serviceLogger := logger.WithContextAndFields(ctx,
+		zap.String("service", "SemesterService"),
+		zap.String("method", "GetSemesterCourseByID"),
+		zap.String("semester", semester),
+		zap.String("course_id", courseID),
+	)
+
+	// Parse course ID
+	id, err := uuid.Parse(courseID)
+	if err != nil {
+		serviceLogger.Warn("invalid course ID format",
+			zap.Error(err),
+		)
+		return dto.SemesterCourseResponse{}, sharedErrors.ErrInvalidID
+	}
+
+	// Get semester course
+	semesterCourse, err := s.semesterRepo.GetSemesterCourseByID(ctx, id, semester)
+	if err != nil {
+		if sharedErrors.Is(err, catalogErrors.ErrSemesterCourseNotFoundRepo) {
+			serviceLogger.Warn("semester course not found",
+				zap.Error(err),
+			)
+			return dto.SemesterCourseResponse{}, catalogErrors.ErrSemesterCourseNotFound
+		}
+
+		if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
+			return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+		}
+
+		return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+	}
+
+	// Get catalog course for course name
+	catalogCourse, err := s.catalogRepo.GetCourseByCourseCode(ctx, semesterCourse.CourseCode)
+	if err != nil {
+		if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
+			return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+		}
+		return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+	}
+
+	// Get schedule sessions
+	scheduleSessions, err := s.scheduleRepo.GetScheduleSessionsByCourseID(ctx, id)
+	if err != nil {
+		if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
+			return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+		}
+		return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+	}
+
+	// Group schedule sessions by day
+	scheduleSessionsDTO := groupScheduleSessions(scheduleSessions)
+
+	// Parse prerequisites from snapshot (not from catalog - historical data)
+	prerequisites, err := repository.JSONToPrerequisites(semesterCourse.Prerequisites)
+	if err != nil {
+		serviceLogger.Error("failed to parse prerequisites from snapshot",
+			zap.Error(err),
+		)
+		prerequisites = []dto.Prerequisite{}
+	}
+
+	serviceLogger.Info("semester course retrieved successfully",
+		zap.String("course_code", semesterCourse.CourseCode),
+	)
+
+	return s.toSemesterCourseResponseWithPrerequisites(semesterCourse, catalogCourse.Name, scheduleSessionsDTO, prerequisites)
+}
+
+// ListSemesterCourses lists semester courses with filtering and pagination
+func (s *SemesterService) ListSemesterCourses(ctx context.Context, semester string, req dto.ListSemesterCoursesRequest) (dto.ListSemesterCoursesResponse, error) {
+	serviceLogger := logger.WithContextAndFields(ctx,
+		zap.String("service", "SemesterService"),
+		zap.String("method", "ListSemesterCourses"),
+		zap.String("semester", semester),
+		zap.Int("page", req.Page),
+		zap.Int("limit", req.Limit),
+	)
+
+	limit := int32(req.Limit)
+	offset := int32((req.Page - 1) * req.Limit)
+
+	// Build query params
+	params := db.ListSemesterCoursesParams{
+		Semester:     semester,
+		Faculty:      utils.PointerStringToPgText(req.Faculty),
+		Department:   utils.PointerStringToPgText(req.Department),
+		InstructorID: utils.PointerUUIDToPgtype(req.InstructorID),
+		CourseType: db.NullCourseTypeEnum{
+			CourseTypeEnum: db.CourseTypeEnum(utils.StringPointerValue(req.CourseType)),
+			Valid:          req.CourseType != nil,
+		},
+		ClassLevel: pgtype.Int2{
+			Int16: utils.Int16PointerValue(req.ClassLevel),
+			Valid: req.ClassLevel != nil,
+		},
+		Offset: offset,
+		Limit:  limit,
+	}
+
+	courses, err := s.semesterRepo.ListSemesterCourses(ctx, params)
+	if err != nil {
+		if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
+			return dto.ListSemesterCoursesResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+		}
+		return dto.ListSemesterCoursesResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+	}
+
+	// Count total
+	countParams := db.CountSemesterCoursesParams{
+		Semester:     params.Semester,
+		Faculty:      params.Faculty,
+		Department:   params.Department,
+		InstructorID: params.InstructorID,
+		CourseType:   params.CourseType,
+		ClassLevel:   params.ClassLevel,
+	}
+
+	total, err := s.semesterRepo.CountSemesterCourses(ctx, countParams)
+	if err != nil {
+		if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
+			return dto.ListSemesterCoursesResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+		}
+		return dto.ListSemesterCoursesResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+	}
+
+	// Collect all course IDs for batch schedule fetching (prevents N+1 query)
+	courseIDs := make([]uuid.UUID, len(courses))
+	for i, course := range courses {
+		courseIDs[i] = uuid.UUID(course.ID.Bytes)
+	}
+
+	// Fetch all schedule sessions in one query
+	allScheduleSessions, err := s.scheduleRepo.GetScheduleSessionsByMultipleCourseIDs(ctx, courseIDs)
+	if err != nil {
+		if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
+			return dto.ListSemesterCoursesResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+		}
+		return dto.ListSemesterCoursesResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+	}
+
+	// Group schedule sessions by course ID
+	scheduleMap := make(map[uuid.UUID][]db.CourseScheduleSession)
+	for _, session := range allScheduleSessions {
+		courseID := uuid.UUID(session.SemesterCourseID.Bytes)
+		scheduleMap[courseID] = append(scheduleMap[courseID], session)
+	}
+
+	// Convert to response DTOs
+	var courseItems []dto.SemesterCourseListItem
+	for _, course := range courses {
+		courseID := uuid.UUID(course.ID.Bytes)
+
+		// Get schedule sessions from map (already fetched)
+		scheduleSessions := scheduleMap[courseID]
+
+		// Group schedule sessions
+		scheduleSessionsDTO := groupScheduleSessions(scheduleSessions)
+
+		// Parse assessment schema
+		assessmentSchema, err := repository.JSONToAssessmentSchema(course.AssessmentSchema)
+		if err != nil {
+			serviceLogger.Error("failed to parse assessment schema",
+				zap.Error(err),
+				zap.String("course_id", utils.PgtypeToUUIDString(course.ID)),
+			)
+			continue
+		}
+
+		courseItems = append(courseItems, dto.SemesterCourseListItem{
+			ID:                 uuid.UUID(course.ID.Bytes),
+			Semester:           course.Semester,
+			CourseCode:         course.CourseCode,
+			CourseName:         course.CourseName,
+			Credits:            course.Credits,
+			ClassLevel:         course.ClassLevel,
+			InstructorID:       uuid.UUID(course.InstructorID.Bytes),
+			InstructorFullname: course.InstructorFullname,
+			ClassroomLocation:  course.ClassroomLocation,
+			MaxCapacity:        course.MaxCapacity,
+			AssessmentSchema:   assessmentSchema,
+			ScheduleSessions:   scheduleSessionsDTO,
+		})
+	}
+
+	totalPages := (int(total) + req.Limit - 1) / req.Limit
+
+	serviceLogger.Info("semester courses list retrieved successfully",
+		zap.Int("total_records", int(total)),
+		zap.Int("returned_records", len(courseItems)),
+		zap.Int("total_pages", totalPages),
+	)
+
+	return dto.ListSemesterCoursesResponse{
+		Data: courseItems,
+		Pagination: dto.PaginationResponse{
+			Page:       req.Page,
+			Limit:      req.Limit,
+			Total:      int(total),
+			TotalPages: totalPages,
+		},
+	}, nil
+}
+
+// UpdateSemesterCourse updates a semester course
+func (s *SemesterService) UpdateSemesterCourse(ctx context.Context, semester, courseID string, req dto.UpdateSemesterCourseRequest) (dto.SemesterCourseResponse, error) {
+	serviceLogger := logger.WithContextAndFields(ctx,
+		zap.String("service", "SemesterService"),
+		zap.String("method", "UpdateSemesterCourse"),
+		zap.String("semester", semester),
+		zap.String("course_id", courseID),
+	)
+
+	// Parse course ID
+	id, err := uuid.Parse(courseID)
+	if err != nil {
+		serviceLogger.Warn("invalid course ID format",
+			zap.Error(err),
+		)
+		return dto.SemesterCourseResponse{}, sharedErrors.ErrInvalidID
+	}
+
+	// Get existing semester course
+	existingCourse, err := s.semesterRepo.GetSemesterCourseByID(ctx, id, semester)
+	if err != nil {
+		if sharedErrors.Is(err, catalogErrors.ErrSemesterCourseNotFoundRepo) {
+			serviceLogger.Warn("semester course not found for update",
+				zap.Error(err),
+			)
+			return dto.SemesterCourseResponse{}, catalogErrors.ErrSemesterCourseNotFound
+		}
+
+		if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
+			return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+		}
+
+		return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+	}
+
+	// Get catalog course
+	catalogCourse, err := s.catalogRepo.GetCourseByCourseCode(ctx, existingCourse.CourseCode)
+	if err != nil {
+		if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
+			return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+		}
+		return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+	}
+
+	// Validate instructor if changed
+	var instructorFullname string
+	if req.InstructorID != nil {
+		instructor, err := s.staffClient.GetInstructor(ctx, *req.InstructorID, catalogCourse.Department)
+		if err != nil {
+			return dto.SemesterCourseResponse{}, err
+		}
+		instructorFullname = instructor.FullName
+	}
+
+	// Validate assessment schema if provided
+	if req.AssessmentSchema != nil {
+		if err := ValidateAssessmentSchema(*req.AssessmentSchema); err != nil {
+			return dto.SemesterCourseResponse{}, err
+		}
+	}
+
+	// Validate schedule sessions if provided
+	if req.ScheduleSessions != nil {
+		for _, session := range *req.ScheduleSessions {
+			if err := ValidateSlotNumbers(session.SlotNumbers); err != nil {
+				return dto.SemesterCourseResponse{}, err
+			}
+			if err := ValidateDayOfWeek(session.DayOfWeek); err != nil {
+				return dto.SemesterCourseResponse{}, err
+			}
+		}
+
+		// Check instructor conflict with new schedule
+		instructorID := uuid.UUID(existingCourse.InstructorID.Bytes)
+		if req.InstructorID != nil {
+			instructorID = *req.InstructorID
+		}
+
+		if err := s.checkInstructorConflict(ctx, semester, instructorID, *req.ScheduleSessions, id); err != nil {
+			return dto.SemesterCourseResponse{}, err
+		}
+	}
+
+	// Begin transaction
+	tx, err := s.outboxRepo.BeginTx(ctx)
+	if err != nil {
+		serviceLogger.Error("failed to begin transaction", zap.Error(err))
+		return dto.SemesterCourseResponse{}, catalogErrors.ErrTransactionFailed
+	}
+	defer tx.Rollback(ctx)
+
+	// Get transaction-aware repositories
+	semesterRepoTx := s.semesterRepo.WithTx(tx)
+	scheduleRepoTx := s.scheduleRepo.WithTx(tx)
+
+	// Build update params
+	params := db.UpdateSemesterCourseParams{
+		ID:                utils.UUIDToPgtype(id),
+		InstructorID:      utils.PointerUUIDToPgtype(req.InstructorID),
+		InstructorFullname: utils.PointerStringToPgText(&instructorFullname),
+		ClassroomLocation: utils.PointerStringToPgText(req.ClassroomLocation),
+		MaxCapacity: pgtype.Int2{
+			Int16: utils.Int16PointerValue(req.MaxCapacity),
+			Valid: req.MaxCapacity != nil,
+		},
+	}
+
+	// Convert assessment schema if provided
+	if req.AssessmentSchema != nil {
+		assessmentSchemaJSON, err := repository.AssessmentSchemaToJSON(*req.AssessmentSchema)
+		if err != nil {
+			serviceLogger.Error("failed to convert assessment schema to JSON",
+				zap.Error(err),
+			)
+			return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+		}
+		params.AssessmentSchema = assessmentSchemaJSON
+	}
+
+	// Update semester course
+	updatedCourse, err := semesterRepoTx.UpdateSemesterCourse(ctx, params)
+	if err != nil {
+		if sharedErrors.Is(err, catalogErrors.ErrSemesterCourseNotFoundRepo) {
+			serviceLogger.Warn("semester course not found during update",
+				zap.Error(err),
+			)
+			return dto.SemesterCourseResponse{}, catalogErrors.ErrSemesterCourseNotFound
+		}
+
+		if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
+			return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+		}
+
+		return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+	}
+
+	// Update schedule sessions if provided
+	var scheduleSessionsDTO []dto.ScheduleSession
+	if req.ScheduleSessions != nil {
+		// Delete old sessions
+		if err := scheduleRepoTx.DeleteScheduleSessionsByCourseID(ctx, id); err != nil {
+			return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+		}
+
+		// Create new sessions (bulk insert for performance)
+		var sessionParams []db.CreateScheduleSessionParams
+		for _, session := range *req.ScheduleSessions {
+			for _, slotNumber := range session.SlotNumbers {
+				sessionParams = append(sessionParams, db.CreateScheduleSessionParams{
+					SemesterCourseID: updatedCourse.ID,
+					DayOfWeek:        db.DayOfWeekEnum(session.DayOfWeek),
+					SlotNumber:       slotNumber,
+				})
+			}
+		}
+
+		if err := scheduleRepoTx.BulkCreateScheduleSessions(ctx, sessionParams); err != nil {
+			return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+		}
+
+		scheduleSessionsDTO = *req.ScheduleSessions
+	} else {
+		// Get existing schedule sessions
+		scheduleSessions, err := s.scheduleRepo.GetScheduleSessionsByCourseID(ctx, id)
+		if err != nil {
+			if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
+				return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+			}
+			return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+		}
+		scheduleSessionsDTO = groupScheduleSessions(scheduleSessions)
+	}
+
+	// Parse prerequisites from snapshot (not from catalog - historical data)
+	prerequisites, err := repository.JSONToPrerequisites(updatedCourse.Prerequisites)
+	if err != nil {
+		serviceLogger.Error("failed to parse prerequisites from snapshot",
+			zap.Error(err),
+		)
+		prerequisites = []dto.Prerequisite{}
+	}
+
+	// Parse assessment schema
+	assessmentSchema, err := repository.JSONToAssessmentSchema(updatedCourse.AssessmentSchema)
+	if err != nil {
+		serviceLogger.Error("failed to parse assessment schema",
+			zap.Error(err),
+		)
+		return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+	}
+
+	// Create outbox event: course.semester.updated
+	eventPayload := map[string]interface{}{
+		"event_id":           uuid.New().String(),
+		"event_type":         events.EventCourseSemesterUpdated,
+		"timestamp":          time.Now().Format(time.RFC3339),
+		"semester_course_id": courseID,
+		"semester":           semester,
+		"course_code":        updatedCourse.CourseCode,
+		"course_name":        catalogCourse.Name,
+		"faculty":            catalogCourse.Faculty,
+		"department":         catalogCourse.Department,
+		"credits":            updatedCourse.Credits,
+		"class_level":        updatedCourse.ClassLevel,
+		"course_type":        string(catalogCourse.CourseType),
+		"instructor_id":      utils.PgtypeToUUIDString(updatedCourse.InstructorID),
+		"instructor_fullname": updatedCourse.InstructorFullname,
+		"classroom_location": updatedCourse.ClassroomLocation,
+		"max_capacity":       updatedCourse.MaxCapacity,
+		"assessment_schema":  assessmentSchema,
+		"prerequisites":      prerequisites,
+		"schedule_sessions":  scheduleSessionsDTO,
+	}
+
+	eventPayloadJSON, err := json.Marshal(map[string]interface{}{
+		"event_id":   eventPayload["event_id"],
+		"event_type": eventPayload["event_type"],
+		"timestamp":  eventPayload["timestamp"],
+		"data":       eventPayload,
+	})
+	if err != nil {
+		serviceLogger.Error("failed to marshal event payload",
+			zap.Error(err),
+		)
+		return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+	}
+
+	outboxParams := db.CreateOutboxEventParams{
+		EventType:  events.EventCourseSemesterUpdated,
+		RoutingKey: events.EventCourseSemesterUpdated,
+		Payload:    eventPayloadJSON,
+	}
+
+	_, err = s.outboxRepo.CreateOutboxEventWithTx(ctx, tx, outboxParams)
+	if err != nil {
+		if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
+			return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+		}
+		return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+	}
+
+	// Create instructor.changed event if instructor changed
+	if req.InstructorID != nil {
+		instructorChangePayload := map[string]interface{}{
+			"event_id":                uuid.New().String(),
+			"event_type":              events.EventCourseInstructorChanged,
+			"timestamp":               time.Now().Format(time.RFC3339),
+			"semester_course_id":      courseID,
+			"semester":                semester,
+			"course_code":             updatedCourse.CourseCode,
+			"course_name":             catalogCourse.Name,
+			"old_instructor_id":       utils.PgtypeToUUIDString(existingCourse.InstructorID),
+			"old_instructor_fullname": existingCourse.InstructorFullname,
+			"new_instructor_id":       req.InstructorID.String(),
+			"new_instructor_fullname": instructorFullname,
+		}
+
+		instructorEventJSON, err := json.Marshal(map[string]interface{}{
+			"event_id":   instructorChangePayload["event_id"],
+			"event_type": instructorChangePayload["event_type"],
+			"timestamp":  instructorChangePayload["timestamp"],
+			"data":       instructorChangePayload,
+		})
+		if err != nil {
+			serviceLogger.Error("failed to marshal instructor change event",
+				zap.Error(err),
+			)
+			return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+		}
+
+		instructorOutboxParams := db.CreateOutboxEventParams{
+			EventType:  events.EventCourseInstructorChanged,
+			RoutingKey: events.EventCourseInstructorChanged,
+			Payload:    instructorEventJSON,
+		}
+
+		_, err = s.outboxRepo.CreateOutboxEventWithTx(ctx, tx, instructorOutboxParams)
+		if err != nil {
+			if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
+				return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+			}
+			return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+		}
+	}
+
+	// Commit transaction
+	if err := tx.Commit(ctx); err != nil {
+		serviceLogger.Error("failed to commit transaction",
+			zap.Error(err),
+		)
+		return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, fmt.Errorf("transaction commit failed: %w", err))
+	}
+
+	serviceLogger.Info("semester course updated successfully",
+		zap.String("semester_course_id", courseID),
+		zap.Bool("instructor_changed", req.InstructorID != nil),
+		zap.Bool("schedule_changed", req.ScheduleSessions != nil),
+	)
+
+	return s.toSemesterCourseResponseWithPrerequisites(updatedCourse, catalogCourse.Name, scheduleSessionsDTO, prerequisites)
+}
+
+// DeleteSemesterCourse deletes a semester course
+func (s *SemesterService) DeleteSemesterCourse(ctx context.Context, semester, courseID string) (dto.DeleteSemesterCourseResponse, error) {
+	serviceLogger := logger.WithContextAndFields(ctx,
+		zap.String("service", "SemesterService"),
+		zap.String("method", "DeleteSemesterCourse"),
+		zap.String("semester", semester),
+		zap.String("course_id", courseID),
+	)
+
+	// Parse course ID
+	id, err := uuid.Parse(courseID)
+	if err != nil {
+		serviceLogger.Warn("invalid course ID format",
+			zap.Error(err),
+		)
+		return dto.DeleteSemesterCourseResponse{}, sharedErrors.ErrInvalidID
+	}
+
+	// Get existing semester course
+	existingCourse, err := s.semesterRepo.GetSemesterCourseByID(ctx, id, semester)
+	if err != nil {
+		if sharedErrors.Is(err, catalogErrors.ErrSemesterCourseNotFoundRepo) {
+			serviceLogger.Warn("semester course not found for deletion",
+				zap.Error(err),
+			)
+			return dto.DeleteSemesterCourseResponse{}, catalogErrors.ErrSemesterCourseNotFound
+		}
+
+		if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
+			return dto.DeleteSemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+		}
+
+		return dto.DeleteSemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+	}
+
+	// Get catalog course
+	catalogCourse, err := s.catalogRepo.GetCourseByCourseCode(ctx, existingCourse.CourseCode)
+	if err != nil {
+		if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
+			return dto.DeleteSemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+		}
+		return dto.DeleteSemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+	}
+
+	// Get schedule sessions
+	scheduleSessions, err := s.scheduleRepo.GetScheduleSessionsByCourseID(ctx, id)
+	if err != nil {
+		if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
+			return dto.DeleteSemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+		}
+		return dto.DeleteSemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+	}
+
+	scheduleSessionsDTO := groupScheduleSessions(scheduleSessions)
+
+	// Begin transaction
+	tx, err := s.outboxRepo.BeginTx(ctx)
+	if err != nil {
+		serviceLogger.Error("failed to begin transaction", zap.Error(err))
+		return dto.DeleteSemesterCourseResponse{}, catalogErrors.ErrTransactionFailed
+	}
+	defer tx.Rollback(ctx)
+
+	// Get transaction-aware repository
+	semesterRepoTx := s.semesterRepo.WithTx(tx)
+
+	// Create outbox event: course.semester.deleted
+	eventPayload := map[string]interface{}{
+		"event_id":           uuid.New().String(),
+		"event_type":         events.EventCourseSemesterDeleted,
+		"timestamp":          time.Now().Format(time.RFC3339),
+		"semester_course_id": courseID,
+		"semester":           semester,
+		"course_code":        existingCourse.CourseCode,
+		"course_name":        catalogCourse.Name,
+		"department":         catalogCourse.Department,
+		"schedule_sessions":  scheduleSessionsDTO,
+	}
+
+	eventPayloadJSON, err := json.Marshal(map[string]interface{}{
+		"event_id":   eventPayload["event_id"],
+		"event_type": eventPayload["event_type"],
+		"timestamp":  eventPayload["timestamp"],
+		"data":       eventPayload,
+	})
+	if err != nil {
+		serviceLogger.Error("failed to marshal event payload",
+			zap.Error(err),
+		)
+		return dto.DeleteSemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+	}
+
+	outboxParams := db.CreateOutboxEventParams{
+		EventType:  events.EventCourseSemesterDeleted,
+		RoutingKey: events.EventCourseSemesterDeleted,
+		Payload:    eventPayloadJSON,
+	}
+
+	_, err = s.outboxRepo.CreateOutboxEventWithTx(ctx, tx, outboxParams)
+	if err != nil {
+		if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
+			return dto.DeleteSemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+		}
+		return dto.DeleteSemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+	}
+
+	// Delete semester course (CASCADE will delete schedule sessions)
+	if err := semesterRepoTx.DeleteSemesterCourse(ctx, id); err != nil {
+		if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
+			return dto.DeleteSemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+		}
+		return dto.DeleteSemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+	}
+
+	// Commit transaction
+	if err := tx.Commit(ctx); err != nil {
+		serviceLogger.Error("failed to commit transaction",
+			zap.Error(err),
+		)
+		return dto.DeleteSemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, fmt.Errorf("transaction commit failed: %w", err))
+	}
+
+	serviceLogger.Info("semester course deleted successfully",
+		zap.String("course_code", existingCourse.CourseCode),
+	)
+
+	return dto.DeleteSemesterCourseResponse{
+		Message:          "Semester course deleted successfully",
+		SemesterCourseID: courseID,
+		CourseCode:       existingCourse.CourseCode,
+		Semester:         semester,
+	}, nil
+}
+
+// checkInstructorConflict checks if instructor has schedule conflict
+func (s *SemesterService) checkInstructorConflict(ctx context.Context, semester string, instructorID uuid.UUID, sessions []dto.ScheduleSession, excludeCourseID uuid.UUID) error {
+	// Extract all days and slots
+	var days []string
+	var slots []int16
+
+	for _, session := range sessions {
+		days = append(days, session.DayOfWeek)
+		slots = append(slots, session.SlotNumbers...)
+	}
+
+	// Convert to DB enums
+	dayEnums := make([]db.DayOfWeekEnum, len(days))
+	for i, day := range days {
+		dayEnums[i] = db.DayOfWeekEnum(day)
+	}
+
+	params := db.CheckInstructorScheduleConflictParams{
+		Days:            dayEnums,
+		Slots:           slots,
+		Semester:        semester,
+		InstructorID:    utils.UUIDToPgtype(instructorID),
+		ExcludeCourseID: utils.UUIDToPgtype(excludeCourseID),
+	}
+
+	conflicts, err := s.scheduleRepo.CheckInstructorScheduleConflict(ctx, params)
+	if err != nil {
+		if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
+			return sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+		}
+		return sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+	}
+
+	if len(conflicts) > 0 {
+		logger.Warn("instructor has schedule conflict",
+			zap.String("instructor_id", instructorID.String()),
+			zap.String("conflicting_course", conflicts[0].CourseCode),
+		)
+		return catalogErrors.ErrInstructorScheduleConflict
+	}
+
+	return nil
+}
+
+// groupScheduleSessions groups schedule sessions by day of week
+func groupScheduleSessions(sessions []db.CourseScheduleSession) []dto.ScheduleSession {
+	dayMap := make(map[string][]int16)
+
+	for _, session := range sessions {
+		day := string(session.DayOfWeek)
+		dayMap[day] = append(dayMap[day], session.SlotNumber)
+	}
+
+	var result []dto.ScheduleSession
+	for day, slots := range dayMap {
+		result = append(result, dto.ScheduleSession{
+			DayOfWeek:   day,
+			SlotNumbers: slots,
+		})
+	}
+
+	return result
+}
+
+// toSemesterCourseResponse converts db.SemesterCourse to dto.SemesterCourseResponse
+func (s *SemesterService) toSemesterCourseResponse(course db.SemesterCourse, courseName string, sessions []dto.ScheduleSession, prerequisites []dto.Prerequisite) (dto.SemesterCourseResponse, error) {
+	assessmentSchema, err := repository.JSONToAssessmentSchema(course.AssessmentSchema)
+	if err != nil {
+		return dto.SemesterCourseResponse{}, fmt.Errorf("failed to parse assessment schema: %w", err)
+	}
+
+	return dto.SemesterCourseResponse{
+		ID:                 uuid.UUID(course.ID.Bytes),
+		Semester:           course.Semester,
+		CourseCode:         course.CourseCode,
+		CourseName:         courseName,
+		Credits:            course.Credits,
+		ClassLevel:         course.ClassLevel,
+		InstructorID:       uuid.UUID(course.InstructorID.Bytes),
+		InstructorFullname: course.InstructorFullname,
+		ClassroomLocation:  course.ClassroomLocation,
+		MaxCapacity:        course.MaxCapacity,
+		AssessmentSchema:   assessmentSchema,
+		ScheduleSessions:   sessions,
+		Prerequisites:      prerequisites,
+		CreatedAt:          course.CreatedAt.Time,
+		UpdatedAt:          course.UpdatedAt.Time,
+	}, nil
+}
+
+// toSemesterCourseResponseWithPrerequisites is alias for toSemesterCourseResponse
+func (s *SemesterService) toSemesterCourseResponseWithPrerequisites(course db.SemesterCourse, courseName string, sessions []dto.ScheduleSession, prerequisites []dto.Prerequisite) (dto.SemesterCourseResponse, error) {
+	return s.toSemesterCourseResponse(course, courseName, sessions, prerequisites)
+}
