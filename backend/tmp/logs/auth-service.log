@@ -1,0 +1,78 @@
+
+  __    _   ___  
+ / /\  | | | |_) 
+/_/--\ |_| |_| \_ v1.63.0, built with Go go1.25.1
+
+watching .
+watching bin
+watching cmd
+watching cmd/seed
+watching config
+watching internal
+watching internal/db
+watching internal/dto
+watching internal/errors
+watching internal/handler
+watching internal/repository
+watching internal/service
+watching internal/worker
+watching sql
+watching sql/migrations
+watching sql/queries
+watching tests
+!exclude tmp
+building...
+running...
+08:26:21.182	[34mINFO[0m	cmd/main.go:39	starting auth-service	{"environment": "development", "port": "8001"}
+08:26:21.212	[34mINFO[0m	cmd/main.go:53	database connection established
+08:26:21.212	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+08:26:21.215	[34mINFO[0m	redis/redis.go:41	redis connection established
+08:26:21.215	[34mINFO[0m	cmd/main.go:64	Redis connection established
+08:26:21.215	[34mINFO[0m	cmd/main.go:68	JWT blacklist checker configured
+08:26:21.215	[34mINFO[0m	rabbitmq/connection.go:37	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+08:26:21.220	[34mINFO[0m	rabbitmq/connection.go:69	rabbitmq connection established
+08:26:21.220	[34mINFO[0m	cmd/main.go:79	RabbitMQ connection established
+08:26:21.223	[34mINFO[0m	cmd/main.go:297	RabbitMQ setup completed	{"queue": "auth_events_queue", "student_routing_keys": ["student.created", "student.updated", "student.deactivated"], "staff_routing_keys": ["staff.created", "staff.updated", "staff.deactivated"]}
+08:26:21.228	[34mINFO[0m	service/auth_service.go:598	admin user already exists, skipping seed
+08:26:21.228	[34mINFO[0m	service/auth_service.go:666	cleanup scheduler started
+08:26:21.228	[34mINFO[0m	worker/event_consumer.go:33	starting event consumer
+08:26:21.228	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "auth.staff_events"}
+08:26:21.228	[34mINFO[0m	worker/event_consumer.go:78	event consumer started successfully
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (4 handlers)
+[GIN-debug] POST   /api/auth/login           --> github.com/baaaki/mydreamcampus/auth-service/internal/handler.(*AuthHandler).Login-fm (4 handlers)
+[GIN-debug] POST   /api/auth/refresh         --> github.com/baaaki/mydreamcampus/auth-service/internal/handler.(*AuthHandler).RefreshToken-fm (4 handlers)
+[GIN-debug] POST   /api/auth/logout          --> github.com/baaaki/mydreamcampus/auth-service/internal/handler.(*AuthHandler).Logout-fm (5 handlers)
+[GIN-debug] POST   /api/auth/logout-all      --> github.com/baaaki/mydreamcampus/auth-service/internal/handler.(*AuthHandler).LogoutAll-fm (5 handlers)
+[GIN-debug] POST   /api/auth/change-password --> github.com/baaaki/mydreamcampus/auth-service/internal/handler.(*AuthHandler).ChangePassword-fm (5 handlers)
+[GIN-debug] GET    /api/auth/sessions        --> github.com/baaaki/mydreamcampus/auth-service/internal/handler.(*AuthHandler).GetSessions-fm (5 handlers)
+[GIN-debug] DELETE /api/auth/sessions/:id    --> github.com/baaaki/mydreamcampus/auth-service/internal/handler.(*AuthHandler).DeleteSession-fm (5 handlers)
+[GIN-debug] GET    /api/auth/verify          --> github.com/baaaki/mydreamcampus/auth-service/internal/handler.(*AuthHandler).Verify-fm (5 handlers)
+08:26:21.228	[34mINFO[0m	cmd/main.go:141	server starting	{"port": "8001"}
+08:26:34.336	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+08:26:34.336	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "fec2af69-69f8-45c9-8bfc-375e358d9b67", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "484.026µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+08:26:34.336	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+08:26:34.336	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "7a2055f2-623a-466f-97a6-b91f3cc48389", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "519.687µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+08:26:34.340	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+08:26:34.340	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "ab911623-41a0-4649-85f4-1a2f791b9fab", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "227.688µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+08:26:34.343	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+08:26:34.343	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "eb233208-6f46-4355-9f8d-0f92e197d440", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "231.427µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+08:26:46.486	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+08:26:46.486	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "b55500be-9088-4821-ad94-d2abea1533ee", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "343.251µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+08:26:46.486	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+08:26:46.486	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "2e994bc5-18dd-4489-b629-8e467c94e08c", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "203.707µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+08:26:55.150	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+08:26:55.150	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "c67cbc2f-90dc-4f6a-b324-bc391522819b", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "482.815µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+08:27:46.705	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+08:27:46.705	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "7654beea-ecdf-4a30-bf3f-2d1c3fd37e74", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "567.488µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+08:31:18.443	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+08:31:18.443	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "e3253b63-a2c2-4556-a2f5-fb423c84e1f8", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "491.445µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+08:31:59.372	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+08:31:59.372	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "26ccea6b-90f2-4296-afb7-5a50c409d375", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "1.155714ms", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+08:32:26.710	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+08:32:26.710	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "a2df4e82-8ad8-45e9-978f-ae8f5b8fb271", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "520.325µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+08:32:54.052	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+08:32:54.052	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "0d94d06e-dfbd-4dc7-9a21-214ecb76a2eb", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "527.255µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}

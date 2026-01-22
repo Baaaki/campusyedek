@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import ky from 'ky';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,6 +34,7 @@ import {
   AlertCircle,
   CheckCircle2,
   BookOpen,
+  Loader2,
 } from 'lucide-react';
 
 // Mock courses by department
@@ -54,15 +57,50 @@ const mockCoursesByDepartment: Record<string, CourseCatalog[]> = {
   ],
 };
 
-// Mock instructors
-const mockInstructors = [
-  { id: 'inst-1', fullname: 'Prof. Dr. Ahmet Yılmaz', department: 'Bilgisayar Bilimleri' },
-  { id: 'inst-2', fullname: 'Doç. Dr. Mehmet Kaya', department: 'Bilgisayar Bilimleri' },
-  { id: 'inst-3', fullname: 'Dr. Öğr. Üyesi Ayşe Demir', department: 'Bilgisayar Bilimleri' },
-  { id: 'inst-4', fullname: 'Prof. Dr. Fatma Özkan', department: 'Matematik' },
-  { id: 'inst-5', fullname: 'Doç. Dr. Ali Çelik', department: 'Fizik' },
-  { id: 'inst-6', fullname: 'Dr. Öğr. Üyesi Zeynep Arslan', department: 'Matematik' },
-];
+// Mock instructors by department (simulating API response)
+const mockInstructorsByDepartment: Record<string, { id: string; fullname: string; title: string }[]> = {
+  'dept-bil': [
+    { id: 'inst-1', fullname: 'Prof. Dr. Ahmet Yılmaz', title: 'Profesör' },
+    { id: 'inst-2', fullname: 'Doç. Dr. Mehmet Kaya', title: 'Doçent' },
+    { id: 'inst-3', fullname: 'Dr. Öğr. Üyesi Ayşe Demir', title: 'Dr. Öğretim Üyesi' },
+  ],
+  'dept-matematik': [
+    { id: 'inst-4', fullname: 'Prof. Dr. Fatma Özkan', title: 'Profesör' },
+    { id: 'inst-6', fullname: 'Dr. Öğr. Üyesi Zeynep Arslan', title: 'Dr. Öğretim Üyesi' },
+  ],
+  'dept-fizik': [
+    { id: 'inst-5', fullname: 'Doç. Dr. Ali Çelik', title: 'Doçent' },
+    { id: 'inst-7', fullname: 'Prof. Dr. Mustafa Yıldız', title: 'Profesör' },
+  ],
+};
+
+interface Instructor {
+  id: string;
+  fullname: string;
+  title: string;
+}
+
+interface DepartmentData {
+  courses: CourseCatalog[];
+  instructors: Instructor[];
+}
+
+// API fetch function for department data
+const fetchDepartmentData = async (facultyId: string, departmentId: string): Promise<DepartmentData> => {
+  // Dynamic URL with faculty and department
+  const url = `https://jsonplaceholder.typicode.com/posts?facultyId=${facultyId}&departmentId=${departmentId}`;
+  
+  // GET request with ky
+  await ky.get(url).json();
+  
+  // Return mock data (in production, this would be the API response)
+  console.log(`📦 Fetching department data for: ${facultyId}/${departmentId}`);
+  
+  return {
+    courses: mockCoursesByDepartment[departmentId] || [],
+    instructors: mockInstructorsByDepartment[departmentId] || [],
+  };
+};
 
 // Predefined assessment types
 const predefinedAssessments = [
@@ -132,7 +170,6 @@ export default function SemesterCoursesPage() {
   const router = useRouter();
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [departments, setDepartments] = useState<Department[]>([]);
-  const [courses, setCourses] = useState<CourseCatalog[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<CourseCatalog | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -140,32 +177,41 @@ export default function SemesterCoursesPage() {
   const totalWeight = formData.assessment_schema.reduce((sum, item) => sum + item.weight, 0);
   const isWeightValid = totalWeight === 100;
 
+  // TanStack Query - Fetch department data (courses + instructors) with caching
+  const { 
+    data: departmentData, 
+    isLoading: isLoadingDepartmentData,
+    isFetching: isFetchingDepartmentData,
+  } = useQuery({
+    queryKey: ['departmentData', formData.faculty_id, formData.department_id],
+    queryFn: () => fetchDepartmentData(formData.faculty_id, formData.department_id),
+    enabled: !!formData.faculty_id && !!formData.department_id, // Only fetch when both are selected
+    staleTime: 10 * 60 * 1000, // 10 dakika boyunca cache'den kullan
+  });
+
+  // Extract courses and instructors from cached data
+  const courses = departmentData?.courses || [];
+  const instructors = departmentData?.instructors || [];
+
   // Update departments when faculty changes
   useEffect(() => {
     if (formData.faculty_id) {
       const faculty = mockFaculties.find(f => f.id === formData.faculty_id);
       if (faculty) {
         setDepartments(faculty.departments);
-        setFormData(prev => ({ ...prev, department_id: '', course_id: '' }));
-        setCourses([]);
+        setFormData(prev => ({ ...prev, department_id: '', course_id: '', instructor_id: '' }));
         setSelectedCourse(null);
       }
     } else {
       setDepartments([]);
-      setCourses([]);
       setSelectedCourse(null);
     }
   }, [formData.faculty_id]);
 
-  // Update courses when department changes
+  // Reset form selections when department changes
   useEffect(() => {
     if (formData.department_id) {
-      const deptCourses = mockCoursesByDepartment[formData.department_id] || [];
-      setCourses(deptCourses);
-      setFormData(prev => ({ ...prev, course_id: '' }));
-      setSelectedCourse(null);
-    } else {
-      setCourses([]);
+      setFormData(prev => ({ ...prev, course_id: '', instructor_id: '' }));
       setSelectedCourse(null);
     }
   }, [formData.department_id]);
@@ -186,12 +232,12 @@ export default function SemesterCoursesPage() {
   // Update instructor fullname when instructor is selected
   useEffect(() => {
     if (formData.instructor_id) {
-      const instructor = mockInstructors.find(i => i.id === formData.instructor_id);
+      const instructor = instructors.find((i: Instructor) => i.id === formData.instructor_id);
       if (instructor) {
         setFormData(prev => ({ ...prev, instructor_fullname: instructor.fullname }));
       }
     }
-  }, [formData.instructor_id]);
+  }, [formData.instructor_id, instructors]);
 
   const handleInputChange = (field: keyof FormData, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -294,11 +340,11 @@ export default function SemesterCoursesPage() {
 
     setIsSubmitting(true);
 
-    // Prepare data for API
+    // Prepare data for API - DTO uyumlu
     const requestData = {
       course_code: selectedCourse?.course_code,
-      class_level: formData.class_level,
-      instructor_id: formData.instructor_id,
+      class_level: selectedCourse?.class_level, // Dersin sınıf seviyesi
+      instructor_id: formData.instructor_id, // UUID string
       instructor_fullname: formData.instructor_fullname,
       classroom_location: formData.classroom_location,
       max_capacity: formData.max_capacity,
@@ -333,17 +379,17 @@ export default function SemesterCoursesPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Fakülte, Bölüm ve Ders Seçimi */}
+        {/* Bölüm Seçimi */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <BookOpen className="h-5 w-5" />
-              Ders Seçimi
+              <GraduationCap className="h-5 w-5" />
+              Bölüm Seçimi
             </CardTitle>
-            <CardDescription>Açılacak dersi seçin</CardDescription>
+            <CardDescription>Dönemlik ders açılacak bölümü seçin</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Fakülte *</Label>
                 <Select
@@ -364,7 +410,10 @@ export default function SemesterCoursesPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Bölüm *</Label>
+                <Label className="flex items-center gap-2">
+                  Bölüm *
+                  {isLoadingDepartmentData && <Loader2 className="h-3 w-3 animate-spin" />}
+                </Label>
                 <Select
                   value={formData.department_id}
                   onValueChange={(value) => handleInputChange('department_id', value)}
@@ -382,16 +431,41 @@ export default function SemesterCoursesPage() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+          </CardContent>
+        </Card>
 
+        {/* Yeni Dönem Açılacak Ders */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BookOpen className="h-5 w-5" />
+              Yeni Dönem Açılacak Ders
+            </CardTitle>
+            <CardDescription>Açılacak ders, öğretim üyesi ve sınıf bilgilerini girin</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Ders Seçimi */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Ders *</Label>
+                <Label className="flex items-center gap-2">
+                  <BookOpen className="h-4 w-4" />
+                  Ders *
+                  {isLoadingDepartmentData && <Loader2 className="h-3 w-3 animate-spin" />}
+                </Label>
                 <Select
                   value={formData.course_id}
                   onValueChange={(value) => handleInputChange('course_id', value)}
-                  disabled={!formData.department_id}
+                  disabled={!formData.department_id || isLoadingDepartmentData}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder={formData.department_id ? "Ders seçin" : "Önce bölüm seçin"} />
+                    <SelectValue placeholder={
+                      isLoadingDepartmentData 
+                        ? "Yükleniyor..." 
+                        : formData.department_id 
+                          ? "Ders seçin" 
+                          : "Önce bölüm seçin"
+                    } />
                   </SelectTrigger>
                   <SelectContent>
                     {courses.map((course) => (
@@ -402,11 +476,40 @@ export default function SemesterCoursesPage() {
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  Öğretim Üyesi *
+                </Label>
+                <Select
+                  value={formData.instructor_id}
+                  onValueChange={(value) => handleInputChange('instructor_id', value)}
+                  disabled={!formData.department_id || isLoadingDepartmentData}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={
+                      isLoadingDepartmentData 
+                        ? "Yükleniyor..." 
+                        : formData.department_id 
+                          ? "Öğretim üyesi seçin" 
+                          : "Önce bölüm seçin"
+                    } />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {instructors.map((instructor: Instructor) => (
+                      <SelectItem key={instructor.id} value={instructor.id}>
+                        {instructor.fullname}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* Selected Course Info */}
             {selectedCourse && (
-              <div className="mt-4 p-4 bg-muted/50 rounded-lg">
+              <div className="p-4 bg-muted/50 rounded-lg">
                 <h4 className="font-medium mb-2">Seçilen Ders Bilgileri</h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   <div>
@@ -430,73 +533,11 @@ export default function SemesterCoursesPage() {
                 </div>
               </div>
             )}
-          </CardContent>
-        </Card>
 
-        {/* Öğretim Üyesi ve Sınıf Bilgileri */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Öğretim Üyesi ve Sınıf Bilgileri
-            </CardTitle>
-            <CardDescription>Dersi verecek öğretim üyesi ve sınıf detayları</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+            <Separator />
+
+            {/* Kontenjan ve Konum */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Öğretim Üyesi *</Label>
-                <Select
-                  value={formData.instructor_id}
-                  onValueChange={(value) => handleInputChange('instructor_id', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Öğretim üyesi seçin" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {mockInstructors.map((instructor) => (
-                      <SelectItem key={instructor.id} value={instructor.id}>
-                        {instructor.fullname}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Sınıf *</Label>
-                <Select
-                  value={formData.class_level.toString()}
-                  onValueChange={(value) => handleInputChange('class_level', parseInt(value))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[1, 2, 3, 4, 5, 6].map((level) => (
-                      <SelectItem key={level} value={level.toString()}>
-                        {level}. Sınıf
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
-                  Derslik / Konum *
-                </Label>
-                <Input
-                  placeholder="Örn: A Blok, Kat 2, Derslik 201"
-                  value={formData.classroom_location}
-                  onChange={(e) => handleInputChange('classroom_location', e.target.value)}
-                  required
-                />
-              </div>
-
               <div className="space-y-2">
                 <Label className="flex items-center gap-2">
                   <Users className="h-4 w-4" />
@@ -509,6 +550,19 @@ export default function SemesterCoursesPage() {
                   placeholder="50"
                   value={formData.max_capacity}
                   onChange={(e) => handleInputChange('max_capacity', parseInt(e.target.value) || 50)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  Derslik / Konum *
+                </Label>
+                <Input
+                  placeholder="Örn: A Blok, Kat 2, Derslik 201"
+                  value={formData.classroom_location}
+                  onChange={(e) => handleInputChange('classroom_location', e.target.value)}
                   required
                 />
               </div>

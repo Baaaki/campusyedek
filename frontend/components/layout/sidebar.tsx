@@ -36,7 +36,7 @@ const navItems: NavItem[] = [
     icon: UserCog,
     children: [
       { label: 'Personel Listesi', href: '/staff' },
-      { label: 'Personel Profili', href: '/staff/profile' },
+      { label: 'Personel Detay', href: '/staff/personel-details' },
     ],
   },
   {
@@ -45,7 +45,7 @@ const navItems: NavItem[] = [
     children: [
       { label: 'Öğrenci Listesi', href: '/students' },
       { label: 'Danışman Atamaları', href: '/students/advisors' },
-      { label: 'Öğrenci Profili', href: '/student/profile' },
+      { label: 'Öğrenci Profili', href: '/students/student' },
     ],
   },
   {
@@ -58,9 +58,12 @@ const navItems: NavItem[] = [
     ],
   },
   {
-    label: 'Dönem Ders Açılışı',
-    href: '/semester-courses',
+    label: 'Dönem Dersleri',
     icon: CalendarPlus,
+    children: [
+      { label: 'Ders Aç', href: '/semester-courses' },
+      { label: 'Açılan Dersler', href: '/semester-courses/list' },
+    ],
   },
   {
     label: 'Yoklama',
@@ -83,6 +86,7 @@ const navItems: NavItem[] = [
     icon: UtensilsCrossed,
     children: [
       { label: 'Yemekhaneler', href: '/meal/cafeterias' },
+      { label: 'Menüyü Göster', href: '/meal/menu' },
       { label: 'Menü Ekle', href: '/meal/menus' },
     ],
   },

@@ -1,0 +1,761 @@
+'use client';
+
+import { useState } from 'react';
+import ky from 'ky';
+import { mockFaculties } from '@/mock_data/catalog';
+import type { Department, Faculty } from '@/lib/types';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  ChevronDown,
+  ChevronRight,
+  ArrowLeft,
+  Building2,
+  GraduationCap,
+  CalendarPlus,
+  Trash2,
+  Pencil,
+  Loader2,
+} from 'lucide-react';
+
+// Time slots for schedule (1-8 ders)
+const timeSlots = [
+  { slot: 1, time: '08:30 - 09:20' },
+  { slot: 2, time: '09:30 - 10:20' },
+  { slot: 3, time: '10:30 - 11:20' },
+  { slot: 4, time: '11:30 - 12:20' },
+  { slot: 5, time: '13:30 - 14:20' },
+  { slot: 6, time: '14:30 - 15:20' },
+  { slot: 7, time: '15:30 - 16:20' },
+  { slot: 8, time: '16:30 - 17:20' },
+];
+
+const daysOfWeek = [
+  { key: 'Pazartesi', label: 'Pzt' },
+  { key: 'Salı', label: 'Sal' },
+  { key: 'Çarşamba', label: 'Çar' },
+  { key: 'Perşembe', label: 'Per' },
+  { key: 'Cuma', label: 'Cum' },
+];
+
+const days = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma'];
+const daysShort = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum'];
+
+interface ScheduleSession {
+  day_of_week: string;
+  slot_numbers: number[];
+}
+
+// Schedule entry type
+interface ScheduleEntry {
+  id: string;
+  course_code: string;
+  course_name: string;
+  instructor: string;
+  classroom: string;
+  color: string;
+}
+
+// Course for edit/delete
+interface CourseInfo {
+  id: string;
+  course_code: string;
+  course_name: string;
+  instructor: string;
+  classroom: string;
+  class_level: number;
+  max_capacity: number;
+}
+
+// Mock schedule data by class level
+const initialMockSchedules: Record<number, Record<string, Record<number, ScheduleEntry>>> = {
+  // 1. Sınıf
+  1: {
+    'Pazartesi': {
+      1: { id: 'c1', course_code: 'BIL101', course_name: 'Programlamaya Giriş', instructor: 'Prof. Dr. Ahmet Yılmaz', classroom: 'A-201', color: 'bg-blue-100 border-blue-300 text-blue-800' },
+      2: { id: 'c1', course_code: 'BIL101', course_name: 'Programlamaya Giriş', instructor: 'Prof. Dr. Ahmet Yılmaz', classroom: 'A-201', color: 'bg-blue-100 border-blue-300 text-blue-800' },
+      5: { id: 'c2', course_code: 'MAT101', course_name: 'Matematik I', instructor: 'Prof. Dr. Fatma Özkan', classroom: 'B-101', color: 'bg-green-100 border-green-300 text-green-800' },
+      6: { id: 'c2', course_code: 'MAT101', course_name: 'Matematik I', instructor: 'Prof. Dr. Fatma Özkan', classroom: 'B-101', color: 'bg-green-100 border-green-300 text-green-800' },
+    },
+    'Salı': {
+      3: { id: 'c3', course_code: 'FIZ101', course_name: 'Fizik I', instructor: 'Doç. Dr. Ali Çelik', classroom: 'C-102', color: 'bg-purple-100 border-purple-300 text-purple-800' },
+      4: { id: 'c3', course_code: 'FIZ101', course_name: 'Fizik I', instructor: 'Doç. Dr. Ali Çelik', classroom: 'C-102', color: 'bg-purple-100 border-purple-300 text-purple-800' },
+      5: { id: 'c4', course_code: 'ING101', course_name: 'İngilizce I', instructor: 'Öğr. Gör. Zeynep Ak', classroom: 'D-301', color: 'bg-yellow-100 border-yellow-300 text-yellow-800' },
+      6: { id: 'c4', course_code: 'ING101', course_name: 'İngilizce I', instructor: 'Öğr. Gör. Zeynep Ak', classroom: 'D-301', color: 'bg-yellow-100 border-yellow-300 text-yellow-800' },
+    },
+    'Çarşamba': {
+      1: { id: 'c1', course_code: 'BIL101', course_name: 'Programlamaya Giriş (Lab)', instructor: 'Arş. Gör. Can Demir', classroom: 'Lab-1', color: 'bg-blue-100 border-blue-300 text-blue-800' },
+      2: { id: 'c1', course_code: 'BIL101', course_name: 'Programlamaya Giriş (Lab)', instructor: 'Arş. Gör. Can Demir', classroom: 'Lab-1', color: 'bg-blue-100 border-blue-300 text-blue-800' },
+      3: { id: 'c1', course_code: 'BIL101', course_name: 'Programlamaya Giriş (Lab)', instructor: 'Arş. Gör. Can Demir', classroom: 'Lab-1', color: 'bg-blue-100 border-blue-300 text-blue-800' },
+    },
+    'Perşembe': {
+      1: { id: 'c2', course_code: 'MAT101', course_name: 'Matematik I', instructor: 'Prof. Dr. Fatma Özkan', classroom: 'B-101', color: 'bg-green-100 border-green-300 text-green-800' },
+      2: { id: 'c2', course_code: 'MAT101', course_name: 'Matematik I', instructor: 'Prof. Dr. Fatma Özkan', classroom: 'B-101', color: 'bg-green-100 border-green-300 text-green-800' },
+      5: { id: 'c5', course_code: 'AIT101', course_name: 'Atatürk İlkeleri I', instructor: 'Dr. Mehmet Sarı', classroom: 'Amfi-1', color: 'bg-red-100 border-red-300 text-red-800' },
+      6: { id: 'c5', course_code: 'AIT101', course_name: 'Atatürk İlkeleri I', instructor: 'Dr. Mehmet Sarı', classroom: 'Amfi-1', color: 'bg-red-100 border-red-300 text-red-800' },
+    },
+    'Cuma': {
+      3: { id: 'c3', course_code: 'FIZ101', course_name: 'Fizik I (Lab)', instructor: 'Arş. Gör. Elif Kara', classroom: 'Fizik Lab', color: 'bg-purple-100 border-purple-300 text-purple-800' },
+      4: { id: 'c3', course_code: 'FIZ101', course_name: 'Fizik I (Lab)', instructor: 'Arş. Gör. Elif Kara', classroom: 'Fizik Lab', color: 'bg-purple-100 border-purple-300 text-purple-800' },
+    },
+  },
+  // 2. Sınıf
+  2: {
+    'Pazartesi': {
+      1: { id: 'c6', course_code: 'BIL201', course_name: 'Algoritmalar', instructor: 'Dr. Öğr. Üyesi Ayşe Demir', classroom: 'A-203', color: 'bg-indigo-100 border-indigo-300 text-indigo-800' },
+      2: { id: 'c6', course_code: 'BIL201', course_name: 'Algoritmalar', instructor: 'Dr. Öğr. Üyesi Ayşe Demir', classroom: 'A-203', color: 'bg-indigo-100 border-indigo-300 text-indigo-800' },
+      3: { id: 'c7', course_code: 'BIL203', course_name: 'Veri Yapıları', instructor: 'Doç. Dr. Mehmet Kaya', classroom: 'A-204', color: 'bg-teal-100 border-teal-300 text-teal-800' },
+      4: { id: 'c7', course_code: 'BIL203', course_name: 'Veri Yapıları', instructor: 'Doç. Dr. Mehmet Kaya', classroom: 'A-204', color: 'bg-teal-100 border-teal-300 text-teal-800' },
+    },
+    'Salı': {
+      5: { id: 'c8', course_code: 'MAT201', course_name: 'Lineer Cebir', instructor: 'Prof. Dr. Fatma Özkan', classroom: 'B-102', color: 'bg-green-100 border-green-300 text-green-800' },
+      6: { id: 'c8', course_code: 'MAT201', course_name: 'Lineer Cebir', instructor: 'Prof. Dr. Fatma Özkan', classroom: 'B-102', color: 'bg-green-100 border-green-300 text-green-800' },
+      7: { id: 'c8', course_code: 'MAT201', course_name: 'Lineer Cebir', instructor: 'Prof. Dr. Fatma Özkan', classroom: 'B-102', color: 'bg-green-100 border-green-300 text-green-800' },
+    },
+    'Çarşamba': {
+      1: { id: 'c9', course_code: 'BIL205', course_name: 'Veritabanı Sistemleri', instructor: 'Doç. Dr. Mehmet Kaya', classroom: 'Lab-2', color: 'bg-orange-100 border-orange-300 text-orange-800' },
+      2: { id: 'c9', course_code: 'BIL205', course_name: 'Veritabanı Sistemleri', instructor: 'Doç. Dr. Mehmet Kaya', classroom: 'Lab-2', color: 'bg-orange-100 border-orange-300 text-orange-800' },
+      3: { id: 'c9', course_code: 'BIL205', course_name: 'Veritabanı Sistemleri', instructor: 'Doç. Dr. Mehmet Kaya', classroom: 'Lab-2', color: 'bg-orange-100 border-orange-300 text-orange-800' },
+    },
+    'Perşembe': {
+      3: { id: 'c10', course_code: 'BIL207', course_name: 'Sayısal Tasarım', instructor: 'Prof. Dr. Ahmet Yılmaz', classroom: 'A-205', color: 'bg-pink-100 border-pink-300 text-pink-800' },
+      4: { id: 'c10', course_code: 'BIL207', course_name: 'Sayısal Tasarım', instructor: 'Prof. Dr. Ahmet Yılmaz', classroom: 'A-205', color: 'bg-pink-100 border-pink-300 text-pink-800' },
+      5: { id: 'c6', course_code: 'BIL201', course_name: 'Algoritmalar (Lab)', instructor: 'Arş. Gör. Can Demir', classroom: 'Lab-1', color: 'bg-indigo-100 border-indigo-300 text-indigo-800' },
+      6: { id: 'c6', course_code: 'BIL201', course_name: 'Algoritmalar (Lab)', instructor: 'Arş. Gör. Can Demir', classroom: 'Lab-1', color: 'bg-indigo-100 border-indigo-300 text-indigo-800' },
+    },
+    'Cuma': {
+      1: { id: 'c11', course_code: 'ING201', course_name: 'İngilizce III', instructor: 'Öğr. Gör. Zeynep Ak', classroom: 'D-302', color: 'bg-yellow-100 border-yellow-300 text-yellow-800' },
+      2: { id: 'c11', course_code: 'ING201', course_name: 'İngilizce III', instructor: 'Öğr. Gör. Zeynep Ak', classroom: 'D-302', color: 'bg-yellow-100 border-yellow-300 text-yellow-800' },
+    },
+  },
+  // 3. Sınıf
+  3: {
+    'Pazartesi': {
+      1: { id: 'c12', course_code: 'BIL301', course_name: 'Yazılım Mühendisliği', instructor: 'Prof. Dr. Ahmet Yılmaz', classroom: 'A-301', color: 'bg-cyan-100 border-cyan-300 text-cyan-800' },
+      2: { id: 'c12', course_code: 'BIL301', course_name: 'Yazılım Mühendisliği', instructor: 'Prof. Dr. Ahmet Yılmaz', classroom: 'A-301', color: 'bg-cyan-100 border-cyan-300 text-cyan-800' },
+      3: { id: 'c12', course_code: 'BIL301', course_name: 'Yazılım Mühendisliği', instructor: 'Prof. Dr. Ahmet Yılmaz', classroom: 'A-301', color: 'bg-cyan-100 border-cyan-300 text-cyan-800' },
+    },
+    'Salı': {
+      3: { id: 'c13', course_code: 'BIL303', course_name: 'Bilgisayar Ağları', instructor: 'Doç. Dr. Mehmet Kaya', classroom: 'A-302', color: 'bg-rose-100 border-rose-300 text-rose-800' },
+      4: { id: 'c13', course_code: 'BIL303', course_name: 'Bilgisayar Ağları', instructor: 'Doç. Dr. Mehmet Kaya', classroom: 'A-302', color: 'bg-rose-100 border-rose-300 text-rose-800' },
+      5: { id: 'c14', course_code: 'BIL305', course_name: 'İşletim Sistemleri', instructor: 'Dr. Öğr. Üyesi Ayşe Demir', classroom: 'A-303', color: 'bg-violet-100 border-violet-300 text-violet-800' },
+      6: { id: 'c14', course_code: 'BIL305', course_name: 'İşletim Sistemleri', instructor: 'Dr. Öğr. Üyesi Ayşe Demir', classroom: 'A-303', color: 'bg-violet-100 border-violet-300 text-violet-800' },
+    },
+    'Çarşamba': {
+      5: { id: 'c15', course_code: 'BIL351', course_name: 'Web Programlama', instructor: 'Dr. Öğr. Üyesi Ayşe Demir', classroom: 'Lab-1', color: 'bg-emerald-100 border-emerald-300 text-emerald-800' },
+      6: { id: 'c15', course_code: 'BIL351', course_name: 'Web Programlama', instructor: 'Dr. Öğr. Üyesi Ayşe Demir', classroom: 'Lab-1', color: 'bg-emerald-100 border-emerald-300 text-emerald-800' },
+      7: { id: 'c15', course_code: 'BIL351', course_name: 'Web Programlama', instructor: 'Dr. Öğr. Üyesi Ayşe Demir', classroom: 'Lab-1', color: 'bg-emerald-100 border-emerald-300 text-emerald-800' },
+    },
+    'Perşembe': {
+      1: { id: 'c13', course_code: 'BIL303', course_name: 'Bilgisayar Ağları (Lab)', instructor: 'Arş. Gör. Can Demir', classroom: 'Ağ Lab', color: 'bg-rose-100 border-rose-300 text-rose-800' },
+      2: { id: 'c13', course_code: 'BIL303', course_name: 'Bilgisayar Ağları (Lab)', instructor: 'Arş. Gör. Can Demir', classroom: 'Ağ Lab', color: 'bg-rose-100 border-rose-300 text-rose-800' },
+      5: { id: 'c16', course_code: 'BIL307', course_name: 'Yapay Zeka', instructor: 'Prof. Dr. Ahmet Yılmaz', classroom: 'A-304', color: 'bg-amber-100 border-amber-300 text-amber-800' },
+      6: { id: 'c16', course_code: 'BIL307', course_name: 'Yapay Zeka', instructor: 'Prof. Dr. Ahmet Yılmaz', classroom: 'A-304', color: 'bg-amber-100 border-amber-300 text-amber-800' },
+    },
+    'Cuma': {
+      3: { id: 'c17', course_code: 'BIL353', course_name: 'Mobil Programlama', instructor: 'Dr. Öğr. Üyesi Ayşe Demir', classroom: 'Lab-2', color: 'bg-sky-100 border-sky-300 text-sky-800' },
+      4: { id: 'c17', course_code: 'BIL353', course_name: 'Mobil Programlama', instructor: 'Dr. Öğr. Üyesi Ayşe Demir', classroom: 'Lab-2', color: 'bg-sky-100 border-sky-300 text-sky-800' },
+      5: { id: 'c17', course_code: 'BIL353', course_name: 'Mobil Programlama', instructor: 'Dr. Öğr. Üyesi Ayşe Demir', classroom: 'Lab-2', color: 'bg-sky-100 border-sky-300 text-sky-800' },
+    },
+  },
+  // 4. Sınıf
+  4: {
+    'Pazartesi': {
+      1: { id: 'c18', course_code: 'BIL401', course_name: 'Bitirme Projesi I', instructor: 'Danışman', classroom: 'Proje Odası', color: 'bg-slate-100 border-slate-300 text-slate-800' },
+      2: { id: 'c18', course_code: 'BIL401', course_name: 'Bitirme Projesi I', instructor: 'Danışman', classroom: 'Proje Odası', color: 'bg-slate-100 border-slate-300 text-slate-800' },
+      5: { id: 'c19', course_code: 'BIL403', course_name: 'Bilgi Güvenliği', instructor: 'Doç. Dr. Mehmet Kaya', classroom: 'A-401', color: 'bg-red-100 border-red-300 text-red-800' },
+      6: { id: 'c19', course_code: 'BIL403', course_name: 'Bilgi Güvenliği', instructor: 'Doç. Dr. Mehmet Kaya', classroom: 'A-401', color: 'bg-red-100 border-red-300 text-red-800' },
+    },
+    'Salı': {
+      3: { id: 'c20', course_code: 'BIL405', course_name: 'Dağıtık Sistemler', instructor: 'Prof. Dr. Ahmet Yılmaz', classroom: 'A-402', color: 'bg-fuchsia-100 border-fuchsia-300 text-fuchsia-800' },
+      4: { id: 'c20', course_code: 'BIL405', course_name: 'Dağıtık Sistemler', instructor: 'Prof. Dr. Ahmet Yılmaz', classroom: 'A-402', color: 'bg-fuchsia-100 border-fuchsia-300 text-fuchsia-800' },
+    },
+    'Çarşamba': {
+      1: { id: 'c21', course_code: 'BIL451', course_name: 'Makine Öğrenmesi', instructor: 'Prof. Dr. Ahmet Yılmaz', classroom: 'A-403', color: 'bg-lime-100 border-lime-300 text-lime-800' },
+      2: { id: 'c21', course_code: 'BIL451', course_name: 'Makine Öğrenmesi', instructor: 'Prof. Dr. Ahmet Yılmaz', classroom: 'A-403', color: 'bg-lime-100 border-lime-300 text-lime-800' },
+      3: { id: 'c21', course_code: 'BIL451', course_name: 'Makine Öğrenmesi', instructor: 'Prof. Dr. Ahmet Yılmaz', classroom: 'A-403', color: 'bg-lime-100 border-lime-300 text-lime-800' },
+    },
+    'Perşembe': {
+      5: { id: 'c22', course_code: 'BIL453', course_name: 'Bulut Bilişim', instructor: 'Dr. Öğr. Üyesi Ayşe Demir', classroom: 'Lab-1', color: 'bg-blue-100 border-blue-300 text-blue-800' },
+      6: { id: 'c22', course_code: 'BIL453', course_name: 'Bulut Bilişim', instructor: 'Dr. Öğr. Üyesi Ayşe Demir', classroom: 'Lab-1', color: 'bg-blue-100 border-blue-300 text-blue-800' },
+      7: { id: 'c22', course_code: 'BIL453', course_name: 'Bulut Bilişim', instructor: 'Dr. Öğr. Üyesi Ayşe Demir', classroom: 'Lab-1', color: 'bg-blue-100 border-blue-300 text-blue-800' },
+    },
+    'Cuma': {
+      1: { id: 'c18', course_code: 'BIL401', course_name: 'Bitirme Projesi I', instructor: 'Danışman', classroom: 'Proje Odası', color: 'bg-slate-100 border-slate-300 text-slate-800' },
+      2: { id: 'c18', course_code: 'BIL401', course_name: 'Bitirme Projesi I', instructor: 'Danışman', classroom: 'Proje Odası', color: 'bg-slate-100 border-slate-300 text-slate-800' },
+    },
+  },
+};
+
+// Get unique courses from schedule
+const getUniqueCourses = (schedule: Record<string, Record<number, ScheduleEntry>>, classLevel: number): CourseInfo[] => {
+  const courseMap = new Map<string, CourseInfo>();
+  
+  Object.values(schedule).forEach(daySchedule => {
+    Object.values(daySchedule).forEach(entry => {
+      if (!courseMap.has(entry.id)) {
+        courseMap.set(entry.id, {
+          id: entry.id,
+          course_code: entry.course_code,
+          course_name: entry.course_name,
+          instructor: entry.instructor,
+          classroom: entry.classroom,
+          class_level: classLevel,
+          max_capacity: 50,
+        });
+      }
+    });
+  });
+  
+  return Array.from(courseMap.values());
+};
+
+export default function OpenedCoursesPage() {
+  const [expandedFaculties, setExpandedFaculties] = useState<string[]>([]);
+  const [selectedDepartment, setSelectedDepartment] = useState<{ dept: Department; faculty: Faculty } | null>(null);
+  const [schedules, setSchedules] = useState(initialMockSchedules);
+  
+  // Delete dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [courseToDelete, setCourseToDelete] = useState<CourseInfo | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Edit dialog state
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [courseToEdit, setCourseToEdit] = useState<CourseInfo | null>(null);
+  const [editForm, setEditForm] = useState({ instructor: '', classroom: '', max_capacity: 50, schedule_sessions: [] as ScheduleSession[] });
+  const [isUpdating, setIsUpdating] = useState(false);
+  
+  // Selected class for edit/delete
+  const [selectedClassLevel, setSelectedClassLevel] = useState<number>(1);
+
+  // Toggle faculty accordion
+  const toggleFaculty = (facultyId: string) => {
+    setExpandedFaculties(prev =>
+      prev.includes(facultyId)
+        ? prev.filter(id => id !== facultyId)
+        : [...prev, facultyId]
+    );
+  };
+
+  const handleDepartmentClick = (dept: Department, faculty: Faculty) => {
+    setSelectedDepartment({ dept, faculty });
+  };
+
+  // Open delete dialog
+  const handleDeleteClick = (classLevel: number) => {
+    setSelectedClassLevel(classLevel);
+    const courses = getUniqueCourses(schedules[classLevel], classLevel);
+    if (courses.length > 0) {
+      setCourseToDelete(courses[0]);
+      setDeleteDialogOpen(true);
+    }
+  };
+
+  // Open edit dialog
+  const handleEditClick = (classLevel: number) => {
+    setSelectedClassLevel(classLevel);
+    const courses = getUniqueCourses(schedules[classLevel], classLevel);
+    if (courses.length > 0) {
+      const course = courses[0];
+      setCourseToEdit(course);
+      setEditForm({
+        instructor: course.instructor,
+        classroom: course.classroom,
+        max_capacity: course.max_capacity,
+        schedule_sessions: [],
+      });
+      setEditDialogOpen(true);
+    }
+  };
+
+  // Toggle schedule slot for edit form
+  const toggleEditScheduleSlot = (day: string, slot: number) => {
+    setEditForm(prev => {
+      const existingSession = prev.schedule_sessions.find(s => s.day_of_week === day);
+      if (existingSession) {
+        const hasSlot = existingSession.slot_numbers.includes(slot);
+        if (hasSlot) {
+          const newSlots = existingSession.slot_numbers.filter(s => s !== slot);
+          if (newSlots.length === 0) {
+            return { ...prev, schedule_sessions: prev.schedule_sessions.filter(s => s.day_of_week !== day) };
+          }
+          return { ...prev, schedule_sessions: prev.schedule_sessions.map(s =>
+            s.day_of_week === day ? { ...s, slot_numbers: newSlots } : s
+          ) };
+        } else {
+          return { ...prev, schedule_sessions: prev.schedule_sessions.map(s =>
+            s.day_of_week === day ? { ...s, slot_numbers: [...s.slot_numbers, slot].sort((a, b) => a - b) } : s
+          ) };
+        }
+      } else {
+        return { ...prev, schedule_sessions: [...prev.schedule_sessions, { day_of_week: day, slot_numbers: [slot] }] };
+      }
+    });
+  };
+
+  // Check if slot is selected in edit form
+  const isEditSlotSelected = (day: string, slot: number) => {
+    const session = editForm.schedule_sessions.find(s => s.day_of_week === day);
+    return session ? session.slot_numbers.includes(slot) : false;
+  };
+
+  // Delete course
+  const handleDeleteConfirm = async () => {
+    if (!courseToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      // API DELETE isteği
+      await ky.delete(`https://jsonplaceholder.typicode.com/posts/${courseToDelete.id}`);
+      
+      // Schedule'dan sil
+      const newSchedules = { ...schedules };
+      const classSchedule = newSchedules[selectedClassLevel];
+      
+      Object.keys(classSchedule).forEach(day => {
+        Object.keys(classSchedule[day]).forEach(slot => {
+          if (classSchedule[day][parseInt(slot)]?.id === courseToDelete.id) {
+            delete classSchedule[day][parseInt(slot)];
+          }
+        });
+      });
+      
+      setSchedules(newSchedules);
+      setDeleteDialogOpen(false);
+      setCourseToDelete(null);
+      alert('Ders başarıyla kaldırıldı!');
+    } catch (error) {
+      console.error('Ders silinirken hata:', error);
+      alert('Ders silinirken bir hata oluştu!');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Update course
+  const handleEditConfirm = async () => {
+    if (!courseToEdit) return;
+    
+    setIsUpdating(true);
+    try {
+      // API POST isteği (güncelleme için)
+      await ky.post('https://jsonplaceholder.typicode.com/posts', {
+        json: {
+          id: courseToEdit.id,
+          instructor: editForm.instructor,
+          classroom: editForm.classroom,
+          max_capacity: editForm.max_capacity,
+        },
+      });
+      
+      // Schedule'ı güncelle
+      const newSchedules = { ...schedules };
+      const classSchedule = newSchedules[selectedClassLevel];
+      
+      Object.keys(classSchedule).forEach(day => {
+        Object.keys(classSchedule[day]).forEach(slot => {
+          if (classSchedule[day][parseInt(slot)]?.id === courseToEdit.id) {
+            classSchedule[day][parseInt(slot)] = {
+              ...classSchedule[day][parseInt(slot)],
+              instructor: editForm.instructor,
+              classroom: editForm.classroom,
+            };
+          }
+        });
+      });
+      
+      setSchedules(newSchedules);
+      setEditDialogOpen(false);
+      setCourseToEdit(null);
+      alert('Ders başarıyla güncellendi!');
+    } catch (error) {
+      console.error('Ders güncellenirken hata:', error);
+      alert('Ders güncellenirken bir hata oluştu!');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Faculty & Department List View (Accordion)
+  if (!selectedDepartment) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+            <div className="flex items-center gap-4 mb-8">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-indigo-600 text-white">
+                <CalendarPlus className="h-6 w-6" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Haftalık Ders Programları</h1>
+                <p className="text-gray-600 dark:text-gray-400">Bölüm seçerek haftalık ders programını görüntüleyin</p>
+              </div>
+            </div>
+
+            {/* Faculty Accordion */}
+            <div className="space-y-2">
+              {mockFaculties.map((faculty) => {
+                const isExpanded = expandedFaculties.includes(faculty.id);
+                return (
+                  <div key={faculty.id} className="border dark:border-gray-700 rounded-lg overflow-hidden">
+                    <button
+                      onClick={() => toggleFaculty(faculty.id)}
+                      className="w-full flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors text-left"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Building2 className="h-5 w-5 text-indigo-600" />
+                        <span className="font-semibold text-gray-900 dark:text-white">{faculty.name}</span>
+                        <Badge variant="outline" className="text-xs">
+                          {faculty.departments.length} bölüm
+                        </Badge>
+                      </div>
+                      {isExpanded ? (
+                        <ChevronDown className="h-5 w-5 text-gray-500" />
+                      ) : (
+                        <ChevronRight className="h-5 w-5 text-gray-500" />
+                      )}
+                    </button>
+
+                    {isExpanded && (
+                      <div className="border-t dark:border-gray-700 bg-white dark:bg-gray-800">
+                        {faculty.departments.map((dept, index) => (
+                          <button
+                            key={dept.id}
+                            onClick={() => handleDepartmentClick(dept, faculty)}
+                            className={`w-full flex items-center justify-between p-3 pl-12 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors text-left ${
+                              index !== faculty.departments.length - 1 ? 'border-b border-gray-100 dark:border-gray-700' : ''
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <GraduationCap className="h-4 w-4 text-gray-400" />
+                              <span className="text-gray-700 dark:text-gray-300">{dept.name}</span>
+                            </div>
+                            <ChevronRight className="h-4 w-4 text-gray-400" />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Weekly Schedule View - 4 class levels
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+      <div className="max-w-[1600px] mx-auto px-4">
+        {/* Header */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+          <button
+            onClick={() => setSelectedDepartment(null)}
+            className="flex items-center gap-2 text-indigo-600 hover:text-indigo-800 mb-4 transition-colors"
+          >
+            <ArrowLeft className="h-5 w-5" />
+            <span>Tüm Fakülteler</span>
+          </button>
+
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/50 rounded-xl flex items-center justify-center">
+              <GraduationCap className="h-8 w-8 text-indigo-600" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{selectedDepartment.dept.name}</h1>
+              <p className="text-gray-600 dark:text-gray-400">{selectedDepartment.faculty.name} - Haftalık Ders Programları</p>
+            </div>
+          </div>
+        </div>
+
+        {/* 4 Weekly Schedules */}
+        <div className="space-y-8">
+          {[1, 2, 3, 4].map((classLevel) => (
+            <div key={classLevel} className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
+              {/* Class Level Header */}
+              <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-4">
+                <h2 className="text-xl font-bold text-white">{classLevel}. Sınıf Haftalık Ders Programı</h2>
+              </div>
+
+              {/* Schedule Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50 dark:bg-gray-700">
+                      <th className="border dark:border-gray-600 px-3 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 w-20">
+                        Saat
+                      </th>
+                      {days.map((day, i) => (
+                        <th key={day} className="border dark:border-gray-600 px-3 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 min-w-[180px]">
+                          <span className="hidden sm:inline">{day}</span>
+                          <span className="sm:hidden">{daysShort[i]}</span>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {timeSlots.map((slot) => (
+                      <tr key={slot.slot} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                        <td className="border dark:border-gray-600 px-2 py-1 text-xs text-center font-medium text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700">
+                          {slot.slot}. Ders
+                          <br />
+                          <span className="text-[10px]">{slot.time}</span>
+                        </td>
+                        {days.map((dayName) => {
+                          const entry = schedules[classLevel]?.[dayName]?.[slot.slot];
+                          return (
+                            <td key={dayName} className="border dark:border-gray-600 p-1">
+                              {entry ? (
+                                <div className={`${entry.color} border rounded-md p-2 h-full min-h-[60px] text-xs relative group`}>
+                                  {/* Action buttons - appear on hover */}
+                                  <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedClassLevel(classLevel);
+                                        setCourseToEdit({
+                                          id: entry.id,
+                                          course_code: entry.course_code,
+                                          course_name: entry.course_name,
+                                          instructor: entry.instructor,
+                                          classroom: entry.classroom,
+                                          class_level: classLevel,
+                                          max_capacity: 50,
+                                        });
+                                        // Find all slots for this course
+                                        const sessions: ScheduleSession[] = [];
+                                        days.forEach(d => {
+                                          const slotsForDay: number[] = [];
+                                          timeSlots.forEach(s => {
+                                            if (schedules[classLevel]?.[d]?.[s.slot]?.id === entry.id) {
+                                              slotsForDay.push(s.slot);
+                                            }
+                                          });
+                                          if (slotsForDay.length > 0) {
+                                            sessions.push({ day_of_week: d, slot_numbers: slotsForDay });
+                                          }
+                                        });
+                                        setEditForm({
+                                          instructor: entry.instructor,
+                                          classroom: entry.classroom,
+                                          max_capacity: 50,
+                                          schedule_sessions: sessions,
+                                        });
+                                        setEditDialogOpen(true);
+                                      }}
+                                      className="p-1 bg-white/80 hover:bg-white rounded shadow-sm"
+                                      title="Düzenle"
+                                    >
+                                      <Pencil className="h-3 w-3 text-gray-600" />
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedClassLevel(classLevel);
+                                        setCourseToDelete({
+                                          id: entry.id,
+                                          course_code: entry.course_code,
+                                          course_name: entry.course_name,
+                                          instructor: entry.instructor,
+                                          classroom: entry.classroom,
+                                          class_level: classLevel,
+                                          max_capacity: 50,
+                                        });
+                                        setDeleteDialogOpen(true);
+                                      }}
+                                      className="p-1 bg-red-100/80 hover:bg-red-200 rounded shadow-sm"
+                                      title="Kaldır"
+                                    >
+                                      <Trash2 className="h-3 w-3 text-red-600" />
+                                    </button>
+                                  </div>
+                                  <div className="font-bold">{entry.course_code}</div>
+                                  <div className="text-[10px] opacity-80 truncate">{entry.course_name}</div>
+                                  <div className="mt-1 text-[10px] opacity-70">{entry.instructor}</div>
+                                  <div className="text-[10px] opacity-60">{entry.classroom}</div>
+                                </div>
+                              ) : (
+                                <div className="h-[60px]"></div>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Dersi Kaldırmak İstediğinize Emin Misiniz?</AlertDialogTitle>
+            <AlertDialogDescription>
+              <strong>{courseToDelete?.course_code} - {courseToDelete?.course_name}</strong> dersini programdan kaldırmak üzeresiniz.
+              Bu işlem geri alınamaz.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+            <div className="text-sm space-y-1">
+              <p><strong>Ders:</strong> {courseToDelete?.course_code} - {courseToDelete?.course_name}</p>
+              <p><strong>Öğretim Üyesi:</strong> {courseToDelete?.instructor}</p>
+              <p><strong>Derslik:</strong> {courseToDelete?.classroom}</p>
+              <p><strong>Sınıf:</strong> {courseToDelete?.class_level}. Sınıf</p>
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>İptal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Trash2 className="h-4 w-4 mr-1" />}
+              Kaldır
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Edit Course Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Dersi Düzenle</DialogTitle>
+            <DialogDescription>
+              {courseToEdit?.course_code} - {courseToEdit?.course_name} ({courseToEdit?.class_level}. Sınıf)
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="instructor">Öğretim Üyesi</Label>
+              <Input
+                id="instructor"
+                value={editForm.instructor}
+                onChange={(e) => setEditForm({ ...editForm, instructor: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="classroom">Derslik / Konum</Label>
+                <Input
+                  id="classroom"
+                  value={editForm.classroom}
+                  onChange={(e) => setEditForm({ ...editForm, classroom: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="max_capacity">Kontenjan</Label>
+                <Input
+                  id="max_capacity"
+                  type="number"
+                  min="1"
+                  max="500"
+                  value={editForm.max_capacity}
+                  onChange={(e) => setEditForm({ ...editForm, max_capacity: parseInt(e.target.value) || 50 })}
+                />
+              </div>
+            </div>
+            
+            {/* Schedule Section - Checkbox Grid */}
+            <div className="border-t pt-4">
+              <Label className="text-base font-semibold">Ders Programı</Label>
+              <p className="text-sm text-muted-foreground mb-3">Dersin hangi gün ve saatlerde yapılacağını seçin</p>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-sm">
+                  <thead>
+                    <tr>
+                      <th className="border dark:border-gray-700 p-2 bg-muted text-left font-medium">Saat</th>
+                      {daysOfWeek.map((day) => (
+                        <th key={day.key} className="border dark:border-gray-700 p-2 bg-muted text-center font-medium">
+                          {day.label}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {timeSlots.map((slot) => (
+                      <tr key={slot.slot}>
+                        <td className="border dark:border-gray-700 p-2 text-xs text-muted-foreground whitespace-nowrap">
+                          {slot.slot}. Ders<br />
+                          <span className="text-[10px]">{slot.time}</span>
+                        </td>
+                        {daysOfWeek.map((day) => (
+                          <td key={day.key} className="border dark:border-gray-700 p-1 text-center">
+                            <Checkbox
+                              checked={isEditSlotSelected(day.key, slot.slot)}
+                              onCheckedChange={() => toggleEditScheduleSlot(day.key, slot.slot)}
+                              className="h-5 w-5"
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {/* Selected schedule summary */}
+              {editForm.schedule_sessions.length > 0 && (
+                <div className="mt-3 p-2 bg-muted/50 rounded-lg">
+                  <p className="text-xs font-medium">Seçilen: </p>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {editForm.schedule_sessions.map((session) => (
+                      <Badge key={session.day_of_week} variant="secondary" className="text-xs">
+                        {session.day_of_week}: {session.slot_numbers.join(', ')}. ders
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)} disabled={isUpdating}>
+              İptal
+            </Button>
+            <Button onClick={handleEditConfirm} disabled={isUpdating}>
+              {isUpdating ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Pencil className="h-4 w-4 mr-1" />}
+              Güncelle
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

@@ -1,12 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { authApi } from "@/lib/api-client";
 import type { AuthResponse } from "@/lib/types";
 
+// Helper to set cookies
+function setCookie(name: string, value: string, days: number = 7) {
+  const expires = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toUTCString();
+  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
+}
+
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -18,34 +25,45 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await authApi
+      const response: AuthResponse = await authApi
         .post("login", {
           json: { email, password },
         })
-        .json<AuthResponse>();
+        .json();
 
-      // Store token
-      localStorage.setItem("access_token", response.token);
+      // Store token in both localStorage and cookies
+      // localStorage for API client, cookies for middleware
+      localStorage.setItem("access_token", response.access_token);
       localStorage.setItem("user", JSON.stringify(response.user));
+      setCookie("access_token", response.access_token);
+      setCookie("user", JSON.stringify(response.user));
 
       // Check if password change is required
       if (response.force_password_change) {
         router.push("/auth/change-password");
-      } else {
-        // Redirect based on role
-        switch (response.user.role) {
-          case "admin":
-            router.push("/admin/dashboard");
-            break;
-          case "teacher":
-            router.push("/teacher/dashboard");
-            break;
-          case "student":
-            router.push("/student/dashboard");
-            break;
-          default:
-            router.push("/");
-        }
+        return;
+      }
+
+      // Check for redirect parameter
+      const redirectTo = searchParams.get("redirect");
+      if (redirectTo && !redirectTo.startsWith("/auth")) {
+        router.push(redirectTo);
+        return;
+      }
+
+      // Redirect based on role
+      switch (response.user.role) {
+        case "admin":
+          router.push("/dashboard");
+          break;
+        case "teacher":
+          router.push("/dashboard");
+          break;
+        case "student":
+          router.push("/student/dashboard");
+          break;
+        default:
+          router.push("/dashboard");
       }
     } catch (err: any) {
       setError(err.message || "Giriş başarısız. Lütfen bilgilerinizi kontrol edin.");

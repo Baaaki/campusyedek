@@ -31,8 +31,10 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { studentApi, staffApi } from '@/lib/api-client'
-import { ArrowLeft, UserPlus, Users, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
+import { ArrowLeft, UserPlus, Users, ArrowUpDown, ArrowUp, ArrowDown, Loader2 } from 'lucide-react'
 import Link from 'next/link'
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost'
 
 type Student = {
   id: string
@@ -102,13 +104,13 @@ export default function AdvisorManagementPage() {
   const [bulkAdvisorId, setBulkAdvisorId] = useState<string>('')
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([])
 
-  // Cascade dropdown states for single assignment
-  const [selectedFaculty, setSelectedFaculty] = useState<string>('')
-  const [selectedDepartment, setSelectedDepartment] = useState<string>('')
-
   // Cascade dropdown states for bulk assignment
   const [bulkSelectedFaculty, setBulkSelectedFaculty] = useState<string>('')
   const [bulkSelectedDepartment, setBulkSelectedDepartment] = useState<string>('')
+
+  // Department-specific instructors (fetched from API)
+  const [departmentInstructors, setDepartmentInstructors] = useState<Staff[]>([])
+  const [loadingInstructors, setLoadingInstructors] = useState(false)
 
   // Pagination states
   const [orphanedPage, setOrphanedPage] = useState(1)
@@ -168,12 +170,22 @@ export default function AdvisorManagementPage() {
         })
         .json()) as StudentListResponse
 
-      setOrphanedStudents(response.data)
-      setOrphanedTotalPages(response.pagination.total_pages)
-      setOrphanedTotal(response.pagination.total)
-      console.log('Orphaned students loaded:', response.data.length, 'students')
+      if (response && response.data) {
+        setOrphanedStudents(response.data)
+        setOrphanedTotalPages(response.pagination.total_pages)
+        setOrphanedTotal(response.pagination.total)
+        console.log('Orphaned students loaded:', response.data.length, 'students')
+      } else {
+        console.warn('No data received for orphaned students')
+        setOrphanedStudents([])
+        setOrphanedTotalPages(1)
+        setOrphanedTotal(0)
+      }
     } catch (error) {
       console.error('Failed to fetch orphaned students:', error)
+      setOrphanedStudents([])
+      setOrphanedTotalPages(1)
+      setOrphanedTotal(0)
     } finally {
       setLoading(false)
     }
@@ -191,12 +203,22 @@ export default function AdvisorManagementPage() {
         })
         .json()) as StudentListResponse
 
-      setAdvisorStudents(response.data)
-      setAdvisorTotalPages(response.pagination.total_pages)
-      setAdvisorTotal(response.pagination.total)
-      console.log('Advisor students loaded:', response.data.length, 'students')
+      if (response && response.data) {
+        setAdvisorStudents(response.data)
+        setAdvisorTotalPages(response.pagination.total_pages)
+        setAdvisorTotal(response.pagination.total)
+        console.log('Advisor students loaded:', response.data.length, 'students')
+      } else {
+        console.warn('No data received for advisor students')
+        setAdvisorStudents([])
+        setAdvisorTotalPages(1)
+        setAdvisorTotal(0)
+      }
     } catch (error) {
       console.error('Failed to fetch advisor students:', error)
+      setAdvisorStudents([])
+      setAdvisorTotalPages(1)
+      setAdvisorTotal(0)
     } finally {
       setLoading(false)
     }
@@ -204,21 +226,23 @@ export default function AdvisorManagementPage() {
 
   const handleAssignAdvisor = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!assigningStudent || !selectedAdvisorId) return
+    console.log('[Advisors] handleAssignAdvisor called', { assigningStudent, selectedAdvisorId })
+    if (!assigningStudent || !selectedAdvisorId) {
+      console.log('[Advisors] Missing data, returning early')
+      return
+    }
 
     try {
-      await studentApi.patch(`${assigningStudent.id}`, {
+      console.log('[Advisors] Sending PUT request to:', `${assigningStudent.id}`)
+      const response = await studentApi.put(`${assigningStudent.id}`, {
         json: {
-          class_level: assigningStudent.class_level,
-          status: assigningStudent.status,
           advisor_id: selectedAdvisorId,
         },
-      })
+      }).json()
+      console.log('[Advisors] PUT response:', response)
 
       setIsAssignOpen(false)
       setAssigningStudent(null)
-      setSelectedFaculty('')
-      setSelectedDepartment('')
       setSelectedAdvisorId('')
       fetchOrphanedStudents()
       if (selectedAdvisor) {
@@ -337,52 +361,77 @@ export default function AdvisorManagementPage() {
     return 0
   })
 
-  // Helper: Get unique faculties from staff list
+  // Helper: Get unique departments from staff list (used as "faculties" since backend doesn't have faculty field)
   const getUniqueFaculties = () => {
-    const faculties = new Set<string>()
-    staffList.forEach((staff) => {
-      if (staff.faculty) {
-        faculties.add(staff.faculty)
-      }
-    })
-    const result = Array.from(faculties).sort()
-    console.log('Unique Faculties:', result, 'Staff List Length:', staffList.length)
-    return result
-  }
-
-  // Helper: Get departments for a specific faculty
-  const getDepartmentsForFaculty = (faculty: string) => {
     const departments = new Set<string>()
     staffList.forEach((staff) => {
-      if (staff.faculty === faculty && staff.department) {
+      if (staff.department) {
         departments.add(staff.department)
       }
     })
-    return Array.from(departments).sort()
+    const result = Array.from(departments).sort()
+    console.log('Unique Departments (as faculties):', result, 'Staff List Length:', staffList.length)
+    return result
   }
 
-  // Helper: Get advisors for a specific department
-  const getAdvisorsForDepartment = (department: string) => {
-    return staffList.filter((staff) => staff.department === department)
+  // Helper: Get departments for a specific faculty (returns same department since we're using department as faculty)
+  const getDepartmentsForFaculty = (faculty: string) => {
+    // Since backend doesn't have faculty, we treat department as both faculty and department
+    // Return the same department if it exists in staff list
+    const hasStaffInDepartment = staffList.some((staff) => staff.department === faculty)
+    return hasStaffInDepartment ? [faculty] : []
   }
 
-  // Department display name mapper
-  const getDepartmentDisplayName = (deptCode: string) => {
-    const mapping: { [key: string]: string } = {
-      'computer-engineering': 'Bilgisayar Mühendisliği',
-      'electrical-engineering': 'Elektrik Mühendisliği',
-      'mechanical-engineering': 'Makine Mühendisliği',
-      'civil-engineering': 'İnşaat Mühendisliği',
-      'mathematics': 'Matematik',
-      'physics': 'Fizik',
-      'chemistry': 'Kimya',
-      'biology': 'Biyoloji',
-      'economics': 'Ekonomi',
-      'business-administration': 'İşletme',
-      'management': 'Yönetim',
+  // Fetch instructors by department from API (with Turkish-English normalization on backend)
+  const fetchInstructorsByDepartment = async (department: string): Promise<Staff[]> => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}:8002/internal/staff/instructors?department=${encodeURIComponent(department)}`
+      )
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+      const instructors = data.data || []
+      console.log(`[Advisors] Fetched ${instructors.length} instructors for department: ${department}`)
+      return instructors
+    } catch (err) {
+      console.error('Error fetching instructors by department:', err)
+      // Fallback to client-side filtering
+      return staffList.filter((staff) => staff.department === department)
     }
-    return mapping[deptCode] || deptCode
   }
+
+  // Helper: Get advisors for a specific department (uses API with caching)
+  const getAdvisorsForDepartment = (department: string) => {
+    // If we have department-specific instructors loaded, use them
+    if (departmentInstructors.length > 0 && assigningStudent?.department === department) {
+      return departmentInstructors
+    }
+    // Fallback to all staff if no filter or loading
+    if (!department) return staffList
+    return staffList
+  }
+
+  // Load instructors when assigning student changes
+  useEffect(() => {
+    if (assigningStudent?.department) {
+      setLoadingInstructors(true)
+      fetchInstructorsByDepartment(assigningStudent.department)
+        .then((instructors) => {
+          setDepartmentInstructors(instructors.length > 0 ? instructors : staffList)
+        })
+        .finally(() => {
+          setLoadingInstructors(false)
+        })
+    } else {
+      setDepartmentInstructors([])
+    }
+  }, [assigningStudent])
+
+
 
   return (
     <div className="container mx-auto py-10">
@@ -475,7 +524,7 @@ export default function AdvisorManagementPage() {
                         <SelectContent>
                           {getDepartmentsForFaculty(bulkSelectedFaculty).map((dept) => (
                             <SelectItem key={dept} value={dept}>
-                              {getDepartmentDisplayName(dept)}
+                              {dept}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -617,8 +666,6 @@ export default function AdvisorManagementPage() {
                         setIsAssignOpen(open)
                         if (!open) {
                           setAssigningStudent(null)
-                          setSelectedFaculty('')
-                          setSelectedDepartment('')
                           setSelectedAdvisorId('')
                         }
                       }}>
@@ -628,8 +675,6 @@ export default function AdvisorManagementPage() {
                             size="sm"
                             onClick={() => {
                               setAssigningStudent(student)
-                              setSelectedFaculty('')
-                              setSelectedDepartment('')
                               setSelectedAdvisorId('')
                             }}
                           >
@@ -644,71 +689,51 @@ export default function AdvisorManagementPage() {
                               {student.first_name} {student.last_name} için danışman seçin
                             </DialogDescription>
                           </DialogHeader>
-                          <form onSubmit={handleAssignAdvisor} className="space-y-4">
-                            <div>
-                              <Label htmlFor="faculty">Fakülte</Label>
-                              <Select
-                                value={selectedFaculty}
-                                onValueChange={(value) => {
-                                  setSelectedFaculty(value)
-                                  setSelectedDepartment('')
-                                  setSelectedAdvisorId('')
-                                }}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Fakülte seçin" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {getUniqueFaculties().map((faculty) => (
-                                    <SelectItem key={faculty} value={faculty}>
-                                      {faculty}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            {selectedFaculty && (
-                              <div>
-                                <Label htmlFor="department">Bölüm</Label>
-                                <Select
-                                  value={selectedDepartment}
-                                  onValueChange={(value) => {
-                                    setSelectedDepartment(value)
-                                    setSelectedAdvisorId('')
-                                  }}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Bölüm seçin" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {getDepartmentsForFaculty(selectedFaculty).map((dept) => (
-                                      <SelectItem key={dept} value={dept}>
-                                        {getDepartmentDisplayName(dept)}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                            <form onSubmit={handleAssignAdvisor} className="space-y-4">
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                  <Label className="text-muted-foreground text-xs">Fakülte</Label>
+                                  <div className="font-medium text-sm">{student.faculty || '-'}</div>
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-muted-foreground text-xs">Bölüm</Label>
+                                  <div className="font-medium text-sm">{student.department || '-'}</div>
+                                </div>
                               </div>
-                            )}
 
-                            {selectedDepartment && (
                               <div>
-                                <Label htmlFor="advisor">Danışman</Label>
-                                <Select value={selectedAdvisorId} onValueChange={setSelectedAdvisorId}>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Danışman seçin" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {getAdvisorsForDepartment(selectedDepartment).map((staff) => (
-                                      <SelectItem key={staff.id} value={staff.id}>
-                                        {staff.first_name} {staff.last_name}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                                <Label htmlFor="advisor">
+                                  Danışman Seçin
+                                  {loadingInstructors && (
+                                    <Loader2 className="ml-2 h-4 w-4 animate-spin inline" />
+                                  )}
+                                </Label>
+                                {loadingInstructors ? (
+                                  <div className="mt-1.5 p-2 border rounded-md text-sm text-muted-foreground">
+                                    Danışmanlar yükleniyor...
+                                  </div>
+                                ) : (
+                                  <>
+                                    <Select value={selectedAdvisorId} onValueChange={setSelectedAdvisorId}>
+                                      <SelectTrigger className="mt-1.5">
+                                        <SelectValue placeholder="Danışman seçin" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {departmentInstructors.map((staff) => (
+                                          <SelectItem key={staff.id} value={staff.id}>
+                                            {staff.first_name} {staff.last_name} {staff.department !== student.department ? `(${staff.department})` : ''}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                    {departmentInstructors.length > 0 && (
+                                      <p className="mt-1 text-xs text-green-600">
+                                        {departmentInstructors.length} danışman bulundu
+                                      </p>
+                                    )}
+                                  </>
+                                )}
                               </div>
-                            )}
 
                             <div className="flex justify-end space-x-2">
                               <Button
@@ -716,8 +741,6 @@ export default function AdvisorManagementPage() {
                                 variant="outline"
                                 onClick={() => {
                                   setIsAssignOpen(false)
-                                  setSelectedFaculty('')
-                                  setSelectedDepartment('')
                                   setSelectedAdvisorId('')
                                 }}
                               >

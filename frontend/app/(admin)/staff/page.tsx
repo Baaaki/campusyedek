@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { staffApi } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,7 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, Pencil, Trash2, ArrowUpDown, ArrowUp, ArrowDown, Check, ChevronsUpDown } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -29,6 +29,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { mockFaculties } from "@/mock_data/catalog";
+import { cn } from "@/lib/utils";
 
 interface Staff {
   id: string;
@@ -36,6 +51,7 @@ interface Staff {
   first_name: string;
   last_name: string;
   role: string;
+  faculty: string;
   department: string;
   phone: string;
   office_location: string;
@@ -79,7 +95,12 @@ export default function StaffPage() {
   const [sortField, setSortField] = useState<SortField>('first_name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
-  // Form states
+  // UI state for faculty/department selection (faculty is only for filtering, not sent to backend)
+  const [selectedFaculty, setSelectedFaculty] = useState("");
+  const [facultyOpen, setFacultyOpen] = useState(false);
+  const [departmentOpen, setDepartmentOpen] = useState(false);
+
+  // Form states - Backend DTO'ya uygun alanlar
   const [formData, setFormData] = useState({
     email: "",
     first_name: "",
@@ -89,6 +110,13 @@ export default function StaffPage() {
     phone: "",
     office_location: "",
   });
+
+  // Filtered departments based on selected faculty
+  const filteredDepartments = useMemo(() => {
+    if (!selectedFaculty) return [];
+    const faculty = mockFaculties.find(f => f.name === selectedFaculty);
+    return faculty?.departments || [];
+  }, [selectedFaculty]);
 
   // Update form for edit - tüm alanlar düzenlenebilir
   const [updateFormData, setUpdateFormData] = useState({
@@ -161,7 +189,22 @@ export default function StaffPage() {
     setError("");
 
     try {
-      await staffApi.post("", { json: formData });
+      // Backend DTO'ya uygun payload - sadece kabul edilen alanlar
+      const payload = {
+        email: formData.email,
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        role: formData.role,
+        department: formData.department,
+        phone: formData.phone,
+        office_location: formData.office_location,
+      };
+      
+      console.log("[Staff] Creating staff with payload:", payload);
+      
+      const response = await staffApi.post("", { json: payload }).json();
+      console.log("[Staff] Create response:", response);
+      
       setCreateDialogOpen(false);
       setFormData({
         email: "",
@@ -172,9 +215,23 @@ export default function StaffPage() {
         phone: "",
         office_location: "",
       });
+      setSelectedFaculty("");
       fetchStaff(page);
     } catch (err: any) {
-      setError(err.message || "Failed to create staff");
+      console.error("[Staff] Create error:", err);
+      // Try to get error message from response
+      let errorMessage = "Failed to create staff";
+      if (err.response) {
+        try {
+          const errorBody = await err.response.json();
+          errorMessage = errorBody.message || errorBody.error || errorMessage;
+        } catch {
+          errorMessage = err.message || errorMessage;
+        }
+      } else {
+        errorMessage = err.message || errorMessage;
+      }
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -196,7 +253,11 @@ export default function StaffPage() {
         office_location: updateFormData.office_location,
       };
 
-      await staffApi.put(editingStaff.id, { json: payload });
+      console.log("[Staff] Updating staff with payload:", payload);
+      
+      const response = await staffApi.put(editingStaff.id, { json: payload }).json();
+      console.log("[Staff] Update response:", response);
+      
       setEditDialogOpen(false);
       setEditingStaff(null);
       setUpdateFormData({
@@ -210,7 +271,19 @@ export default function StaffPage() {
       });
       fetchStaff(page);
     } catch (err: any) {
-      setError(err.message || "Failed to update staff");
+      console.error("[Staff] Update error:", err);
+      let errorMessage = "Failed to update staff";
+      if (err.response) {
+        try {
+          const errorBody = await err.response.json();
+          errorMessage = errorBody.message || errorBody.error || errorMessage;
+        } catch {
+          errorMessage = err.message || errorMessage;
+        }
+      } else {
+        errorMessage = err.message || errorMessage;
+      }
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -224,9 +297,12 @@ export default function StaffPage() {
     setError("");
 
     try {
-      await staffApi.delete(id);
+      console.log("[Staff] Deleting staff:", id);
+      await staffApi.delete(id).json();
+      console.log("[Staff] Delete successful");
       fetchStaff(page);
     } catch (err: any) {
+      console.error("[Staff] Delete error:", err);
       setError(err.message || "Failed to delete staff");
     } finally {
       setLoading(false);
@@ -265,16 +341,16 @@ export default function StaffPage() {
             <DialogTrigger asChild>
               <Button>
                 <Plus className="mr-2 h-4 w-4" />
-                Add New Staff
+                Yeni Personel Ekle
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]">
               <DialogHeader>
-                <DialogTitle>Add New Staff Member</DialogTitle>
+                <DialogTitle>Yeni Personel Ekle</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleCreate} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
+                  <Label htmlFor="email">E-posta *</Label>
                   <Input
                     id="email"
                     type="email"
@@ -287,7 +363,7 @@ export default function StaffPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="first_name">First Name *</Label>
+                    <Label htmlFor="first_name">Ad *</Label>
                     <Input
                       id="first_name"
                       required
@@ -298,7 +374,7 @@ export default function StaffPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="last_name">Last Name *</Label>
+                    <Label htmlFor="last_name">Soyad *</Label>
                     <Input
                       id="last_name"
                       required
@@ -310,7 +386,7 @@ export default function StaffPage() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="role">Role *</Label>
+                  <Label htmlFor="role">Rol *</Label>
                   <Select
                     value={formData.role}
                     onValueChange={(value) =>
@@ -318,7 +394,7 @@ export default function StaffPage() {
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select role" />
+                      <SelectValue placeholder="Rol seçin" />
                     </SelectTrigger>
                     <SelectContent>
                       {ROLE_OPTIONS.map((role) => (
@@ -330,17 +406,94 @@ export default function StaffPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="department">Department</Label>
-                  <Input
-                    id="department"
-                    value={formData.department}
-                    onChange={(e) =>
-                      setFormData({ ...formData, department: e.target.value })
-                    }
-                  />
+                  <Label htmlFor="faculty">Fakülte (filtreleme için)</Label>
+                  <Popover open={facultyOpen} onOpenChange={setFacultyOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={facultyOpen}
+                        className="w-full justify-between"
+                      >
+                        {selectedFaculty || "Fakülte seçin..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Fakülte ara..." />
+                        <CommandList>
+                          <CommandEmpty>Fakülte bulunamadı.</CommandEmpty>
+                          <CommandGroup>
+                            {mockFaculties.map((faculty) => (
+                              <CommandItem
+                                key={faculty.id}
+                                value={faculty.name}
+                                onSelect={() => {
+                                  setSelectedFaculty(selectedFaculty === faculty.name ? "" : faculty.name);
+                                  setFormData({ ...formData, department: "" });
+                                  setFacultyOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={`mr-2 h-4 w-4 ${selectedFaculty === faculty.name ? "opacity-100" : "opacity-0"}`}
+                                />
+                                {faculty.name}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Phone</Label>
+                  <Label htmlFor="department">Bölüm</Label>
+                  <Popover open={departmentOpen} onOpenChange={setDepartmentOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={departmentOpen}
+                        className="w-full justify-between"
+                        disabled={!selectedFaculty}
+                      >
+                        {formData.department || (selectedFaculty ? "Bölüm seçin..." : "Önce fakülte seçin")}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Bölüm ara..." />
+                        <CommandList>
+                          <CommandEmpty>Bölüm bulunamadı.</CommandEmpty>
+                          <CommandGroup>
+                            {filteredDepartments.map((dept) => (
+                              <CommandItem
+                                key={dept.id}
+                                value={dept.name}
+                                onSelect={() => {
+                                  setFormData({
+                                    ...formData,
+                                    department: formData.department === dept.name ? "" : dept.name,
+                                  });
+                                  setDepartmentOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={`mr-2 h-4 w-4 ${formData.department === dept.name ? "opacity-100" : "opacity-0"}`}
+                                />
+                                {dept.name}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Telefon</Label>
                   <Input
                     id="phone"
                     value={formData.phone}
@@ -350,7 +503,7 @@ export default function StaffPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="office_location">Office Location</Label>
+                  <Label htmlFor="office_location">Ofis Konumu</Label>
                   <Input
                     id="office_location"
                     value={formData.office_location}
@@ -364,7 +517,7 @@ export default function StaffPage() {
                 </div>
                 <div className="flex gap-2 pt-4">
                   <Button type="submit" disabled={loading} className="flex-1">
-                    {loading ? "Creating..." : "Create Staff"}
+                    {loading ? "Oluşturuluyor..." : "Personel Oluştur"}
                   </Button>
                   <Button
                     type="button"
@@ -372,7 +525,7 @@ export default function StaffPage() {
                     onClick={() => setCreateDialogOpen(false)}
                     className="flex-1"
                   >
-                    Cancel
+                    İptal
                   </Button>
                 </div>
               </form>

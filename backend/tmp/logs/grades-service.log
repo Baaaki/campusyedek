@@ -1,0 +1,477 @@
+
+  __    _   ___  
+ / /\  | | | |_) 
+/_/--\ |_| |_| \_ v1.63.0, built with Go go1.25.1
+
+watching .
+watching cmd
+watching config
+watching internal
+watching internal/db
+watching internal/dto
+watching internal/errors
+watching internal/handler
+watching internal/repository
+watching internal/service
+watching internal/worker
+watching sql
+watching sql/migrations
+watching sql/queries
+!exclude tmp
+building...
+running...
+08:26:21.174	[34mINFO[0m	cmd/main.go:38	starting grades-service	{"environment": "development", "port": "8007"}
+08:26:21.203	[34mINFO[0m	cmd/main.go:50	database connection established
+08:26:21.204	[34mINFO[0m	rabbitmq/connection.go:37	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+08:26:21.211	[34mINFO[0m	rabbitmq/connection.go:69	rabbitmq connection established
+08:26:21.211	[34mINFO[0m	cmd/main.go:59	RabbitMQ connection established
+08:26:21.212	[34mINFO[0m	cmd/main.go:206	RabbitMQ exchange declared	{"exchange": "grade.events"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (4 handlers)
+[GIN-debug] GET    /api/grades/course/:courseId/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (6 handlers)
+[GIN-debug] GET    /api/grades/course/:courseId/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (6 handlers)
+[GIN-debug] POST   /api/grades/course/:courseId/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (6 handlers)
+[GIN-debug] POST   /api/grades/course/:courseId/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (6 handlers)
+[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (5 handlers)
+[GIN-debug] GET    /api/grades/transcript/:studentId --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (5 handlers)
+08:26:21.212	[34mINFO[0m	cmd/main.go:113	server starting	{"port": "8007"}
+08:26:21.212	[34mINFO[0m	worker/outbox_worker.go:38	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
+08:26:21.212	[34mINFO[0m	worker/event_consumer.go:35	starting event consumer
+08:26:21.213	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:47
+08:26:21.217	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
+08:26:21.219	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
+08:26:21.221	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
+08:26:21.222	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
+08:26:21.222	[34mINFO[0m	worker/event_consumer.go:101	event consumer started
+08:26:26.213	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:26:31.212	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:26:36.214	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:26:41.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:26:46.214	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:26:51.214	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:26:56.214	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:27:01.214	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:27:06.214	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:27:11.214	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:27:16.213	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:27:21.213	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:27:26.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:27:31.214	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:27:36.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:27:41.214	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:27:46.214	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:27:51.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:27:56.213	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:28:01.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:28:06.213	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:28:11.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:28:16.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:28:21.213	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:28:26.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:28:31.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:28:36.214	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:28:41.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:28:46.213	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:28:51.213	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:28:56.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:29:01.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:29:06.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:29:11.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:29:16.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:29:21.213	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:29:26.214	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:29:31.214	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:29:36.214	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:29:41.214	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:29:46.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:29:51.214	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:29:56.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:30:01.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:30:06.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:30:11.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:30:16.214	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:30:21.213	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:30:26.214	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:30:31.214	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:30:36.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:30:41.214	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:30:46.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:30:51.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:30:56.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:31:01.214	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:31:06.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:31:11.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:31:16.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:31:21.213	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:31:26.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:31:31.214	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:31:36.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:31:41.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:31:46.214	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:31:51.214	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:31:56.214	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:32:01.214	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:32:06.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:32:11.214	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:32:16.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:32:21.213	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:32:26.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:32:31.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:32:36.213	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:32:41.214	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:32:46.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:32:51.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:32:56.214	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:33:01.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:33:06.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:33:11.213	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:33:16.214	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:33:21.213	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55
+08:33:26.215	[31mERROR[0m	worker/outbox_worker.go:64	failed to get pending outbox events	{"error": "ERROR: relation \"outbox_events\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).processBatch
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:64
+github.com/baaaki/mydreamcampus/grades-service/internal/worker.(*OutboxWorker).Start
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/internal/worker/outbox_worker.go:55

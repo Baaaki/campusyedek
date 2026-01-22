@@ -1,0 +1,30 @@
+
+  __    _   ___  
+ / /\  | | | |_) 
+/_/--\ |_| |_| \_ v1.63.0, built with Go go1.25.1
+
+watching .
+watching bin
+watching cmd
+watching config
+watching internal
+!exclude internal/db
+watching internal/dto
+watching internal/errors
+watching internal/handler
+watching internal/repository
+watching internal/service
+watching internal/worker
+watching sql
+watching sql/migrations
+watching sql/queries
+!exclude tmp
+building...
+running...
+08:26:21.170	[34mINFO[0m	cmd/main.go:39	starting enrollment-service	{"environment": "development", "port": "8005"}
+08:26:21.187	[31mFATAL[0m	cmd/main.go:47	failed to connect to database	{"error": "unable to ping database: failed to connect to `user=postgres database=mydreamcampus_enrollment`: 127.0.0.1:5434 (localhost): server error: FATAL: database \"mydreamcampus_enrollment\" does not exist (SQLSTATE 3D000)"}
+main.main
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/enrollment-service/cmd/main.go:47
+runtime.main
+	/usr/local/go/src/runtime/proc.go:285
+Process Exit with Code: 1

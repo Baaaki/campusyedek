@@ -1,0 +1,258 @@
+.PHONY: dev dev-all stop stop-all logs help \
+        dev-auth dev-staff dev-student dev-course dev-enrollment dev-attendance dev-grades dev-meal \
+        stop-auth stop-staff stop-student stop-course stop-enrollment stop-attendance stop-grades stop-meal \
+        infra infra-down status
+
+# Use bash for proper shell features
+SHELL := /bin/bash
+
+# Get absolute path to backend directory
+BACKEND_DIR := $(shell pwd)
+SERVICES_DIR := $(BACKEND_DIR)/services
+LOG_DIR := $(BACKEND_DIR)/tmp/logs
+
+# Service list
+SERVICES := auth-service staff-service student-service course-catalog-service enrollment-service attendance-service grades-service meal-service
+
+# Colors
+GREEN := \033[0;32m
+RED := \033[0;31m
+YELLOW := \033[0;33m
+BLUE := \033[0;34m
+NC := \033[0m
+
+# ============================================
+# 🚀 MAIN COMMANDS
+# ============================================
+
+# Start all services
+dev: dev-all
+
+dev-all:
+	@mkdir -p $(LOG_DIR)
+	@echo -e "$(GREEN)🚀 Starting all backend services...$(NC)"
+	@for service in $(SERVICES); do \
+		echo -e "$(BLUE)  Starting $$service...$(NC)"; \
+		cd $(SERVICES_DIR)/$$service && nohup air > $(LOG_DIR)/$$service.log 2>&1 & echo $$! > $(LOG_DIR)/$$service.pid; \
+	done
+	@sleep 2
+	@echo ""
+	@echo -e "$(GREEN)✅ All services started!$(NC)"
+	@echo ""
+	@$(MAKE) status --no-print-directory
+
+# Stop all services
+stop: stop-all
+
+stop-all:
+	@echo -e "$(RED)🛑 Stopping all backend services...$(NC)"
+	@for service in $(SERVICES); do \
+		if [ -f $(LOG_DIR)/$$service.pid ]; then \
+			pid=$$(cat $(LOG_DIR)/$$service.pid); \
+			if ps -p $$pid > /dev/null 2>&1; then \
+				kill $$pid 2>/dev/null || true; \
+				echo "  Stopped $$service (PID: $$pid)"; \
+			fi; \
+			rm -f $(LOG_DIR)/$$service.pid; \
+		fi; \
+	done
+	@pkill -f "air" 2>/dev/null || true
+	@echo -e "$(GREEN)✅ All services stopped$(NC)"
+
+# Restart all services
+restart: stop-all dev-all
+
+# Show status of all services
+status:
+	@echo -e "$(BLUE)📊 Backend Services Status:$(NC)"
+	@echo ""
+	@printf "%-25s %-10s %-10s\n" "SERVICE" "STATUS" "PID"
+	@printf "%-25s %-10s %-10s\n" "-------" "------" "---"
+	@for service in $(SERVICES); do \
+		if [ -f $(LOG_DIR)/$$service.pid ]; then \
+			pid=$$(cat $(LOG_DIR)/$$service.pid); \
+			if ps -p $$pid > /dev/null 2>&1; then \
+				printf "%-25s $(GREEN)%-10s$(NC) %-10s\n" "$$service" "running" "$$pid"; \
+			else \
+				printf "%-25s $(RED)%-10s$(NC) %-10s\n" "$$service" "stopped" "-"; \
+			fi; \
+		else \
+			printf "%-25s $(YELLOW)%-10s$(NC) %-10s\n" "$$service" "not started" "-"; \
+		fi; \
+	done
+	@echo ""
+
+# ============================================
+# 📝 LOGS
+# ============================================
+
+logs:
+	@tail -f $(LOG_DIR)/*.log
+
+logs-auth:
+	@tail -f $(LOG_DIR)/auth-service.log
+
+logs-staff:
+	@tail -f $(LOG_DIR)/staff-service.log
+
+logs-student:
+	@tail -f $(LOG_DIR)/student-service.log
+
+logs-course:
+	@tail -f $(LOG_DIR)/course-catalog-service.log
+
+logs-enrollment:
+	@tail -f $(LOG_DIR)/enrollment-service.log
+
+logs-attendance:
+	@tail -f $(LOG_DIR)/attendance-service.log
+
+logs-grades:
+	@tail -f $(LOG_DIR)/grades-service.log
+
+logs-meal:
+	@tail -f $(LOG_DIR)/meal-service.log
+
+# ============================================
+# 🔧 INDIVIDUAL SERVICES
+# ============================================
+
+dev-auth:
+	@mkdir -p $(LOG_DIR)
+	@echo -e "$(GREEN)🚀 Starting auth-service...$(NC)"
+	@cd $(SERVICES_DIR)/auth-service && nohup air > $(LOG_DIR)/auth-service.log 2>&1 & echo $$! > $(LOG_DIR)/auth-service.pid
+	@echo -e "$(GREEN)✅ auth-service started (logs: make logs-auth)$(NC)"
+
+dev-staff:
+	@mkdir -p $(LOG_DIR)
+	@echo -e "$(GREEN)🚀 Starting staff-service...$(NC)"
+	@cd $(SERVICES_DIR)/staff-service && nohup air > $(LOG_DIR)/staff-service.log 2>&1 & echo $$! > $(LOG_DIR)/staff-service.pid
+	@echo -e "$(GREEN)✅ staff-service started (logs: make logs-staff)$(NC)"
+
+dev-student:
+	@mkdir -p $(LOG_DIR)
+	@echo -e "$(GREEN)🚀 Starting student-service...$(NC)"
+	@cd $(SERVICES_DIR)/student-service && nohup air > $(LOG_DIR)/student-service.log 2>&1 & echo $$! > $(LOG_DIR)/student-service.pid
+	@echo -e "$(GREEN)✅ student-service started (logs: make logs-student)$(NC)"
+
+dev-course:
+	@mkdir -p $(LOG_DIR)
+	@echo -e "$(GREEN)🚀 Starting course-catalog-service...$(NC)"
+	@cd $(SERVICES_DIR)/course-catalog-service && nohup air > $(LOG_DIR)/course-catalog-service.log 2>&1 & echo $$! > $(LOG_DIR)/course-catalog-service.pid
+	@echo -e "$(GREEN)✅ course-catalog-service started (logs: make logs-course)$(NC)"
+
+dev-enrollment:
+	@mkdir -p $(LOG_DIR)
+	@echo -e "$(GREEN)🚀 Starting enrollment-service...$(NC)"
+	@cd $(SERVICES_DIR)/enrollment-service && nohup air > $(LOG_DIR)/enrollment-service.log 2>&1 & echo $$! > $(LOG_DIR)/enrollment-service.pid
+	@echo -e "$(GREEN)✅ enrollment-service started (logs: make logs-enrollment)$(NC)"
+
+dev-attendance:
+	@mkdir -p $(LOG_DIR)
+	@echo -e "$(GREEN)🚀 Starting attendance-service...$(NC)"
+	@cd $(SERVICES_DIR)/attendance-service && nohup air > $(LOG_DIR)/attendance-service.log 2>&1 & echo $$! > $(LOG_DIR)/attendance-service.pid
+	@echo -e "$(GREEN)✅ attendance-service started (logs: make logs-attendance)$(NC)"
+
+dev-grades:
+	@mkdir -p $(LOG_DIR)
+	@echo -e "$(GREEN)🚀 Starting grades-service...$(NC)"
+	@cd $(SERVICES_DIR)/grades-service && nohup air > $(LOG_DIR)/grades-service.log 2>&1 & echo $$! > $(LOG_DIR)/grades-service.pid
+	@echo -e "$(GREEN)✅ grades-service started (logs: make logs-grades)$(NC)"
+
+dev-meal:
+	@mkdir -p $(LOG_DIR)
+	@echo -e "$(GREEN)🚀 Starting meal-service...$(NC)"
+	@cd $(SERVICES_DIR)/meal-service && nohup air > $(LOG_DIR)/meal-service.log 2>&1 & echo $$! > $(LOG_DIR)/meal-service.pid
+	@echo -e "$(GREEN)✅ meal-service started (logs: make logs-meal)$(NC)"
+
+# Stop individual services
+stop-auth:
+	@if [ -f $(LOG_DIR)/auth-service.pid ]; then kill $$(cat $(LOG_DIR)/auth-service.pid) 2>/dev/null || true; rm -f $(LOG_DIR)/auth-service.pid; fi
+	@echo -e "$(RED)🛑 auth-service stopped$(NC)"
+
+stop-staff:
+	@if [ -f $(LOG_DIR)/staff-service.pid ]; then kill $$(cat $(LOG_DIR)/staff-service.pid) 2>/dev/null || true; rm -f $(LOG_DIR)/staff-service.pid; fi
+	@echo -e "$(RED)🛑 staff-service stopped$(NC)"
+
+stop-student:
+	@if [ -f $(LOG_DIR)/student-service.pid ]; then kill $$(cat $(LOG_DIR)/student-service.pid) 2>/dev/null || true; rm -f $(LOG_DIR)/student-service.pid; fi
+	@echo -e "$(RED)🛑 student-service stopped$(NC)"
+
+stop-course:
+	@if [ -f $(LOG_DIR)/course-catalog-service.pid ]; then kill $$(cat $(LOG_DIR)/course-catalog-service.pid) 2>/dev/null || true; rm -f $(LOG_DIR)/course-catalog-service.pid; fi
+	@echo -e "$(RED)🛑 course-catalog-service stopped$(NC)"
+
+stop-enrollment:
+	@if [ -f $(LOG_DIR)/enrollment-service.pid ]; then kill $$(cat $(LOG_DIR)/enrollment-service.pid) 2>/dev/null || true; rm -f $(LOG_DIR)/enrollment-service.pid; fi
+	@echo -e "$(RED)🛑 enrollment-service stopped$(NC)"
+
+stop-attendance:
+	@if [ -f $(LOG_DIR)/attendance-service.pid ]; then kill $$(cat $(LOG_DIR)/attendance-service.pid) 2>/dev/null || true; rm -f $(LOG_DIR)/attendance-service.pid; fi
+	@echo -e "$(RED)🛑 attendance-service stopped$(NC)"
+
+stop-grades:
+	@if [ -f $(LOG_DIR)/grades-service.pid ]; then kill $$(cat $(LOG_DIR)/grades-service.pid) 2>/dev/null || true; rm -f $(LOG_DIR)/grades-service.pid; fi
+	@echo -e "$(RED)🛑 grades-service stopped$(NC)"
+
+stop-meal:
+	@if [ -f $(LOG_DIR)/meal-service.pid ]; then kill $$(cat $(LOG_DIR)/meal-service.pid) 2>/dev/null || true; rm -f $(LOG_DIR)/meal-service.pid; fi
+	@echo -e "$(RED)🛑 meal-service stopped$(NC)"
+
+# ============================================
+# 🏗️ INFRASTRUCTURE SHORTCUTS
+# ============================================
+
+infra:
+	@echo -e "$(GREEN)🏗️ Starting infrastructure...$(NC)"
+	@cd $(BACKEND_DIR)/infrastructure && $(MAKE) up
+
+infra-down:
+	@echo -e "$(RED)🏗️ Stopping infrastructure...$(NC)"
+	@cd $(BACKEND_DIR)/infrastructure && $(MAKE) down
+
+# ============================================
+# 🆘 HELP
+# ============================================
+
+help:
+	@echo ""
+	@echo -e "$(BLUE)╔════════════════════════════════════════════════════════════════╗$(NC)"
+	@echo -e "$(BLUE)║           MyDreamCampus Backend Makefile Commands              ║$(NC)"
+	@echo -e "$(BLUE)╚════════════════════════════════════════════════════════════════╝$(NC)"
+	@echo ""
+	@echo -e "$(GREEN)🚀 Main Commands:$(NC)"
+	@echo "  make dev             Start all services (alias: make dev-all)"
+	@echo "  make stop            Stop all services (alias: make stop-all)"
+	@echo "  make restart         Restart all services"
+	@echo "  make status          Show status of all services"
+	@echo ""
+	@echo -e "$(YELLOW)📝 Log Commands:$(NC)"
+	@echo "  make logs            Tail all service logs"
+	@echo "  make logs-auth       Tail auth-service logs"
+	@echo "  make logs-staff      Tail staff-service logs"
+	@echo "  make logs-student    Tail student-service logs"
+	@echo "  make logs-course     Tail course-catalog-service logs"
+	@echo "  make logs-enrollment Tail enrollment-service logs"
+	@echo "  make logs-attendance Tail attendance-service logs"
+	@echo "  make logs-grades     Tail grades-service logs"
+	@echo "  make logs-meal       Tail meal-service logs"
+	@echo ""
+	@echo -e "$(BLUE)🔧 Individual Services:$(NC)"
+	@echo "  make dev-auth        Start auth-service"
+	@echo "  make dev-staff       Start staff-service"
+	@echo "  make dev-student     Start student-service"
+	@echo "  make dev-course      Start course-catalog-service"
+	@echo "  make dev-enrollment  Start enrollment-service"
+	@echo "  make dev-attendance  Start attendance-service"
+	@echo "  make dev-grades      Start grades-service"
+	@echo "  make dev-meal        Start meal-service"
+	@echo ""
+	@echo -e "$(RED)🛑 Stop Individual:$(NC)"
+	@echo "  make stop-auth       Stop auth-service"
+	@echo "  make stop-staff      Stop staff-service"
+	@echo "  ... (same pattern for other services)"
+	@echo ""
+	@echo -e "$(GREEN)🏗️ Infrastructure:$(NC)"
+	@echo "  make infra           Start infrastructure (postgres, redis, rabbitmq)"
+	@echo "  make infra-down      Stop infrastructure"
+	@echo ""

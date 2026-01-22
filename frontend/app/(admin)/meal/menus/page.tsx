@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import ky from 'ky';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Cafeteria } from '@/lib/types';
 import {
   Save,
@@ -65,6 +67,90 @@ function MealAutocomplete({ value, onChange, placeholder, categoryFilter }: Meal
     setIsOpen(true);
     // Manuel giriş durumunda kalori 0 olur (listeden seçilmezse)
     onChange(newValue, getMealCalories(newValue));
+  };
+
+  const handleClear = () => {
+    setSearchTerm('');
+    onChange('', 0);
+  };
+
+  return (
+    <div ref={containerRef} className="relative">
+      <div className="flex items-center">
+        <Input
+          value={searchTerm}
+          onChange={handleInputChange}
+          onFocus={() => setIsOpen(true)}
+          placeholder={placeholder}
+          className="h-8 text-xs text-center uppercase border-0 bg-transparent focus:bg-white dark:focus:bg-gray-800 pr-6"
+        />
+        {searchTerm && (
+          <button
+            onClick={handleClear}
+            className="absolute right-1 p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            type="button"
+          >
+            <span className="text-xs">✕</span>
+          </button>
+        )}
+      </div>
+      {isOpen && filteredMeals.length > 0 && (
+        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg max-h-48 overflow-y-auto">
+          {filteredMeals.map((meal, idx) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => handleSelect(meal)}
+              className="w-full px-2 py-1.5 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 flex justify-between items-center"
+            >
+              <span className="uppercase">{meal.name}</span>
+              <span className="text-gray-400 text-[10px]">{meal.calories} kcal</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Vegan Autocomplete Combobox Component
+function VeganMealAutocomplete({ value, onChange, placeholder, categoryFilter }: MealAutocompleteProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState(value);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setSearchTerm(value);
+  }, [value]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Vegan veritabanından filtreleme
+  const filteredMeals = veganMealDatabase.filter(meal => {
+    const matchesSearch = meal.name.includes(searchTerm.toUpperCase());
+    const matchesCategory = !categoryFilter || meal.category === categoryFilter;
+    return matchesSearch && matchesCategory;
+  }).slice(0, 8);
+
+  const handleSelect = (meal: MealItem) => {
+    setSearchTerm(meal.name);
+    onChange(meal.name, meal.calories);
+    setIsOpen(false);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value.toUpperCase();
+    setSearchTerm(newValue);
+    setIsOpen(true);
+    onChange(newValue, getVeganMealCalories(newValue));
   };
 
   const handleClear = () => {
@@ -295,9 +381,86 @@ const mealDatabase: MealItem[] = [
   { name: 'EKMEK', calories: 136, category: 'other' },
 ];
 
+// Vegan yemek veritabanı
+const veganMealDatabase: MealItem[] = [
+  // VEGAN ÇORBALAR
+  { name: 'MERCİMEK ÇORBASI', calories: 120, category: 'soup' },
+  { name: 'SEBZE ÇORBASI', calories: 75, category: 'soup' },
+  { name: 'DOMATES ÇORBASI', calories: 85, category: 'soup' },
+  { name: 'EZOGELİN ÇORBASI', calories: 130, category: 'soup' },
+  { name: 'TARHANA ÇORBASI (VEGAN)', calories: 100, category: 'soup' },
+  { name: 'BALKABAGI ÇORBASI', calories: 95, category: 'soup' },
+  { name: 'BROKOLI ÇORBASI', calories: 80, category: 'soup' },
+  { name: 'ISPANAK ÇORBASI', calories: 70, category: 'soup' },
+  { name: 'KARNABAHAR ÇORBASI', calories: 65, category: 'soup' },
+  { name: 'PATATES ÇORBASI', calories: 115, category: 'soup' },
+  { name: 'HAVUÇ ÇORBASI', calories: 60, category: 'soup' },
+  { name: 'MANTAR ÇORBASI (VEGAN)', calories: 90, category: 'soup' },
+  // VEGAN ANA YEMEKLER
+  { name: 'NOHUT YEMEĞİ', calories: 260, category: 'main' },
+  { name: 'KURU FASULYE', calories: 280, category: 'main' },
+  { name: 'BARBUNYA PİLAKİ', calories: 245, category: 'main' },
+  { name: 'MERCİMEK KÖFTE', calories: 180, category: 'main' },
+  { name: 'ZEYTİNYAĞLI FASULYE', calories: 150, category: 'main' },
+  { name: 'ZEYTİNYAĞLI ENGINAR', calories: 140, category: 'main' },
+  { name: 'ZEYTİNYAĞLI BAKLA', calories: 160, category: 'main' },
+  { name: 'ZEYTİNYAĞLI PAZI', calories: 100, category: 'main' },
+  { name: 'İMAM BAYILDI', calories: 290, category: 'main' },
+  { name: 'TÜRLÜ', calories: 220, category: 'main' },
+  { name: 'SEBZE GÜVEÇ', calories: 180, category: 'main' },
+  { name: 'PATLICAN MUSAKKA (VEGAN)', calories: 200, category: 'main' },
+  { name: 'KABAK DOLMASI', calories: 170, category: 'main' },
+  { name: 'BİBER DOLMASI', calories: 180, category: 'main' },
+  { name: 'YAPRAK SARMASI', calories: 190, category: 'main' },
+  { name: 'MANTARLI SEBZE SOTE', calories: 150, category: 'main' },
+  { name: 'SEBZELI NOHUT', calories: 240, category: 'main' },
+  { name: 'VEGAN KÖFTE', calories: 200, category: 'main' },
+  // VEGAN YAN YEMEKLER
+  { name: 'PİRİNÇ PİLAVI', calories: 200, category: 'side' },
+  { name: 'BULGUR PİLAVI', calories: 180, category: 'side' },
+  { name: 'SOSLU MAKARNA', calories: 240, category: 'side' },
+  { name: 'ISPANAK', calories: 80, category: 'side' },
+  { name: 'ZEYTİNYAĞLI YEŞİL FASULYE', calories: 120, category: 'side' },
+  { name: 'HAVUÇLU BEZELYE', calories: 130, category: 'side' },
+  { name: 'PATATES PÜRESİ (VEGAN)', calories: 160, category: 'side' },
+  { name: 'FIRINDA PATATES', calories: 200, category: 'side' },
+  { name: 'KABAK MÜCVER (VEGAN)', calories: 180, category: 'side' },
+  { name: 'ZEYTİNYAĞLI PATLICAN', calories: 150, category: 'side' },
+  { name: 'KINOA SALATASI', calories: 170, category: 'side' },
+  // VEGAN TATLILAR
+  { name: 'MEYVE', calories: 60, category: 'dessert' },
+  { name: 'MEVSİM MEYVE', calories: 65, category: 'dessert' },
+  { name: 'KOMPOSTO', calories: 80, category: 'dessert' },
+  { name: 'AŞURE', calories: 250, category: 'dessert' },
+  { name: 'KABAK TATLISI', calories: 180, category: 'dessert' },
+  { name: 'AYVA TATLISI', calories: 160, category: 'dessert' },
+  { name: 'İNCİR TATLISI', calories: 170, category: 'dessert' },
+  { name: 'HURMA', calories: 100, category: 'dessert' },
+  { name: 'CEVİZLİ İNCİR', calories: 150, category: 'dessert' },
+  { name: 'MEYVE SALATASI', calories: 90, category: 'dessert' },
+  // VEGAN DİĞER
+  { name: 'ÇOBAN SALATA', calories: 70, category: 'other' },
+  { name: 'MEVSİM SALATA', calories: 50, category: 'other' },
+  { name: 'AKDENIZ SALATASI', calories: 90, category: 'other' },
+  { name: 'ROKA SALATA', calories: 45, category: 'other' },
+  { name: 'HUMUS', calories: 130, category: 'other' },
+  { name: 'FAVA', calories: 120, category: 'other' },
+  { name: 'TURŞU', calories: 25, category: 'other' },
+  { name: 'ZEYTİN', calories: 50, category: 'other' },
+  { name: 'ACILI EZME', calories: 70, category: 'other' },
+  { name: 'PATLICAN SALATASI', calories: 100, category: 'other' },
+  { name: 'EKMEK', calories: 136, category: 'other' },
+];
+
 // Yemek adından kalori bul
 const getMealCalories = (mealName: string): number => {
   const meal = mealDatabase.find(m => m.name === mealName.toUpperCase());
+  return meal?.calories || 0;
+};
+
+// Vegan yemek adından kalori bul
+const getVeganMealCalories = (mealName: string): number => {
+  const meal = veganMealDatabase.find(m => m.name === mealName.toUpperCase());
   return meal?.calories || 0;
 };
 
@@ -331,6 +494,10 @@ const calcCalories = (items: string[]): number => {
   return items.reduce((total, item) => total + getMealCalories(item), 0);
 };
 
+const calcVeganCalories = (items: string[]): number => {
+  return items.reduce((total, item) => total + getVeganMealCalories(item), 0);
+};
+
 // Örnek veri - DEU formatında (kaloriler otomatik hesaplanır)
 const sampleMenuItems = {
   monday: ['YEŞİL MERCİMEK ÇORBASI', 'KURU FASULYE', 'PİRİNÇ PİLAVI', 'SÜTLAÇ', 'TURŞU'] as [string, string, string, string, string],
@@ -348,12 +515,37 @@ const sampleWeeklyMenu: WeeklyMenu = {
   friday: { items: sampleMenuItems.friday, calories: calcCalories(sampleMenuItems.friday) },
 };
 
+// Vegan örnek menü
+const sampleVeganMenuItems = {
+  monday: ['MERCİMEK ÇORBASI', 'NOHUT YEMEĞİ', 'BULGUR PİLAVI', 'MEYVE', 'HUMUS'] as [string, string, string, string, string],
+  tuesday: ['SEBZE ÇORBASI', 'ZEYTİNYAĞLI FASULYE', 'PİRİNÇ PİLAVI', 'KOMPOSTO', 'ÇOBAN SALATA'] as [string, string, string, string, string],
+  wednesday: ['DOMATES ÇORBASI', 'İMAM BAYILDI', 'SOSLU MAKARNA', 'KABAK TATLISI', 'TURŞU'] as [string, string, string, string, string],
+  thursday: ['', '', '', '', ''] as [string, string, string, string, string],
+  friday: ['EZOGELİN ÇORBASI', 'SEBZE GÜVEÇ', 'ZEYTİNYAĞLI YEŞİL FASULYE', 'MEVSİM MEYVE', 'FAVA'] as [string, string, string, string, string],
+};
+
+const sampleVeganWeeklyMenu: WeeklyMenu = {
+  monday: { items: sampleVeganMenuItems.monday, calories: calcVeganCalories(sampleVeganMenuItems.monday) },
+  tuesday: { items: sampleVeganMenuItems.tuesday, calories: calcVeganCalories(sampleVeganMenuItems.tuesday) },
+  wednesday: { items: sampleVeganMenuItems.wednesday, calories: calcVeganCalories(sampleVeganMenuItems.wednesday) },
+  thursday: { items: sampleVeganMenuItems.thursday, calories: calcVeganCalories(sampleVeganMenuItems.thursday) },
+  friday: { items: sampleVeganMenuItems.friday, calories: calcVeganCalories(sampleVeganMenuItems.friday) },
+};
+
 export default function MenusPage() {
+  const [activeTab, setActiveTab] = useState<string>('normal');
   const [selectedCafeteria, setSelectedCafeteria] = useState<string>('1');
   const [selectedMonth, setSelectedMonth] = useState<string>('01');
   const [selectedYear, setSelectedYear] = useState<string>('2026');
   const [weeklyMenus, setWeeklyMenus] = useState<WeeklyMenu[]>([
     sampleWeeklyMenu,
+    getEmptyWeeklyMenu(),
+    getEmptyWeeklyMenu(),
+    getEmptyWeeklyMenu(),
+    getEmptyWeeklyMenu(),
+  ]);
+  const [veganWeeklyMenus, setVeganWeeklyMenus] = useState<WeeklyMenu[]>([
+    sampleVeganWeeklyMenu,
     getEmptyWeeklyMenu(),
     getEmptyWeeklyMenu(),
     getEmptyWeeklyMenu(),
@@ -397,10 +589,10 @@ export default function MenusPage() {
   };
 
   // Günün toplam kalorisini hesapla
-  const calculateDayCalories = (items: string[]): number => {
+  const calculateDayCalories = (items: string[], isVegan = false): number => {
     return items.reduce((total, item) => {
       if (!item) return total;
-      return total + getMealCalories(item);
+      return total + (isVegan ? getVeganMealCalories(item) : getMealCalories(item));
     }, 0);
   };
 
@@ -426,19 +618,54 @@ export default function MenusPage() {
     });
   };
 
+  // Vegan menü öğesi güncelle
+  const updateVeganMenuItem = (weekIndex: number, day: string, itemIndex: number, value: string) => {
+    setVeganWeeklyMenus(prev => {
+      const updated = [...prev];
+      const newItems = [...updated[weekIndex][day].items] as [string, string, string, string, string];
+      newItems[itemIndex] = value.toUpperCase();
+
+      // Otomatik kalori hesapla
+      const totalCalories = calculateDayCalories(newItems, true);
+
+      updated[weekIndex] = {
+        ...updated[weekIndex],
+        [day]: {
+          ...updated[weekIndex][day],
+          items: newItems,
+          calories: totalCalories,
+        },
+      };
+      return updated;
+    });
+  };
+
   // Kaydet
   const handleSave = async () => {
     setIsSubmitting(true);
-    // TODO: API'ye gönder
-    console.log('Kaydedilen menü:', {
+    
+    const payload = {
       cafeteria_id: selectedCafeteria,
       month: selectedMonth,
       year: selectedYear,
-      menus: weeklyMenus,
-    });
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setIsSubmitting(false);
-    alert('Menü başarıyla kaydedildi!');
+      normalMenus: weeklyMenus,
+      veganMenus: veganWeeklyMenus,
+    };
+
+    try {
+      // Mock API URL'ye POST isteği
+      await ky.post('https://jsonplaceholder.typicode.com/posts', {
+        json: payload,
+      }).json();
+      
+      console.log('Menü başarıyla gönderildi:', payload);
+      alert('Menü başarıyla kaydedildi!');
+    } catch (error) {
+      console.error('Menü kaydedilirken hata oluştu:', error);
+      alert('Menü kaydedilirken bir hata oluştu!');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const selectedMonthLabel = months.find(m => m.value === selectedMonth)?.label || '';
@@ -514,86 +741,177 @@ export default function MenusPage() {
         </CardContent>
       </Card>
 
-      {/* Menü Tablosu */}
-      <Card className="dark:bg-gray-900 dark:border-gray-800 overflow-hidden">
-        <CardHeader className="bg-blue-900 text-white text-center py-4">
-          <div className="flex items-center justify-center gap-4">
-            <img src="/deu-logo.png" alt="DEU" className="h-12 w-12 hidden" />
-            <div>
-              <h2 className="text-lg font-bold">DOKUZ EYLÜL ÜNİVERSİTESİ</h2>
-              <h3 className="text-sm">SAĞLIK KÜLTÜR VE SPOR DAİRE BAŞKANLIĞI</h3>
-              <h4 className="text-base font-semibold mt-1">
-                {selectedYear} {selectedMonthLabel.toUpperCase()} AYI - YEMEK LİSTESİ
-              </h4>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          {weeklyMenus.map((weekMenu, weekIndex) => {
-            const weekDates = getWeekDates(weekIndex);
-            return (
-              <div key={weekIndex} className="border-b dark:border-gray-700 last:border-b-0">
-                {/* Hafta tablosu */}
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr className="bg-yellow-100 dark:bg-yellow-900/30">
-                        {dayNames.map((day, idx) => (
-                          <th
-                            key={day.key}
-                            className="border border-gray-300 dark:border-gray-600 p-2 text-center text-sm font-semibold text-blue-900 dark:text-blue-300 min-w-[180px]"
-                          >
-                            <div>{weekDates[idx]}</div>
-                            <div className="text-xs font-normal text-gray-600 dark:text-gray-400">
-                              {day.label}
-                            </div>
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {/* Sabit 5 yemek satırı */}
-                      {mealCategories.map((category, rowIdx) => (
-                        <tr key={rowIdx}>
-                          {dayNames.map(day => (
-                            <td
-                              key={day.key}
-                              className="border border-gray-300 dark:border-gray-600 p-1"
-                            >
-                              <MealAutocomplete
-                                value={weekMenu[day.key]?.items[rowIdx] || ''}
-                                onChange={(value) => updateMenuItem(weekIndex, day.key, rowIdx, value)}
-                                placeholder={category}
-                                categoryFilter={getCategoryByIndex(rowIdx)}
-                              />
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                      {/* Kalori satırı - otomatik hesaplanıyor */}
-                      <tr className="bg-gray-50 dark:bg-gray-800">
-                        {dayNames.map(day => (
-                          <td
-                            key={day.key}
-                            className="border border-gray-300 dark:border-gray-600 p-2 text-center"
-                          >
-                            <div className="flex items-center justify-center gap-1">
-                              <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">
-                                {weekMenu[day.key]?.calories || 0}
-                              </span>
-                              <span className="text-xs text-gray-500">kcal</span>
-                            </div>
-                          </td>
-                        ))}
-                      </tr>
-                    </tbody>
-                  </table>
+      {/* Tabs for Normal and Vegan Menu */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-4">
+          <TabsTrigger value="normal" className="text-base">
+            🍖 Normal Menü
+          </TabsTrigger>
+          <TabsTrigger value="vegan" className="text-base">
+            🥗 Vegan Menü
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Normal Menü Tab */}
+        <TabsContent value="normal">
+          <Card className="dark:bg-gray-900 dark:border-gray-800 overflow-hidden">
+            <CardHeader className="bg-blue-900 text-white text-center py-4">
+              <div className="flex items-center justify-center gap-4">
+                <img src="/deu-logo.png" alt="DEU" className="h-12 w-12 hidden" />
+                <div>
+                  <h2 className="text-lg font-bold">DOKUZ EYLÜL ÜNİVERSİTESİ</h2>
+                  <h3 className="text-sm">SAĞLIK KÜLTÜR VE SPOR DAİRE BAŞKANLIĞI</h3>
+                  <h4 className="text-base font-semibold mt-1">
+                    {selectedYear} {selectedMonthLabel.toUpperCase()} AYI - YEMEK LİSTESİ
+                  </h4>
                 </div>
               </div>
-            );
-          })}
-        </CardContent>
-      </Card>
+            </CardHeader>
+            <CardContent className="p-0">
+              {weeklyMenus.map((weekMenu, weekIndex) => {
+                const weekDates = getWeekDates(weekIndex);
+                return (
+                  <div key={weekIndex} className="border-b dark:border-gray-700 last:border-b-0">
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="bg-yellow-100 dark:bg-yellow-900/30">
+                            {dayNames.map((day, idx) => (
+                              <th
+                                key={day.key}
+                                className="border border-gray-300 dark:border-gray-600 p-2 text-center text-sm font-semibold text-blue-900 dark:text-blue-300 min-w-[180px]"
+                              >
+                                <div>{weekDates[idx]}</div>
+                                <div className="text-xs font-normal text-gray-600 dark:text-gray-400">
+                                  {day.label}
+                                </div>
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {mealCategories.map((category, rowIdx) => (
+                            <tr key={rowIdx}>
+                              {dayNames.map(day => (
+                                <td
+                                  key={day.key}
+                                  className="border border-gray-300 dark:border-gray-600 p-1"
+                                >
+                                  <MealAutocomplete
+                                    value={weekMenu[day.key]?.items[rowIdx] || ''}
+                                    onChange={(value) => updateMenuItem(weekIndex, day.key, rowIdx, value)}
+                                    placeholder={category}
+                                    categoryFilter={getCategoryByIndex(rowIdx)}
+                                  />
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                          <tr className="bg-gray-50 dark:bg-gray-800">
+                            {dayNames.map(day => (
+                              <td
+                                key={day.key}
+                                className="border border-gray-300 dark:border-gray-600 p-2 text-center"
+                              >
+                                <div className="flex items-center justify-center gap-1">
+                                  <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">
+                                    {weekMenu[day.key]?.calories || 0}
+                                  </span>
+                                  <span className="text-xs text-gray-500">kcal</span>
+                                </div>
+                              </td>
+                            ))}
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Vegan Menü Tab */}
+        <TabsContent value="vegan">
+          <Card className="dark:bg-gray-900 dark:border-gray-800 overflow-hidden">
+            <CardHeader className="bg-green-800 text-white text-center py-4">
+              <div className="flex items-center justify-center gap-4">
+                <img src="/deu-logo.png" alt="DEU" className="h-12 w-12 hidden" />
+                <div>
+                  <h2 className="text-lg font-bold">DOKUZ EYLÜL ÜNİVERSİTESİ</h2>
+                  <h3 className="text-sm">SAĞLIK KÜLTÜR VE SPOR DAİRE BAŞKANLIĞI</h3>
+                  <h4 className="text-base font-semibold mt-1">
+                    {selectedYear} {selectedMonthLabel.toUpperCase()} AYI - VEGAN MENÜ
+                  </h4>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              {veganWeeklyMenus.map((weekMenu, weekIndex) => {
+                const weekDates = getWeekDates(weekIndex);
+                return (
+                  <div key={weekIndex} className="border-b dark:border-gray-700 last:border-b-0">
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="bg-green-100 dark:bg-green-900/30">
+                            {dayNames.map((day, idx) => (
+                              <th
+                                key={day.key}
+                                className="border border-gray-300 dark:border-gray-600 p-2 text-center text-sm font-semibold text-green-900 dark:text-green-300 min-w-[180px]"
+                              >
+                                <div>{weekDates[idx]}</div>
+                                <div className="text-xs font-normal text-gray-600 dark:text-gray-400">
+                                  {day.label}
+                                </div>
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {mealCategories.map((category, rowIdx) => (
+                            <tr key={rowIdx}>
+                              {dayNames.map(day => (
+                                <td
+                                  key={day.key}
+                                  className="border border-gray-300 dark:border-gray-600 p-1"
+                                >
+                                  <VeganMealAutocomplete
+                                    value={weekMenu[day.key]?.items[rowIdx] || ''}
+                                    onChange={(value) => updateVeganMenuItem(weekIndex, day.key, rowIdx, value)}
+                                    placeholder={category}
+                                    categoryFilter={getCategoryByIndex(rowIdx)}
+                                  />
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                          <tr className="bg-gray-50 dark:bg-gray-800">
+                            {dayNames.map(day => (
+                              <td
+                                key={day.key}
+                                className="border border-gray-300 dark:border-gray-600 p-2 text-center"
+                              >
+                                <div className="flex items-center justify-center gap-1">
+                                  <span className="text-sm font-semibold text-green-600 dark:text-green-400">
+                                    {weekMenu[day.key]?.calories || 0}
+                                  </span>
+                                  <span className="text-xs text-gray-500">kcal</span>
+                                </div>
+                              </td>
+                            ))}
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Notlar */}
       <Card className="dark:bg-gray-900 dark:border-gray-800">

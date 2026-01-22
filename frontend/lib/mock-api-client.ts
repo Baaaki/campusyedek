@@ -25,7 +25,7 @@ class MockApiClient {
     console.log('[Mock API] GET', fullUrl);
 
     // Parse URL to extract route
-    const cleanUrl = fullUrl.replace(/^\//, '').replace(/^api\/v1\//, '');
+    const cleanUrl = fullUrl.replace(/^\//, '').replace(/^api\//, '');
     console.log('[Mock API] cleanUrl:', cleanUrl, 'prefixUrl:', this.prefixUrl);
 
     return {
@@ -80,6 +80,32 @@ class MockApiClient {
             },
           };
         }
+        // Staff profile by ID endpoint - staff/profile/:id
+        if (cleanUrl.match(/^staff\/profile\/[\w-]+$/) || (cleanUrl.match(/^profile\/[\w-]+$/) && this.prefixUrl?.includes('staff'))) {
+          const id = cleanUrl.split('/').pop();
+          console.log('[Mock API] Staff profile by ID matched:', id);
+          const profile = MockData.staffProfiles[id || ''];
+          return profile || null;
+        }
+        // Staff profile endpoint (default) - must be before staff/:id check
+        if (cleanUrl === 'staff/profile' || (cleanUrl === 'profile' && this.prefixUrl?.includes('staff'))) {
+          console.log('[Mock API] Staff profile matched');
+          return MockData.staffProfile;
+        }
+
+        // Admin staff list endpoint
+        if (cleanUrl === 'admin-staff' || cleanUrl === 'admin-staff/') {
+          console.log('[Mock API] Admin staff list matched');
+          return MockData.adminStaff;
+        }
+        // Admin staff profile by ID endpoint
+        if (cleanUrl.match(/^admin-staff\/profile\/[\w-]+$/)) {
+          const id = cleanUrl.split('/').pop();
+          console.log('[Mock API] Admin staff profile by ID matched:', id);
+          const profile = MockData.adminStaffProfiles[id || ''];
+          return profile || null;
+        }
+
         if (cleanUrl.match(/^staff\/[\w-]+$/)) {
           const id = cleanUrl.replace('staff/', '');
           const staff = MockData.staff.find(s => s.id === id);
@@ -137,8 +163,21 @@ class MockApiClient {
         }
 
         // Orphaned students (no advisor)
-        if (cleanUrl === 'orphaned' || cleanUrl.startsWith('orphaned?') || cleanUrl === 'students/orphaned' || cleanUrl.startsWith('students/orphaned?')) {
-          const urlObj = new URL('http://dummy.com/' + cleanUrl);
+        const isOrphanedEndpoint =
+          cleanUrl === 'orphaned' ||
+          cleanUrl.startsWith('orphaned?') ||
+          cleanUrl === 'students/orphaned' ||
+          cleanUrl.startsWith('students/orphaned?') ||
+          (this.prefixUrl?.includes('students') && (cleanUrl === 'orphaned' || cleanUrl.startsWith('orphaned?')));
+
+        if (isOrphanedEndpoint) {
+          // Parse query params for pagination
+          let urlForParsing = cleanUrl;
+          if (!cleanUrl.includes('?')) {
+            urlForParsing = cleanUrl + '?';
+          }
+
+          const urlObj = new URL('http://dummy.com/' + urlForParsing);
           const params = urlObj.searchParams;
           const page = parseInt(params.get('page') || '1', 10);
           const limit = parseInt(params.get('limit') || '10', 10);
@@ -278,7 +317,7 @@ class MockApiClient {
       json: async () => {
         await delay();
 
-        const cleanUrl = fullUrl.replace(/^\//, '').replace(/^api\/v1\//, '');
+        const cleanUrl = fullUrl.replace(/^\//, '').replace(/^api\//, '');
 
         // Auth endpoints
         if (cleanUrl === 'login') {
@@ -391,7 +430,7 @@ class MockApiClient {
       json: async () => {
         await delay();
 
-        const cleanUrl = fullUrl.replace(/^\//, '').replace(/^api\/v1\//, '');
+        const cleanUrl = fullUrl.replace(/^\//, '').replace(/^api\//, '');
 
         // Update student advisor
         if (cleanUrl.match(/^students\/[\w-]+$/)) {
@@ -433,16 +472,38 @@ class MockApiClient {
       json: async () => {
         await delay();
 
-        const cleanUrl = fullUrl.replace(/^\//, '').replace(/^api\/v1\//, '');
+        const cleanUrl = fullUrl.replace(/^\//, '').replace(/^api\//, '');
 
-        // Update student
-        if (cleanUrl.match(/^students\/[\w-]+$/)) {
-          const studentId = cleanUrl.split('/').pop();
+        // Update student - handle both full path and prefixed URL
+        const studentMatch = cleanUrl.match(/^students\/([\w-]+)$/);
+        const isStudentUpdate = studentMatch || (this.prefixUrl?.includes('students') && url && !url.includes('/'));
+
+        if (isStudentUpdate) {
+          const studentId = studentMatch ? studentMatch[1] : url;
+          console.log('[Mock API] Student update - studentId:', studentId, 'data:', options?.json);
+
           const student = MockData.students.find(s => s.id === studentId);
 
           if (student && options?.json) {
-            // Update student with new data
-            Object.assign(student, options.json, {
+            // Handle advisor_id assignment - also set advisor_name
+            if (options.json.advisor_id) {
+              student.advisor_id = options.json.advisor_id;
+              const advisor = MockData.staff.find(s => s.id === options.json.advisor_id);
+              if (advisor) {
+                student.advisor = {
+                  id: advisor.id,
+                  first_name: advisor.first_name,
+                  last_name: advisor.last_name,
+                  email: advisor.email,
+                };
+                (student as any).advisor_name = `${advisor.first_name} ${advisor.last_name}`;
+              }
+              console.log('[Mock API] Advisor assigned:', student.advisor_id, '->', (student as any).advisor_name);
+            }
+
+            // Update other fields
+            Object.assign(student, {
+              ...options.json,
               updated_at: new Date().toISOString()
             });
 
@@ -451,6 +512,43 @@ class MockApiClient {
               message: 'Student updated successfully',
               data: student
             };
+          } else {
+            console.warn('[Mock API] Student not found:', studentId);
+          }
+        }
+
+        // Update staff profile
+        if (cleanUrl === 'staff/profile' || (cleanUrl === 'profile' && this.prefixUrl?.includes('staff'))) {
+          if (options?.json) {
+            // Update mock staff profile
+            Object.assign(MockData.staffProfile, options.json);
+
+            // Also update the individual staff profile if ID is present in the body
+            if (options.json.id && MockData.staffProfiles[options.json.id]) {
+              Object.assign(MockData.staffProfiles[options.json.id], options.json);
+            }
+
+            return {
+              success: true,
+              message: 'Profile updated successfully',
+              data: options.json
+            };
+          }
+        }
+
+        // Update admin staff profile
+        if (cleanUrl === 'admin-staff/profile' || (cleanUrl === 'profile' && this.prefixUrl?.includes('admin-staff'))) {
+          if (options?.json) {
+            // Update individual admin staff profile if ID is present
+            if (options.json.id && MockData.adminStaffProfiles[options.json.id]) {
+              Object.assign(MockData.adminStaffProfiles[options.json.id], options.json);
+
+              return {
+                success: true,
+                message: 'Admin profile updated successfully',
+                data: MockData.adminStaffProfiles[options.json.id]
+              };
+            }
           }
         }
 
@@ -467,7 +565,7 @@ class MockApiClient {
       json: async () => {
         await delay();
 
-        const cleanUrl = fullUrl.replace(/^\//, '').replace(/^api\/v1\//, '');
+        const cleanUrl = fullUrl.replace(/^\//, '').replace(/^api\//, '');
 
         // Delete student
         if (cleanUrl.match(/^students\/[\w-]+$/)) {
@@ -496,14 +594,16 @@ class MockApiClient {
   }
 }
 
-// Create mock API client instances
+// Create mock API client instances - URLs must match Traefik routing
 const mockApiClient = new MockApiClient();
 
-export const mockAuthApi = mockApiClient.extend({ prefixUrl: '/api/v1/auth' });
-export const mockStaffApi = mockApiClient.extend({ prefixUrl: '/api/v1/staff' });
-export const mockStudentApi = mockApiClient.extend({ prefixUrl: '/api/v1/students' });
-export const mockCatalogApi = mockApiClient.extend({ prefixUrl: '/api/v1/catalog' });
-export const mockEnrollmentApi = mockApiClient.extend({ prefixUrl: '/api/v1/enrollment' });
-export const mockAttendanceApi = mockApiClient.extend({ prefixUrl: '/api/v1/attendance' });
-export const mockGradesApi = mockApiClient.extend({ prefixUrl: '/api/v1/grades' });
-export const mockMealApi = mockApiClient.extend({ prefixUrl: '/api/v1/meal' });
+export const mockAuthApi = mockApiClient.extend({ prefixUrl: '/api/auth' });
+export const mockStaffApi = mockApiClient.extend({ prefixUrl: '/api/staff' });
+export const mockAdminStaffApi = mockApiClient.extend({ prefixUrl: '/api/admin-staff' });
+export const mockStudentApi = mockApiClient.extend({ prefixUrl: '/api/students' });
+export const mockCatalogApi = mockApiClient.extend({ prefixUrl: '/api/catalog' });
+export const mockSemesterApi = mockApiClient.extend({ prefixUrl: '/api/semesters' });
+export const mockEnrollmentApi = mockApiClient.extend({ prefixUrl: '/api/enrollment' });
+export const mockAttendanceApi = mockApiClient.extend({ prefixUrl: '/api/attendance' });
+export const mockGradesApi = mockApiClient.extend({ prefixUrl: '/api/grades' });
+export const mockMealApi = mockApiClient.extend({ prefixUrl: '/api/meals' });

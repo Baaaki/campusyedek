@@ -19,10 +19,20 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { studentApi } from '@/lib/api-client'
+import { mockFaculties } from '@/mock_data/catalog'
+import { staffApi } from '@/lib/api-client'
+import type { Department, Staff } from '@/lib/types'
 import { ArrowUp, ArrowDown, ArrowUpDown, Plus, Upload, Users } from 'lucide-react'
 import Link from 'next/link'
 
@@ -37,12 +47,7 @@ type Student = {
   enrollment_year: number
   class_level: number
   advisor_id?: string
-  advisor?: {
-    id: string
-    first_name: string
-    last_name: string
-    email?: string
-  }
+  advisor_name?: string
   status: string
   created_at: string
   updated_at: string
@@ -75,6 +80,13 @@ export default function StudentsPage() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [importing, setImporting] = useState(false)
+  
+  // Faculty/Department selection
+  const [createDepartments, setCreateDepartments] = useState<Department[]>([])
+  const [editDepartments, setEditDepartments] = useState<Department[]>([])
+  
+  // Advisors from staff API
+  const [advisors, setAdvisors] = useState<Staff[]>([])
 
   // Create form state
   const [createFormData, setCreateFormData] = useState({
@@ -86,7 +98,7 @@ export default function StudentsPage() {
     department: '',
     enrollment_year: new Date().getFullYear(),
     class_level: 1,
-    advisor_id: '00000000-0000-0000-0000-000000000000', // Placeholder UUID
+    advisor_id: '', // Will be selected from dropdown
   })
 
   // Update form state
@@ -105,6 +117,19 @@ export default function StudentsPage() {
   useEffect(() => {
     fetchStudents()
   }, [currentPage, limit])
+
+  // Fetch advisors (teachers) from staff API
+  useEffect(() => {
+    const fetchAdvisors = async () => {
+      try {
+        const response = await staffApi.get('', { searchParams: { role: 'teacher', limit: '100' } }).json() as { data: Staff[] }
+        setAdvisors(response.data || [])
+      } catch (error) {
+        console.error('Failed to fetch advisors:', error)
+      }
+    }
+    fetchAdvisors()
+  }, [])
 
   const fetchStudents = async () => {
     setLoading(true)
@@ -131,8 +156,12 @@ export default function StudentsPage() {
 
   const handleCreateStudent = async (e: React.FormEvent) => {
     e.preventDefault()
+    console.log('[Students Page] handleCreateStudent called')
+    console.log('[Students Page] createFormData:', createFormData)
     try {
-      await studentApi.post('', { json: createFormData })
+      console.log('[Students Page] Calling studentApi.post...')
+      const response = await studentApi.post('', { json: createFormData }).json()
+      console.log('[Students Page] POST Response:', response)
       setIsCreateOpen(false)
       setCreateFormData({
         student_number: '',
@@ -143,11 +172,12 @@ export default function StudentsPage() {
         department: '',
         enrollment_year: new Date().getFullYear(),
         class_level: 1,
-        advisor_id: '00000000-0000-0000-0000-000000000000',
+        advisor_id: '',
       })
+      setCreateDepartments([])
       fetchStudents()
     } catch (error) {
-      console.error('Failed to create student:', error)
+      console.error('[Students Page] Failed to create student:', error)
     }
   }
 
@@ -381,26 +411,77 @@ export default function StudentsPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="faculty">Faculty</Label>
-                <Input
-                  id="faculty"
+                <Label htmlFor="faculty">Fakülte</Label>
+                <Select
                   value={createFormData.faculty}
-                  onChange={(e) =>
-                    setCreateFormData({ ...createFormData, faculty: e.target.value })
-                  }
-                  required
-                />
+                  onValueChange={(value) => {
+                    const selectedFaculty = mockFaculties.find(f => f.name === value)
+                    setCreateFormData({ 
+                      ...createFormData, 
+                      faculty: value,
+                      department: '' // Reset department when faculty changes
+                    })
+                    setCreateDepartments(selectedFaculty?.departments || [])
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Fakülte seçin..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {mockFaculties.map((faculty) => (
+                      <SelectItem key={faculty.id} value={faculty.name}>
+                        {faculty.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
-                <Label htmlFor="department">Department</Label>
-                <Input
-                  id="department"
+                <Label htmlFor="department">Bölüm</Label>
+                <Select
                   value={createFormData.department}
-                  onChange={(e) =>
-                    setCreateFormData({ ...createFormData, department: e.target.value })
+                  onValueChange={(value) =>
+                    setCreateFormData({ ...createFormData, department: value })
                   }
-                  required
-                />
+                  disabled={!createFormData.faculty}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder={createFormData.faculty ? "Bölüm seçin..." : "Önce fakülte seçin"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {createDepartments.map((dept) => (
+                      <SelectItem key={dept.id} value={dept.name}>
+                        {dept.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="advisor">Danışman</Label>
+                <Select
+                  value={createFormData.advisor_id}
+                  onValueChange={(value) =>
+                    setCreateFormData({ ...createFormData, advisor_id: value })
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Danışman seçin..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {advisors.length === 0 ? (
+                      <SelectItem value="no-advisors" disabled>
+                        Danışman bulunamadı
+                      </SelectItem>
+                    ) : (
+                      advisors.map((staff) => (
+                        <SelectItem key={staff.id} value={staff.id}>
+                          {staff.first_name} {staff.last_name} - {staff.department}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label htmlFor="enrollment_year">Enrollment Year</Label>
@@ -545,9 +626,9 @@ export default function StudentsPage() {
                   <TableCell>{student.enrollment_year}</TableCell>
                   <TableCell>{student.class_level}</TableCell>
                   <TableCell>
-                    {student.advisor ? (
+                    {student.advisor_name || (student as any).advisor ? (
                       <span className="text-sm">
-                        {student.advisor.first_name} {student.advisor.last_name}
+                        {student.advisor_name || `${(student as any).advisor?.first_name} ${(student as any).advisor?.last_name}`}
                       </span>
                     ) : (
                       <span className="text-sm text-muted-foreground">No Advisor</span>

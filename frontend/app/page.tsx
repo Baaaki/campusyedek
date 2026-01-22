@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 
 export default function HomePage() {
-  // Ana sayfa doğrudan dashboard'a yönlendirir
-  redirect('/dashboard');
+  // Ana sayfa doğrudan login'e yönlendirir
+  redirect('/auth/login');
 }

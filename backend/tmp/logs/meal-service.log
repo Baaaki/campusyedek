@@ -1,0 +1,27 @@
+
+  __    _   ___  
+ / /\  | | | |_) 
+/_/--\ |_| |_| \_ v1.63.0, built with Go go1.25.1
+
+watching .
+watching bin
+watching cmd
+watching config
+watching internal
+!exclude internal/db
+watching internal/dto
+watching internal/errors
+watching internal/handler
+watching internal/repository
+watching internal/service
+watching internal/worker
+watching sql
+watching sql/migrations
+watching sql/queries
+!exclude tmp
+building...
+running...
+08:26:21.184	[34mINFO[0m	runtime/proc.go:285	starting meal service	{"environment": "development", "port": "8008"}
+08:26:21.193	[31mFATAL[0m	runtime/proc.go:285	failed to connect to database	{"error": "unable to ping database: failed to connect to `user=postgres database=mydreamcampus_meal`: 127.0.0.1:5433 (localhost): server error: FATAL: database \"mydreamcampus_meal\" does not exist (SQLSTATE 3D000)"}
+runtime.main
+	/usr/local/go/src/runtime/proc.go:285
