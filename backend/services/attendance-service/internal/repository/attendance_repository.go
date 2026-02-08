@@ -80,6 +80,10 @@ func (r *AttendanceRepository) GetFailingStudentsByCourse(ctx context.Context, c
 	})
 }
 
+func (r *AttendanceRepository) GetAttendanceRecordsBySession(ctx context.Context, sessionID uuid.UUID) ([]db.GetAttendanceRecordsBySessionRow, error) {
+	return r.queries.GetAttendanceRecordsBySession(ctx, utils.UUIDToPgUUID(sessionID))
+}
+
 // BatchCreateAbsentRecords creates multiple absent records at once (for session close)
 func (r *AttendanceRepository) BatchCreateAbsentRecords(ctx context.Context, sessionID, courseID uuid.UUID, semester string, weekNumber int16, instructorID uuid.UUID, studentIDs []uuid.UUID) error {
 	tx, err := r.pool.Begin(ctx)

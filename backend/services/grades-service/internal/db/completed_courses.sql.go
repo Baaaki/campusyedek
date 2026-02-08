@@ -147,6 +147,46 @@ func (q *Queries) DeleteCompletedCourse(ctx context.Context, arg DeleteCompleted
 	return err
 }
 
+const getCompletedCourseByStudentAndCourse = `-- name: GetCompletedCourseByStudentAndCourse :one
+SELECT id, student_id, student_number, student_first_name, student_last_name, student_department, course_id, course_code, course_name, credits, semester, instructor_id, instructor_name, assessment_scores, weighted_average, grade_point, grading_type, grading_config, class_statistics, is_attendance_failed, finalized_at, finalized_by FROM student_completed_courses
+WHERE student_id = $1 AND course_id = $2
+`
+
+type GetCompletedCourseByStudentAndCourseParams struct {
+	StudentID uuid.UUID `json:"student_id"`
+	CourseID  uuid.UUID `json:"course_id"`
+}
+
+func (q *Queries) GetCompletedCourseByStudentAndCourse(ctx context.Context, arg GetCompletedCourseByStudentAndCourseParams) (StudentCompletedCourse, error) {
+	row := q.db.QueryRow(ctx, getCompletedCourseByStudentAndCourse, arg.StudentID, arg.CourseID)
+	var i StudentCompletedCourse
+	err := row.Scan(
+		&i.ID,
+		&i.StudentID,
+		&i.StudentNumber,
+		&i.StudentFirstName,
+		&i.StudentLastName,
+		&i.StudentDepartment,
+		&i.CourseID,
+		&i.CourseCode,
+		&i.CourseName,
+		&i.Credits,
+		&i.Semester,
+		&i.InstructorID,
+		&i.InstructorName,
+		&i.AssessmentScores,
+		&i.WeightedAverage,
+		&i.GradePoint,
+		&i.GradingType,
+		&i.GradingConfig,
+		&i.ClassStatistics,
+		&i.IsAttendanceFailed,
+		&i.FinalizedAt,
+		&i.FinalizedBy,
+	)
+	return i, err
+}
+
 const getCompletedCoursesByCourse = `-- name: GetCompletedCoursesByCourse :many
 SELECT id, student_id, student_number, student_first_name, student_last_name, student_department, course_id, course_code, course_name, credits, semester, instructor_id, instructor_name, assessment_scores, weighted_average, grade_point, grading_type, grading_config, class_statistics, is_attendance_failed, finalized_at, finalized_by FROM student_completed_courses
 WHERE course_id = $1
@@ -292,4 +332,36 @@ func (q *Queries) GetTranscriptData(ctx context.Context, studentID uuid.UUID) ([
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateCompletedCourseAfterAppeal = `-- name: UpdateCompletedCourseAfterAppeal :exec
+UPDATE student_completed_courses
+SET
+    assessment_scores = $3,
+    weighted_average = $4,
+    grade_point = $5,
+    grading_config = $6,
+    finalized_at = NOW()
+WHERE student_id = $1 AND course_id = $2
+`
+
+type UpdateCompletedCourseAfterAppealParams struct {
+	StudentID        uuid.UUID      `json:"student_id"`
+	CourseID         uuid.UUID      `json:"course_id"`
+	AssessmentScores []byte         `json:"assessment_scores"`
+	WeightedAverage  pgtype.Numeric `json:"weighted_average"`
+	GradePoint       GradePointEnum `json:"grade_point"`
+	GradingConfig    []byte         `json:"grading_config"`
+}
+
+func (q *Queries) UpdateCompletedCourseAfterAppeal(ctx context.Context, arg UpdateCompletedCourseAfterAppealParams) error {
+	_, err := q.db.Exec(ctx, updateCompletedCourseAfterAppeal,
+		arg.StudentID,
+		arg.CourseID,
+		arg.AssessmentScores,
+		arg.WeightedAverage,
+		arg.GradePoint,
+		arg.GradingConfig,
+	)
+	return err
 }

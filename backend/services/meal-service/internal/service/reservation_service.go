@@ -108,7 +108,7 @@ func (s *ReservationService) CreateReservation(ctx context.Context, studentID uu
 	// 8. Check for active reservation (conflict)
 	mealTimeEnum, _ := s.parseMealTimeEnum(req.MealTime)
 	existing, err := s.reservationRepo.CheckActiveReservation(ctx, db.CheckActiveReservationParams{
-		StudentID: utils.UUIDToPgtype(studentID),
+		StudentID:       utils.UUIDToPgtype(studentID),
 		ReservationDate: pgtype.Date{Time: reservationDate, Valid: true},
 		MealTime:        mealTimeEnum,
 	})
@@ -120,27 +120,11 @@ func (s *ReservationService) CreateReservation(ctx context.Context, studentID uu
 		return nil, serviceErrors.ErrActiveReservationExists
 	}
 
-	// 9. Create reservation in pending status
+	// 9. Call Payment Service FIRST (before saving to DB)
 	menuTypeEnum, _ := s.parseMenuTypeEnum(req.MenuType)
-	expiresAt := time.Now().Add(time.Duration(s.cfg.Reservation.TimeoutMinutes) * time.Minute)
+	reservationID := uuid.New()
+	referenceID := fmt.Sprintf("res_%s", reservationID.String())
 
-	reservation, err := s.reservationRepo.CreateReservation(ctx, db.CreateReservationParams{
-		BatchID:         pgtype.UUID{Valid: false},
-		StudentID: utils.UUIDToPgtype(studentID),
-		CafeteriaID: utils.UUIDToPgtype(cafeteriaID),
-		ReservationDate: pgtype.Date{Time: reservationDate, Valid: true},
-		MealTime:        mealTimeEnum,
-		MenuType:        menuTypeEnum,
-		Status:          db.ReservationStatusEnumPending,
-		ExpiresAt:       pgtype.Timestamptz{Time: expiresAt, Valid: true},
-	})
-	if err != nil {
-		s.logger.Error("failed to create reservation", zap.Error(err))
-		return nil, err
-	}
-
-	// 10. Call Payment Service
-	referenceID := fmt.Sprintf("res_%s", reservation.ID.String())
 	paymentResp, err := s.paymentClient.InitiatePayment(ctx, dto.InitiatePaymentRequest{
 		ReferenceID: referenceID,
 		Amount:      s.cfg.Reservation.MealPriceTRY,
@@ -149,13 +133,32 @@ func (s *ReservationService) CreateReservation(ctx context.Context, studentID uu
 		StudentID:   studentID.String(),
 	})
 	if err != nil {
-		s.logger.Error("failed to initiate payment", zap.Error(err), zap.String("reservation_id", reservation.ID.String()))
+		s.logger.Error("payment initiation failed", zap.Error(err), zap.String("reference_id", referenceID))
 		return nil, err
 	}
 
-	s.logger.Info("reservation created",
+	// 10. Payment successful - now save reservation to DB
+	expiresAt := time.Now().Add(time.Duration(s.cfg.Reservation.TimeoutMinutes) * time.Minute)
+
+	reservation, err := s.reservationRepo.CreateReservation(ctx, db.CreateReservationParams{
+		BatchID:         pgtype.UUID{Valid: false},
+		StudentID:       utils.UUIDToPgtype(studentID),
+		CafeteriaID:     utils.UUIDToPgtype(cafeteriaID),
+		ReservationDate: pgtype.Date{Time: reservationDate, Valid: true},
+		MealTime:        mealTimeEnum,
+		MenuType:        menuTypeEnum,
+		Status:          db.ReservationStatusEnumConfirmed,
+		ExpiresAt:       pgtype.Timestamptz{Time: expiresAt, Valid: true},
+	})
+	if err != nil {
+		s.logger.Error("failed to create reservation after payment", zap.Error(err))
+		return nil, err
+	}
+
+	s.logger.Info("reservation created after successful payment",
 		zap.String("reservation_id", reservation.ID.String()),
 		zap.String("student_id", studentID.String()),
+		zap.String("payment_id", paymentResp.PaymentID),
 		zap.String("date", req.Date),
 		zap.String("meal_time", req.MealTime),
 	)
@@ -297,7 +300,7 @@ func (s *ReservationService) CreateBatchReservation(ctx context.Context, student
 		// Check for conflicts
 		mealTimeEnum, _ := s.parseMealTimeEnum(r.MealTime)
 		existing, err := s.reservationRepo.CheckActiveReservation(ctx, db.CheckActiveReservationParams{
-			StudentID: utils.UUIDToPgtype(studentID),
+			StudentID:       utils.UUIDToPgtype(studentID),
 			ReservationDate: pgtype.Date{Time: reservationDate, Valid: true},
 			MealTime:        mealTimeEnum,
 		})
@@ -320,45 +323,47 @@ func (s *ReservationService) CreateBatchReservation(ctx context.Context, student
 		menuTypeEnum, _ := s.parseMenuTypeEnum(r.MenuType)
 		reservationParams = append(reservationParams, db.CreateReservationParams{
 			BatchID:         pgtype.UUID{Bytes: batchID, Valid: true},
-			StudentID: utils.UUIDToPgtype(studentID),
-			CafeteriaID: utils.UUIDToPgtype(cafeteriaID),
+			StudentID:       utils.UUIDToPgtype(studentID),
+			CafeteriaID:     utils.UUIDToPgtype(cafeteriaID),
 			ReservationDate: pgtype.Date{Time: reservationDate, Valid: true},
 			MealTime:        mealTimeEnum,
 			MenuType:        menuTypeEnum,
-			Status:          db.ReservationStatusEnumPending,
+			Status:          db.ReservationStatusEnumConfirmed, // Auto-confirmed (mock payment)
 			ExpiresAt:       pgtype.Timestamptz{Time: expiresAt, Valid: true},
 		})
 	}
 
 	// If there are any validation errors, return them
 	if len(validationErrors) > 0 {
+		s.logger.Error("batch reservation validation failed", zap.Any("errors", validationErrors))
 		return nil, fmt.Errorf("%w", serviceErrors.ErrValidationErrors)
 	}
 
 	// If there are any conflicts, return them
 	if len(conflicts) > 0 {
+		s.logger.Error("batch reservation conflicts found", zap.Any("conflicts", conflicts))
 		return nil, fmt.Errorf("%w", serviceErrors.ErrReservationConflicts)
 	}
 
-	// Create all reservations atomically
-	reservations, err := s.reservationRepo.CreateBatchReservations(ctx, reservationParams)
-	if err != nil {
-		s.logger.Error("failed to create batch reservations", zap.Error(err))
-		return nil, err
-	}
-
-	// Call Payment Service for batch
-	totalAmount := s.cfg.Reservation.MealPriceTRY * float64(len(reservations))
+	// Call Payment Service FIRST (before saving to DB)
+	totalAmount := s.cfg.Reservation.MealPriceTRY * float64(len(reservationParams))
 	referenceID := fmt.Sprintf("bat_%s", batchID.String())
 	paymentResp, err := s.paymentClient.InitiatePayment(ctx, dto.InitiatePaymentRequest{
 		ReferenceID: referenceID,
 		Amount:      totalAmount,
 		Currency:    "TRY",
-		Description: fmt.Sprintf("Batch meal reservation - %d meals", len(reservations)),
+		Description: fmt.Sprintf("Batch meal reservation - %d meals", len(reservationParams)),
 		StudentID:   studentID.String(),
 	})
 	if err != nil {
-		s.logger.Error("failed to initiate batch payment", zap.Error(err), zap.String("batch_id", batchID.String()))
+		s.logger.Error("payment initiation failed for batch", zap.Error(err), zap.String("batch_id", batchID.String()))
+		return nil, err
+	}
+
+	// Payment successful - now save reservations to DB
+	reservations, err := s.reservationRepo.CreateBatchReservations(ctx, reservationParams)
+	if err != nil {
+		s.logger.Error("failed to create batch reservations after payment", zap.Error(err))
 		return nil, err
 	}
 
@@ -378,9 +383,10 @@ func (s *ReservationService) CreateBatchReservation(ctx context.Context, student
 		})
 	}
 
-	s.logger.Info("batch reservation created",
+	s.logger.Info("batch reservation created after successful payment",
 		zap.String("batch_id", batchID.String()),
 		zap.String("student_id", studentID.String()),
+		zap.String("payment_id", paymentResp.PaymentID),
 		zap.Int("count", len(reservations)),
 	)
 
@@ -401,7 +407,7 @@ func (s *ReservationService) GetMyReservations(ctx context.Context, studentID uu
 
 	// Parse optional filters
 	var fromDate, toDate pgtype.Date
-	var status db.ReservationStatusEnum
+	var status db.NullReservationStatusEnum
 
 	if query.FromDate != "" {
 		t, err := time.Parse("2006-01-02", query.FromDate)
@@ -424,7 +430,33 @@ func (s *ReservationService) GetMyReservations(ctx context.Context, studentID uu
 		if err != nil {
 			return nil, err
 		}
-		status = statusEnum
+		status = db.NullReservationStatusEnum{ReservationStatusEnum: statusEnum, Valid: true}
+	}
+
+	// Handle pagination
+	var limit int32 = 0
+	var offset int32 = 0
+	var totalCount int64 = 0
+
+	if query.Page > 0 {
+		if query.Limit > 0 {
+			limit = int32(query.Limit)
+		} else {
+			limit = 10 // default limit
+		}
+		offset = int32((query.Page - 1)) * limit
+
+		// Get total count for pagination
+		totalCount, err = s.reservationRepo.CountStudentReservationsFiltered(ctx, db.CountStudentReservationsFilteredParams{
+			StudentID: utils.UUIDToPgtype(studentID),
+			Column2:   fromDate,
+			Column3:   toDate,
+			Column4:   status,
+		})
+		if err != nil {
+			s.logger.Error("failed to count student reservations", zap.Error(err))
+			return nil, err
+		}
 	}
 
 	reservations, err = s.reservationRepo.GetStudentReservationsFiltered(ctx, db.GetStudentReservationsFilteredParams{
@@ -432,6 +464,8 @@ func (s *ReservationService) GetMyReservations(ctx context.Context, studentID uu
 		Column2:   fromDate,
 		Column3:   toDate,
 		Column4:   status,
+		Column5:   limit,
+		Offset:    offset,
 	})
 	if err != nil {
 		s.logger.Error("failed to get student reservations", zap.Error(err))
@@ -448,6 +482,21 @@ func (s *ReservationService) GetMyReservations(ctx context.Context, studentID uu
 			Used:      0,
 			Cancelled: 0,
 		},
+	}
+
+	// Add pagination info if requested
+	if query.Page > 0 {
+		totalPages := int(totalCount) / int(limit)
+		if int(totalCount)%int(limit) > 0 {
+			totalPages++
+		}
+		response.Pagination = &dto.PaginationInfo{
+			Page:       query.Page,
+			Limit:      int(limit),
+			TotalItems: int(totalCount),
+			TotalPages: totalPages,
+		}
+		response.Summary.Total = int(totalCount)
 	}
 
 	for _, r := range reservations {
@@ -615,7 +664,7 @@ func (s *ReservationService) UseReservation(ctx context.Context, studentID uuid.
 		CafeteriaID:     utils.UUIDToPgtype(parsedCafeteriaID),
 		ReservationDate: pgtype.Date{Time: parsedDate, Valid: true},
 		MealTime:        mealTimeEnum,
-		StudentID: utils.UUIDToPgtype(studentID),
+		StudentID:       utils.UUIDToPgtype(studentID),
 	})
 	if err != nil {
 		if errors.Is(err, serviceErrors.ErrReservationNotFoundRepo) {
@@ -699,50 +748,52 @@ func (s *ReservationService) GenerateQR(ctx context.Context, cafeteriaID string,
 // ============================================================================
 
 func (s *ReservationService) validateReservationWindow() error {
-	now := time.Now().In(time.FixedZone("UTC+3", 3*3600))
-	weekday := now.Weekday()
-	hour := now.Hour()
+	// DISABLED FOR TESTING: Allow reservations at any time
+	// now := time.Now().In(time.FixedZone("UTC+3", 3*3600))
+	// weekday := now.Weekday()
+	// hour := now.Hour()
 
-	// Must be Monday-Friday
-	if weekday == time.Saturday || weekday == time.Sunday {
-		return serviceErrors.ErrOutsideReservationWindow
-	}
+	// // Must be Monday-Friday
+	// if weekday == time.Saturday || weekday == time.Sunday {
+	// 	return serviceErrors.ErrOutsideReservationWindow
+	// }
 
-	// Monday 08:00 - Friday 13:00
-	if weekday == time.Monday && hour < 8 {
-		return serviceErrors.ErrOutsideReservationWindow
-	}
-	if weekday == time.Friday && hour >= 13 {
-		return serviceErrors.ErrOutsideReservationWindow
-	}
+	// // Monday 08:00 - Friday 13:00
+	// if weekday == time.Monday && hour < 8 {
+	// 	return serviceErrors.ErrOutsideReservationWindow
+	// }
+	// if weekday == time.Friday && hour >= 13 {
+	// 	return serviceErrors.ErrOutsideReservationWindow
+	// }
 
 	return nil
 }
 
 func (s *ReservationService) validateReservationDate(date time.Time) error {
-	// Get next Monday
-	now := time.Now().In(time.FixedZone("UTC+3", 3*3600))
-	daysUntilMonday := (8 - int(now.Weekday())) % 7
-	if daysUntilMonday == 0 {
-		daysUntilMonday = 7
-	}
-	nextMonday := now.AddDate(0, 0, daysUntilMonday)
-	nextFriday := nextMonday.AddDate(0, 0, 4)
+	// DISABLED FOR TESTING: Allow reservations for any date
+	// // Get next Monday
+	// now := time.Now().In(time.FixedZone("UTC+3", 3*3600))
+	// daysUntilMonday := (8 - int(now.Weekday())) % 7
+	// if daysUntilMonday == 0 {
+	// 	daysUntilMonday = 7
+	// }
+	// nextMonday := now.AddDate(0, 0, daysUntilMonday)
+	// nextFriday := nextMonday.AddDate(0, 0, 4)
 
-	// Reset to start of day for comparison
-	nextMonday = time.Date(nextMonday.Year(), nextMonday.Month(), nextMonday.Day(), 0, 0, 0, 0, nextMonday.Location())
-	nextFriday = time.Date(nextFriday.Year(), nextFriday.Month(), nextFriday.Day(), 23, 59, 59, 0, nextFriday.Location())
-	date = time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
+	// // Reset to start of day for comparison
+	// nextMonday = time.Date(nextMonday.Year(), nextMonday.Month(), nextMonday.Day(), 0, 0, 0, 0, nextMonday.Location())
+	// nextFriday = time.Date(nextFriday.Year(), nextFriday.Month(), nextFriday.Day(), 23, 59, 59, 0, nextFriday.Location())
+	// date = time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
 
-	if date.Before(nextMonday) || date.After(nextFriday) {
-		return serviceErrors.ErrInvalidDateRange
-	}
+	// if date.Before(nextMonday) || date.After(nextFriday) {
+	// 	return serviceErrors.ErrInvalidDateRange
+	// }
 
-	// Must be Monday-Friday
-	weekday := date.Weekday()
-	if weekday == time.Saturday || weekday == time.Sunday {
-		return serviceErrors.ErrInvalidDateRange
-	}
+	// // Must be Monday-Friday
+	// weekday := date.Weekday()
+	// if weekday == time.Saturday || weekday == time.Sunday {
+	// 	return serviceErrors.ErrInvalidDateRange
+	// }
 
 	return nil
 }

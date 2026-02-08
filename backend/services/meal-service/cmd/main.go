@@ -69,8 +69,14 @@ func main() {
 	// Initialize publisher
 	publisher := rabbitmq.NewPublisher(rabbitConn)
 
+	// Initialize payment client (gRPC)
+	paymentClient, err := service.NewPaymentClient(cfg.Payment.GRPCAddress, log)
+	if err != nil {
+		log.Fatal("failed to connect to payment service", zap.Error(err))
+	}
+	defer paymentClient.Close()
+
 	// Initialize services
-	paymentClient := service.NewPaymentClient(cfg.Payment.ServiceURL, log)
 	cafeteriaService := service.NewCafeteriaService(cafeteriaRepo, log)
 	reservationService := service.NewReservationService(
 		reservationRepo,
@@ -207,6 +213,16 @@ func setupConsumers(
 	paymentConsumer *worker.PaymentEventConsumer,
 	log *zap.Logger,
 ) {
+	ch := conn.Channel()
+
+	// Declare required exchanges (auto-declare)
+	exchanges := []string{"student.events", "payment.events"}
+	for _, exchange := range exchanges {
+		if err := ch.ExchangeDeclare(exchange, "topic", true, false, false, false, nil); err != nil {
+			log.Fatal("failed to declare exchange", zap.String("exchange", exchange), zap.Error(err))
+		}
+	}
+
 	// Student events consumer
 	studentEventsConsumer := rabbitmq.NewConsumer(conn)
 

@@ -191,6 +191,7 @@ func setupRouter(staffHandler *handler.StaffHandler, teacherProfileHandler *hand
 		// Read operations - any authenticated user
 		api.GET("", staffHandler.ListStaff)
 		api.GET("/:id", staffHandler.GetStaffByID)
+		api.GET("/instructors", staffHandler.GetInstructorsByDepartment)
 		// Note: GET /api/staff/profile/:id is handled by the public route above
 
 		// Admin only routes

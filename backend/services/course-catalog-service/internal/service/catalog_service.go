@@ -42,65 +42,110 @@ func (s *CatalogService) CreateCourse(ctx context.Context, req dto.CreateCourseR
 		}
 	}
 
-	// Convert prerequisites to JSONB
+	// Convert JSON fields
 	prerequisitesJSON, err := repository.PrerequisitesToJSON(req.Prerequisites)
 	if err != nil {
-		serviceLogger.Error("failed to convert prerequisites to JSON",
-			zap.Error(err),
-		)
+		serviceLogger.Error("failed to convert prerequisites to JSON", zap.Error(err))
 		return dto.CourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
 	}
 
-	// Set default status if not provided
+	coordinatorJSON, err := repository.CoordinatorToJSON(req.Coordinator)
+	if err != nil {
+		serviceLogger.Error("failed to convert coordinator to JSON", zap.Error(err))
+		return dto.CourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+	}
+
+	learningOutcomesListJSON, err := repository.StringSliceToJSON(req.LearningOutcomesList)
+	if err != nil {
+		serviceLogger.Error("failed to convert learning outcomes list to JSON", zap.Error(err))
+		return dto.CourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+	}
+
+	weeklyTopicsJSON, err := repository.WeeklyTopicsToJSON(req.WeeklyTopics)
+	if err != nil {
+		serviceLogger.Error("failed to convert weekly topics to JSON", zap.Error(err))
+		return dto.CourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+	}
+
+	recommendedSourcesJSON, err := repository.StringSliceToJSON(req.RecommendedSources)
+	if err != nil {
+		serviceLogger.Error("failed to convert recommended sources to JSON", zap.Error(err))
+		return dto.CourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+	}
+
+	// Set defaults
 	status := req.Status
 	if status == "" {
 		status = "active"
 	}
 
-	// Create course
+	courseCategory := req.CourseCategory
+	if courseCategory == "" {
+		courseCategory = "theoretical"
+	}
+
+	educationLevel := req.EducationLevel
+	if educationLevel == "" {
+		educationLevel = "undergraduate"
+	}
+
+	teachingType := req.TeachingType
+	if teachingType == "" {
+		teachingType = "on_campus"
+	}
+
+	language := "Türkçe"
+	if req.Language != nil {
+		language = *req.Language
+	}
+
+	// Build create params
 	params := db.CreateCourseParams{
-		CourseCode:       req.CourseCode,
-		Name:             req.Name,
-		Faculty:          req.Faculty,
-		Department:       req.Department,
-		ClassLevel:       req.ClassLevel,
-		Credits:          req.Credits,
-		TheoreticalHours: req.TheoreticalHours,
-		PracticalHours:   req.PracticalHours,
-		CourseType:       db.CourseTypeEnum(req.CourseType),
-		Prerequisites:    prerequisitesJSON,
-		Description:      utils.StringToPgText(req.Description),
-		LearningOutcomes: utils.StringToPgText(req.LearningOutcomes),
-		Syllabus:         utils.StringToPgText(req.Syllabus),
-		Status: db.NullCourseCatalogStatusEnum{
-			CourseCatalogStatusEnum: db.CourseCatalogStatusEnum(status),
-			Valid:                   true,
-		},
+		CourseCode:           req.CourseCode,
+		Name:                 req.Name,
+		Faculty:              req.Faculty,
+		Department:           req.Department,
+		OfferingUnit:         utils.PointerStringToPgText(req.OfferingUnit),
+		ClassLevel:           req.ClassLevel,
+		Semester:             utils.PointerInt16ToPgInt2(req.Semester),
+		Credits:              req.Credits,
+		Ects:                 utils.PointerInt16ToPgInt2(req.ECTS),
+		TheoreticalHours:     req.TheoreticalHours,
+		PracticalHours:       req.PracticalHours,
+		LabHours:             req.LabHours,
+		CourseType:           db.CourseTypeEnum(req.CourseType),
+		CourseCategory:       db.CourseCategoryEnum(courseCategory),
+		EducationLevel:       db.EducationLevelEnum(educationLevel),
+		TeachingType:         db.TeachingTypeEnum(teachingType),
+		Language:             language,
+		Prerequisites:        prerequisitesJSON,
+		Coordinator:          coordinatorJSON,
+		Purpose:              utils.PointerStringToPgText(req.Purpose),
+		Description:          utils.PointerStringToPgText(req.Description),
+		LearningOutcomes:     utils.PointerStringToPgText(req.LearningOutcomes),
+		LearningOutcomesList: learningOutcomesListJSON,
+		WeeklyTopics:         weeklyTopicsJSON,
+		RecommendedSources:   recommendedSourcesJSON,
+		Syllabus:             utils.PointerStringToPgText(req.Syllabus),
+		Status:               db.CourseCatalogStatusEnum(status),
 	}
 
 	course, err := s.catalogRepo.CreateCourse(ctx, params)
 	if err != nil {
-		// Check for duplicate course_code
 		if sharedErrors.Is(err, catalogErrors.ErrCourseExistsRepo) {
-			serviceLogger.Warn("duplicate course code detected",
-				zap.Error(err),
-			)
+			serviceLogger.Warn("duplicate course code detected", zap.Error(err))
 			return dto.CourseResponse{}, catalogErrors.ErrCourseCodeExists
 		}
-
-		// Check for query failures - wrap and return
 		if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
 			return dto.CourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
 		}
-
-		// Unexpected error - wrap and return
 		return dto.CourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
 	}
 
 	serviceLogger.Info("course created successfully in catalog",
 		zap.String("course_id", utils.PgtypeToUUIDString(course.ID)),
 		zap.String("course_code", course.CourseCode),
-		zap.String("status", string(course.Status.CourseCatalogStatusEnum)),
+		zap.String("status", string(course.Status)),
 	)
 
 	return s.toCourseResponse(course)
@@ -116,20 +161,13 @@ func (s *CatalogService) GetCourseByCourseCode(ctx context.Context, courseCode s
 
 	course, err := s.catalogRepo.GetCourseByCourseCode(ctx, courseCode)
 	if err != nil {
-		// Check if course not found
 		if sharedErrors.Is(err, catalogErrors.ErrCourseNotFoundRepo) {
-			serviceLogger.Warn("course not found in catalog",
-				zap.Error(err),
-			)
+			serviceLogger.Warn("course not found in catalog", zap.Error(err))
 			return dto.CourseResponse{}, catalogErrors.ErrCourseNotFound
 		}
-
-		// Check for query failures - wrap and return
 		if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
 			return dto.CourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
 		}
-
-		// Unexpected error - wrap and return
 		return dto.CourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
 	}
 
@@ -160,6 +198,14 @@ func (s *CatalogService) ListCourses(ctx context.Context, req dto.ListCoursesReq
 			CourseTypeEnum: db.CourseTypeEnum(utils.StringPointerValue(req.CourseType)),
 			Valid:          req.CourseType != nil,
 		},
+		CourseCategory: db.NullCourseCategoryEnum{
+			CourseCategoryEnum: db.CourseCategoryEnum(utils.StringPointerValue(req.CourseCategory)),
+			Valid:              req.CourseCategory != nil,
+		},
+		EducationLevel: db.NullEducationLevelEnum{
+			EducationLevelEnum: db.EducationLevelEnum(utils.StringPointerValue(req.EducationLevel)),
+			Valid:              req.EducationLevel != nil,
+		},
 		Status: db.NullCourseCatalogStatusEnum{
 			CourseCatalogStatusEnum: db.CourseCatalogStatusEnum(utils.StringPointerValue(req.Status)),
 			Valid:                   req.Status != nil,
@@ -168,40 +214,43 @@ func (s *CatalogService) ListCourses(ctx context.Context, req dto.ListCoursesReq
 			Int16: utils.Int16PointerValue(req.ClassLevel),
 			Valid: req.ClassLevel != nil,
 		},
-		Search: utils.PointerStringToPgText(req.Search),
-		Offset: offset,
-		Limit:  limit,
+		Semester: pgtype.Int2{
+			Int16: utils.Int16PointerValue(req.Semester),
+			Valid: req.Semester != nil,
+		},
+		Language: utils.PointerStringToPgText(req.Language),
+		Search:   utils.PointerStringToPgText(req.Search),
+		Offset:   offset,
+		Limit:    limit,
 	}
 
 	courses, err := s.catalogRepo.ListCourses(ctx, params)
 	if err != nil {
-		// Check for query failures - wrap and return
 		if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
 			return dto.ListCoursesResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
 		}
-
-		// Unexpected error - wrap and return
 		return dto.ListCoursesResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
 	}
 
 	// Count total
 	countParams := db.CountCoursesParams{
-		Faculty:    params.Faculty,
-		Department: params.Department,
-		CourseType: params.CourseType,
-		Status:     params.Status,
-		ClassLevel: params.ClassLevel,
-		Search:     params.Search,
+		Faculty:        params.Faculty,
+		Department:     params.Department,
+		CourseType:     params.CourseType,
+		CourseCategory: params.CourseCategory,
+		EducationLevel: params.EducationLevel,
+		Status:         params.Status,
+		ClassLevel:     params.ClassLevel,
+		Semester:       params.Semester,
+		Language:       params.Language,
+		Search:         params.Search,
 	}
 
 	total, err := s.catalogRepo.CountCourses(ctx, countParams)
 	if err != nil {
-		// Check for query failures - wrap and return
 		if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
 			return dto.ListCoursesResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
 		}
-
-		// Unexpected error - wrap and return
 		return dto.ListCoursesResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
 	}
 
@@ -223,13 +272,21 @@ func (s *CatalogService) ListCourses(ctx context.Context, req dto.ListCoursesReq
 			Name:             course.Name,
 			Faculty:          course.Faculty,
 			Department:       course.Department,
+			OfferingUnit:     utils.PgTextToStringPtr(course.OfferingUnit),
 			ClassLevel:       course.ClassLevel,
+			Semester:         utils.PgInt2ToInt16Ptr(course.Semester),
 			Credits:          course.Credits,
+			ECTS:             utils.PgInt2ToInt16Ptr(course.Ects),
 			TheoreticalHours: course.TheoreticalHours,
 			PracticalHours:   course.PracticalHours,
+			LabHours:         course.LabHours,
 			CourseType:       string(course.CourseType),
+			CourseCategory:   string(course.CourseCategory),
+			EducationLevel:   string(course.EducationLevel),
+			TeachingType:     string(course.TeachingType),
+			Language:         course.Language,
 			Prerequisites:    prerequisites,
-			Status:           string(course.Status.CourseCatalogStatusEnum),
+			Status:           string(course.Status),
 		})
 	}
 
@@ -263,20 +320,13 @@ func (s *CatalogService) UpdateCourse(ctx context.Context, courseCode string, re
 	// Check if course exists
 	existingCourse, err := s.catalogRepo.GetCourseByCourseCode(ctx, courseCode)
 	if err != nil {
-		// Check if course not found
 		if sharedErrors.Is(err, catalogErrors.ErrCourseNotFoundRepo) {
-			serviceLogger.Warn("course not found for update",
-				zap.Error(err),
-			)
+			serviceLogger.Warn("course not found for update", zap.Error(err))
 			return dto.CourseResponse{}, catalogErrors.ErrCourseNotFound
 		}
-
-		// Check for query failures - wrap and return
 		if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
 			return dto.CourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
 		}
-
-		// Unexpected error - wrap and return
 		return dto.CourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
 	}
 
@@ -292,12 +342,49 @@ func (s *CatalogService) UpdateCourse(ctx context.Context, courseCode string, re
 		if err := s.validatePrerequisites(ctx, *req.Prerequisites, classLevel); err != nil {
 			return dto.CourseResponse{}, err
 		}
-
 		prerequisitesJSON, err = repository.PrerequisitesToJSON(*req.Prerequisites)
 		if err != nil {
-			serviceLogger.Error("failed to convert prerequisites to JSON",
-				zap.Error(err),
-			)
+			serviceLogger.Error("failed to convert prerequisites to JSON", zap.Error(err))
+			return dto.CourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+		}
+	}
+
+	// Convert coordinator if provided
+	var coordinatorJSON []byte
+	if req.Coordinator != nil {
+		coordinatorJSON, err = repository.CoordinatorToJSON(req.Coordinator)
+		if err != nil {
+			serviceLogger.Error("failed to convert coordinator to JSON", zap.Error(err))
+			return dto.CourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+		}
+	}
+
+	// Convert learning outcomes list if provided
+	var learningOutcomesListJSON []byte
+	if req.LearningOutcomesList != nil {
+		learningOutcomesListJSON, err = repository.StringSliceToJSON(*req.LearningOutcomesList)
+		if err != nil {
+			serviceLogger.Error("failed to convert learning outcomes list to JSON", zap.Error(err))
+			return dto.CourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+		}
+	}
+
+	// Convert weekly topics if provided
+	var weeklyTopicsJSON []byte
+	if req.WeeklyTopics != nil {
+		weeklyTopicsJSON, err = repository.WeeklyTopicsToJSON(*req.WeeklyTopics)
+		if err != nil {
+			serviceLogger.Error("failed to convert weekly topics to JSON", zap.Error(err))
+			return dto.CourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+		}
+	}
+
+	// Convert recommended sources if provided
+	var recommendedSourcesJSON []byte
+	if req.RecommendedSources != nil {
+		recommendedSourcesJSON, err = repository.StringSliceToJSON(*req.RecommendedSources)
+		if err != nil {
+			serviceLogger.Error("failed to convert recommended sources to JSON", zap.Error(err))
 			return dto.CourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
 		}
 	}
@@ -308,14 +395,32 @@ func (s *CatalogService) UpdateCourse(ctx context.Context, courseCode string, re
 		Name:             utils.PointerStringToPgText(req.Name),
 		Faculty:          utils.PointerStringToPgText(req.Faculty),
 		Department:       utils.PointerStringToPgText(req.Department),
+		OfferingUnit:     utils.PointerStringToPgText(req.OfferingUnit),
 		ClassLevel:       pgtype.Int2{Int16: utils.Int16PointerValue(req.ClassLevel), Valid: req.ClassLevel != nil},
+		Semester:         pgtype.Int2{Int16: utils.Int16PointerValue(req.Semester), Valid: req.Semester != nil},
 		Credits:          pgtype.Int2{Int16: utils.Int16PointerValue(req.Credits), Valid: req.Credits != nil},
+		Ects:             pgtype.Int2{Int16: utils.Int16PointerValue(req.ECTS), Valid: req.ECTS != nil},
 		TheoreticalHours: pgtype.Int2{Int16: utils.Int16PointerValue(req.TheoreticalHours), Valid: req.TheoreticalHours != nil},
 		PracticalHours:   pgtype.Int2{Int16: utils.Int16PointerValue(req.PracticalHours), Valid: req.PracticalHours != nil},
+		LabHours:         pgtype.Int2{Int16: utils.Int16PointerValue(req.LabHours), Valid: req.LabHours != nil},
 		CourseType: db.NullCourseTypeEnum{
 			CourseTypeEnum: db.CourseTypeEnum(utils.StringPointerValue(req.CourseType)),
 			Valid:          req.CourseType != nil,
 		},
+		CourseCategory: db.NullCourseCategoryEnum{
+			CourseCategoryEnum: db.CourseCategoryEnum(utils.StringPointerValue(req.CourseCategory)),
+			Valid:              req.CourseCategory != nil,
+		},
+		EducationLevel: db.NullEducationLevelEnum{
+			EducationLevelEnum: db.EducationLevelEnum(utils.StringPointerValue(req.EducationLevel)),
+			Valid:              req.EducationLevel != nil,
+		},
+		TeachingType: db.NullTeachingTypeEnum{
+			TeachingTypeEnum: db.TeachingTypeEnum(utils.StringPointerValue(req.TeachingType)),
+			Valid:            req.TeachingType != nil,
+		},
+		Language:         utils.PointerStringToPgText(req.Language),
+		Purpose:          utils.PointerStringToPgText(req.Purpose),
 		Description:      utils.PointerStringToPgText(req.Description),
 		LearningOutcomes: utils.PointerStringToPgText(req.LearningOutcomes),
 		Syllabus:         utils.PointerStringToPgText(req.Syllabus),
@@ -325,26 +430,32 @@ func (s *CatalogService) UpdateCourse(ctx context.Context, courseCode string, re
 		},
 	}
 
+	// Set JSONB fields only if provided
 	if prerequisitesJSON != nil {
 		params.Prerequisites = prerequisitesJSON
+	}
+	if coordinatorJSON != nil {
+		params.Coordinator = coordinatorJSON
+	}
+	if learningOutcomesListJSON != nil {
+		params.LearningOutcomesList = learningOutcomesListJSON
+	}
+	if weeklyTopicsJSON != nil {
+		params.WeeklyTopics = weeklyTopicsJSON
+	}
+	if recommendedSourcesJSON != nil {
+		params.RecommendedSources = recommendedSourcesJSON
 	}
 
 	course, err := s.catalogRepo.UpdateCourse(ctx, params)
 	if err != nil {
-		// Check if course not found during update
 		if sharedErrors.Is(err, catalogErrors.ErrCourseNotFoundRepo) {
-			serviceLogger.Warn("course not found during update",
-				zap.Error(err),
-			)
+			serviceLogger.Warn("course not found during update", zap.Error(err))
 			return dto.CourseResponse{}, catalogErrors.ErrCourseNotFound
 		}
-
-		// Check for query failures - wrap and return
 		if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
 			return dto.CourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
 		}
-
-		// Unexpected error - wrap and return
 		return dto.CourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
 	}
 
@@ -372,7 +483,6 @@ func (s *CatalogService) validatePrerequisites(ctx context.Context, prerequisite
 	// Fetch prerequisite courses from database
 	courses, err := s.catalogRepo.GetCoursesByIDs(ctx, ids)
 	if err != nil {
-		// Check for query failures - wrap and return
 		if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
 			return sharedErrors.Wrap(sharedErrors.ErrInternal, err)
 		}
@@ -441,24 +551,57 @@ func (s *CatalogService) toCourseResponse(course db.CourseCatalog) (dto.CourseRe
 		return dto.CourseResponse{}, fmt.Errorf("failed to parse prerequisites: %w", err)
 	}
 
+	coordinator, err := repository.JSONToCoordinator(course.Coordinator)
+	if err != nil {
+		return dto.CourseResponse{}, fmt.Errorf("failed to parse coordinator: %w", err)
+	}
+
+	learningOutcomesList, err := repository.JSONToStringSlice(course.LearningOutcomesList)
+	if err != nil {
+		return dto.CourseResponse{}, fmt.Errorf("failed to parse learning outcomes list: %w", err)
+	}
+
+	weeklyTopics, err := repository.JSONToWeeklyTopics(course.WeeklyTopics)
+	if err != nil {
+		return dto.CourseResponse{}, fmt.Errorf("failed to parse weekly topics: %w", err)
+	}
+
+	recommendedSources, err := repository.JSONToStringSlice(course.RecommendedSources)
+	if err != nil {
+		return dto.CourseResponse{}, fmt.Errorf("failed to parse recommended sources: %w", err)
+	}
+
 	return dto.CourseResponse{
-		ID:               uuid.UUID(course.ID.Bytes),
-		CourseCode:       course.CourseCode,
-		Name:             course.Name,
-		Faculty:          course.Faculty,
-		Department:       course.Department,
-		ClassLevel:       course.ClassLevel,
-		Credits:          course.Credits,
-		TheoreticalHours: course.TheoreticalHours,
-		PracticalHours:   course.PracticalHours,
-		CourseType:       string(course.CourseType),
-		Prerequisites:    prerequisites,
-		Description:      utils.PgTextToStringPtr(course.Description),
-		LearningOutcomes: utils.PgTextToStringPtr(course.LearningOutcomes),
-		Syllabus:         utils.PgTextToStringPtr(course.Syllabus),
-		Status:           string(course.Status.CourseCatalogStatusEnum),
-		CreatedAt:        course.CreatedAt.Time,
-		UpdatedAt:        course.UpdatedAt.Time,
+		ID:                   uuid.UUID(course.ID.Bytes),
+		CourseCode:           course.CourseCode,
+		Name:                 course.Name,
+		Faculty:              course.Faculty,
+		Department:           course.Department,
+		OfferingUnit:         utils.PgTextToStringPtr(course.OfferingUnit),
+		ClassLevel:           course.ClassLevel,
+		Semester:             utils.PgInt2ToInt16Ptr(course.Semester),
+		Credits:              course.Credits,
+		ECTS:                 utils.PgInt2ToInt16Ptr(course.Ects),
+		TheoreticalHours:     course.TheoreticalHours,
+		PracticalHours:       course.PracticalHours,
+		LabHours:             course.LabHours,
+		CourseType:           string(course.CourseType),
+		CourseCategory:       string(course.CourseCategory),
+		EducationLevel:       string(course.EducationLevel),
+		TeachingType:         string(course.TeachingType),
+		Language:             course.Language,
+		Prerequisites:        prerequisites,
+		Coordinator:          coordinator,
+		Purpose:              utils.PgTextToStringPtr(course.Purpose),
+		Description:          utils.PgTextToStringPtr(course.Description),
+		LearningOutcomes:     utils.PgTextToStringPtr(course.LearningOutcomes),
+		LearningOutcomesList: learningOutcomesList,
+		WeeklyTopics:         weeklyTopics,
+		RecommendedSources:   recommendedSources,
+		Syllabus:             utils.PgTextToStringPtr(course.Syllabus),
+		Status:               string(course.Status),
+		CreatedAt:            course.CreatedAt.Time,
+		UpdatedAt:            course.UpdatedAt.Time,
 	}, nil
 }
 

@@ -254,12 +254,16 @@ func (s *EnrollmentService) GetPendingProgramsByAdvisor(ctx context.Context, adv
 		}
 
 		programsDTO = append(programsDTO, dto.EnrollmentProgramResponse{
-			ID:        programID,
-			StudentID: utils.PgtypeToUUID(program.StudentID),
-			Semester:  program.Semester,
-			Status:    string(program.Status.EnrollmentStatusEnum),
-			Courses:   coursesDTO,
-			CreatedAt: program.CreatedAt.Time,
+			ID:            programID,
+			StudentID:     utils.PgtypeToUUID(program.StudentID),
+			StudentName:   utils.PgTextToString(program.FirstName) + " " + utils.PgTextToString(program.LastName),
+			StudentNumber: program.StudentNumber,
+			Department:    utils.PgTextToString(program.Department),
+			ClassLevel:    int16(program.ClassLevel.Int16),
+			Semester:      program.Semester,
+			Status:        string(program.Status.EnrollmentStatusEnum),
+			Courses:       coursesDTO,
+			CreatedAt:     program.CreatedAt.Time,
 		})
 	}
 

@@ -11,8 +11,29 @@ import (
 	"github.com/baaaki/mydreamcampus/shared/events"
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	"github.com/baaaki/mydreamcampus/shared/rabbitmq"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
+
+// wrappedEvent represents an event with nested data (from student-service)
+type wrappedEvent struct {
+	EventID   string          `json:"event_id"`
+	EventType string          `json:"event_type"`
+	Data      json.RawMessage `json:"data"`
+}
+
+// studentEventData represents student data inside the wrapped event
+type studentEventData struct {
+	ID            string  `json:"id"`
+	StudentNumber string  `json:"student_number"`
+	Email         string  `json:"email"`
+	FirstName     string  `json:"first_name"`
+	LastName      string  `json:"last_name"`
+	Department    string  `json:"department"`
+	ClassLevel    int16   `json:"class_level"`
+	AdvisorID     *string `json:"advisor_id"`
+	Status        string  `json:"status"`
+}
 
 type EventConsumer struct {
 	consumer            *rabbitmq.Consumer
@@ -201,12 +222,59 @@ func (c *EventConsumer) handleCourseSemesterDeleted(ctx context.Context, msgBody
 
 // handleStudentCreated handles student.created events
 func (c *EventConsumer) handleStudentCreated(ctx context.Context, msgBody []byte, eventID string) error {
-	var event dto.StudentCreatedEvent
-	if err := json.Unmarshal(msgBody, &event); err != nil {
-		logger.Error("failed to unmarshal student.created event",
+	// Parse wrapped event format (from student-service)
+	var wrapped wrappedEvent
+	if err := json.Unmarshal(msgBody, &wrapped); err != nil {
+		logger.Error("failed to unmarshal student.created event wrapper",
 			zap.Error(err),
 		)
 		return err
+	}
+
+	// Parse data field
+	var data studentEventData
+	if err := json.Unmarshal(wrapped.Data, &data); err != nil {
+		logger.Error("failed to unmarshal student.created event data",
+			zap.Error(err),
+		)
+		return err
+	}
+
+	// Parse event ID
+	parsedEventID, err := uuid.Parse(wrapped.EventID)
+	if err != nil {
+		logger.Error("failed to parse event_id", zap.Error(err))
+		return err
+	}
+
+	// Parse student ID
+	studentID, err := uuid.Parse(data.ID)
+	if err != nil {
+		logger.Error("failed to parse student_id", zap.Error(err), zap.String("id", data.ID))
+		return err
+	}
+
+	// Parse advisor ID if present
+	var advisorID uuid.UUID
+	if data.AdvisorID != nil && *data.AdvisorID != "" {
+		advisorID, _ = uuid.Parse(*data.AdvisorID)
+	}
+
+	// Construct the event
+	event := dto.StudentCreatedEvent{
+		BaseEvent: dto.BaseEvent{
+			EventID:   parsedEventID,
+			EventType: wrapped.EventType,
+		},
+		StudentID:     studentID,
+		StudentNumber: data.StudentNumber,
+		Email:         data.Email,
+		FirstName:     data.FirstName,
+		LastName:      data.LastName,
+		Department:    data.Department,
+		ClassLevel:    data.ClassLevel,
+		AdvisorID:     advisorID,
+		Status:        data.Status,
 	}
 
 	logger.Info("processing student.created event",
@@ -214,7 +282,7 @@ func (c *EventConsumer) handleStudentCreated(ctx context.Context, msgBody []byte
 		zap.String("student_id", event.StudentID.String()),
 	)
 
-	err := c.eventService.HandleStudentCreated(ctx, event)
+	err = c.eventService.HandleStudentCreated(ctx, event)
 	if err != nil {
 		logger.Error("failed to process student.created event",
 			zap.Error(err),
@@ -232,12 +300,60 @@ func (c *EventConsumer) handleStudentCreated(ctx context.Context, msgBody []byte
 
 // handleStudentUpdated handles student.updated events
 func (c *EventConsumer) handleStudentUpdated(ctx context.Context, msgBody []byte, eventID string) error {
-	var event dto.StudentUpdatedEvent
-	if err := json.Unmarshal(msgBody, &event); err != nil {
-		logger.Error("failed to unmarshal student.updated event",
+	// Parse wrapped event format (from student-service)
+	var wrapped wrappedEvent
+	if err := json.Unmarshal(msgBody, &wrapped); err != nil {
+		logger.Error("failed to unmarshal student.updated event wrapper",
 			zap.Error(err),
 		)
 		return err
+	}
+
+	// Parse data field
+	var data studentEventData
+	if err := json.Unmarshal(wrapped.Data, &data); err != nil {
+		logger.Error("failed to unmarshal student.updated event data",
+			zap.Error(err),
+		)
+		return err
+	}
+
+	// Parse event ID
+	parsedEventID, err := uuid.Parse(wrapped.EventID)
+	if err != nil {
+		logger.Error("failed to parse event_id", zap.Error(err))
+		return err
+	}
+
+	// Parse student ID
+	studentID, err := uuid.Parse(data.ID)
+	if err != nil {
+		logger.Error("failed to parse student_id", zap.Error(err), zap.String("id", data.ID))
+		return err
+	}
+
+	// Parse advisor ID if present
+	var advisorID *uuid.UUID
+	if data.AdvisorID != nil && *data.AdvisorID != "" {
+		parsed, _ := uuid.Parse(*data.AdvisorID)
+		advisorID = &parsed
+	}
+
+	// Construct the event
+	event := dto.StudentUpdatedEvent{
+		BaseEvent: dto.BaseEvent{
+			EventID:   parsedEventID,
+			EventType: wrapped.EventType,
+		},
+		StudentID:     studentID,
+		StudentNumber: data.StudentNumber,
+		Email:         data.Email,
+		FirstName:     data.FirstName,
+		LastName:      data.LastName,
+		Department:    data.Department,
+		ClassLevel:    data.ClassLevel,
+		AdvisorID:     advisorID,
+		Status:        data.Status,
 	}
 
 	logger.Info("processing student.updated event",
@@ -245,7 +361,7 @@ func (c *EventConsumer) handleStudentUpdated(ctx context.Context, msgBody []byte
 		zap.String("student_id", event.StudentID.String()),
 	)
 
-	err := c.eventService.HandleStudentUpdated(ctx, event)
+	err = c.eventService.HandleStudentUpdated(ctx, event)
 	if err != nil {
 		logger.Error("failed to process student.updated event",
 			zap.Error(err),
@@ -263,12 +379,45 @@ func (c *EventConsumer) handleStudentUpdated(ctx context.Context, msgBody []byte
 
 // handleStudentDeactivated handles student.deleted events
 func (c *EventConsumer) handleStudentDeactivated(ctx context.Context, msgBody []byte, eventID string) error {
-	var event dto.StudentDeactivatedEvent
-	if err := json.Unmarshal(msgBody, &event); err != nil {
-		logger.Error("failed to unmarshal student.deleted event",
+	// Parse wrapped event format (from student-service)
+	var wrapped wrappedEvent
+	if err := json.Unmarshal(msgBody, &wrapped); err != nil {
+		logger.Error("failed to unmarshal student.deleted event wrapper",
 			zap.Error(err),
 		)
 		return err
+	}
+
+	// Parse data field
+	var data studentEventData
+	if err := json.Unmarshal(wrapped.Data, &data); err != nil {
+		logger.Error("failed to unmarshal student.deleted event data",
+			zap.Error(err),
+		)
+		return err
+	}
+
+	// Parse event ID
+	parsedEventID, err := uuid.Parse(wrapped.EventID)
+	if err != nil {
+		logger.Error("failed to parse event_id", zap.Error(err))
+		return err
+	}
+
+	// Parse student ID
+	studentID, err := uuid.Parse(data.ID)
+	if err != nil {
+		logger.Error("failed to parse student_id", zap.Error(err), zap.String("id", data.ID))
+		return err
+	}
+
+	// Construct the event
+	event := dto.StudentDeactivatedEvent{
+		BaseEvent: dto.BaseEvent{
+			EventID:   parsedEventID,
+			EventType: wrapped.EventType,
+		},
+		StudentID: studentID,
 	}
 
 	logger.Info("processing student.deleted event",
@@ -276,7 +425,7 @@ func (c *EventConsumer) handleStudentDeactivated(ctx context.Context, msgBody []
 		zap.String("student_id", event.StudentID.String()),
 	)
 
-	err := c.eventService.HandleStudentDeactivated(ctx, event)
+	err = c.eventService.HandleStudentDeactivated(ctx, event)
 	if err != nil {
 		logger.Error("failed to process student.deleted event",
 			zap.Error(err),

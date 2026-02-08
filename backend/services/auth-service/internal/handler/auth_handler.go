@@ -9,6 +9,7 @@ import (
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	"github.com/baaaki/mydreamcampus/auth-service/config"
 	"github.com/baaaki/mydreamcampus/auth-service/internal/dto"
+	authErrors "github.com/baaaki/mydreamcampus/auth-service/internal/errors"
 	"github.com/baaaki/mydreamcampus/auth-service/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -71,25 +72,34 @@ func (h *AuthHandler) Login(c *gin.Context) {
 			zap.String("email", req.Email),
 		)
 
-		if err == sharedErrors.ErrUnauthorized {
-			c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
-				Error:   "INVALID_CREDENTIALS",
-				Message: "Invalid email or password",
+		// Check for specific auth errors
+		if sharedErrors.Is(err, authErrors.ErrAccountLocked) {
+			c.JSON(http.StatusTooManyRequests, dto.ErrorResponse{
+				Error:   "ACCOUNT_LOCKED",
+				Message: "Hesabınız çok fazla başarısız giriş denemesi nedeniyle geçici olarak kilitlendi. Lütfen 30 dakika sonra tekrar deneyin.",
 			})
 			return
 		}
 
-		if err.Error() == "account deactivated" {
+		if sharedErrors.Is(err, authErrors.ErrAccountDeactivated) {
 			c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
 				Error:   "ACCOUNT_DEACTIVATED",
-				Message: "Your account has been deactivated",
+				Message: "Hesabınız devre dışı bırakılmış",
+			})
+			return
+		}
+
+		if sharedErrors.Is(err, authErrors.ErrInvalidCredentials) || err == sharedErrors.ErrUnauthorized {
+			c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
+				Error:   "INVALID_CREDENTIALS",
+				Message: "Geçersiz e-posta veya şifre",
 			})
 			return
 		}
 
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "INTERNAL_ERROR",
-			Message: "An error occurred during login",
+			Message: "Giriş sırasında bir hata oluştu",
 		})
 		return
 	}

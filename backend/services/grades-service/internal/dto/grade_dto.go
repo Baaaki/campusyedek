@@ -114,6 +114,7 @@ type StudentGrades struct {
 type ScoreDetail struct {
 	Score    *float64 `json:"score"`
 	IsAbsent bool     `json:"is_absent"`
+	IsLocked bool     `json:"is_locked"`
 }
 
 // ============================================
@@ -138,12 +139,13 @@ type ActiveCourse struct {
 }
 
 type CompletedCourse struct {
-	CourseCode      string  `json:"course_code"`
-	CourseName      string  `json:"course_name"`
-	Semester        string  `json:"semester"`
-	Credits         int     `json:"credits"`
-	WeightedAverage float64 `json:"weighted_average"`
-	GradePoint      string  `json:"grade_point"`
+	CourseCode       string             `json:"course_code"`
+	CourseName       string             `json:"course_name"`
+	Semester         string             `json:"semester"`
+	Credits          int                `json:"credits"`
+	WeightedAverage  float64            `json:"weighted_average"`
+	GradePoint       string             `json:"grade_point"`
+	AssessmentScores map[string]float64 `json:"assessment_scores,omitempty"`
 }
 
 // ============================================
@@ -183,4 +185,30 @@ type CourseGrade struct {
 type TranscriptSummary struct {
 	TotalCredits  int     `json:"total_credits"`
 	CumulativeGPA float64 `json:"cumulative_gpa"`
+}
+
+// ============================================
+// Appeal (İtiraz) DTOs
+// ============================================
+
+type AppealScoreRequest struct {
+	StudentID uuid.UUID `json:"student_id" binding:"required"`
+	CourseID  uuid.UUID `json:"course_id" binding:"required"`
+	Slug      string    `json:"slug" binding:"required"`
+	NewScore  float64   `json:"new_score" binding:"required,min=0,max=100"`
+}
+
+type AppealScoreResponse struct {
+	StudentID          uuid.UUID `json:"student_id"`
+	CourseCode         string    `json:"course_code"`
+	Slug               string    `json:"slug"`
+	OldScore           float64   `json:"old_score"`
+	NewScore           float64   `json:"new_score"`
+	OldWeightedAverage float64   `json:"old_weighted_average"`
+	NewWeightedAverage float64   `json:"new_weighted_average"`
+	OldGradePoint      string    `json:"old_grade_point"`
+	NewGradePoint      string    `json:"new_grade_point"`
+	GradingType        string    `json:"grading_type"`
+	FrozenClassMean    float64   `json:"frozen_class_mean"`
+	FrozenClassStdDev  float64   `json:"frozen_class_stddev,omitempty"`
 }

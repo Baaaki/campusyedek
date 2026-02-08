@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -190,21 +191,33 @@ func Int16ToPgInt2(i int16) pgtype.Int2 {
 	return pgtype.Int2{Int16: i, Valid: true}
 }
 
+// PgInt2ToInt16Ptr converts pgtype.Int2 to *int16
+func PgInt2ToInt16Ptr(i pgtype.Int2) *int16 {
+	if !i.Valid {
+		return nil
+	}
+	return &i.Int16
+}
+
 // Float64ToPgNumeric converts float64 to pgtype.Numeric
 func Float64ToPgNumeric(f float64) pgtype.Numeric {
 	var n pgtype.Numeric
-	n.Scan(f)
+	// pgtype.Numeric.Scan accepts string format
+	n.Scan(fmt.Sprintf("%.2f", f))
 	return n
 }
 
 // PgNumericToFloat64 converts pgtype.Numeric to float64
 func PgNumericToFloat64(n pgtype.Numeric) (float64, error) {
-	var f float64
 	if !n.Valid {
 		return 0, nil
 	}
-	err := n.Scan(&f)
-	return f, err
+	// Use Float64Value method which returns (float64, error)
+	f, err := n.Float64Value()
+	if err != nil {
+		return 0, err
+	}
+	return f.Float64, nil
 }
 
 // TimeToPgTimestamp converts time.Time to pgtype.Timestamp

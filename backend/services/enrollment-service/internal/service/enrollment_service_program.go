@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/baaaki/mydreamcampus/enrollment-service/internal/db"
 	"github.com/baaaki/mydreamcampus/enrollment-service/internal/dto"
 	sharedErrors "github.com/baaaki/mydreamcampus/shared/errors"
 	"github.com/baaaki/mydreamcampus/shared/logger"
@@ -41,14 +42,56 @@ func (s *EnrollmentService) GetMyEnrollments(ctx context.Context, studentID uuid
 			continue
 		}
 
+		// Collect course IDs for session lookup
+		allCourseIDs := make([]uuid.UUID, len(coursesRows))
+		for i, row := range coursesRows {
+			allCourseIDs[i] = utils.PgtypeToUUID(row.CourseID)
+		}
+
+		// Get sessions for these courses
+		sessions, err := s.courseRepo.GetSessionsByCourseIDs(ctx, allCourseIDs)
+		if err != nil {
+			serviceLogger.Warn("failed to get sessions for program courses",
+				zap.String("program_id", programID.String()),
+				zap.Error(err),
+			)
+			// Continue without sessions
+		}
+
+		// Group sessions by course_id
+		sessionsMap := make(map[uuid.UUID][]db.CourseSessionsCache)
+		for _, session := range sessions {
+			cID := utils.PgtypeToUUID(session.CourseID)
+			sessionsMap[cID] = append(sessionsMap[cID], session)
+		}
+
 		coursesDTO := make([]dto.CourseBasic, 0, len(coursesRows))
 		for _, row := range coursesRows {
+			cID := utils.PgtypeToUUID(row.CourseID)
+
+			// Map sessions
+			var scheduleSessions []dto.ScheduleSession
+			if sessList, ok := sessionsMap[cID]; ok {
+				daySessionsMap := make(map[string][]int)
+				for _, s := range sessList {
+					day := string(s.DayOfWeek)
+					daySessionsMap[day] = append(daySessionsMap[day], int(s.SlotNumber))
+				}
+				for day, slots := range daySessionsMap {
+					scheduleSessions = append(scheduleSessions, dto.ScheduleSession{
+						DayOfWeek:   day,
+						SlotNumbers: slots,
+					})
+				}
+			}
+
 			coursesDTO = append(coursesDTO, dto.CourseBasic{
-				ID:             utils.PgtypeToUUID(row.CourseID).String(),
-				CourseCode:     row.CourseCode,
-				CourseName:     utils.PgTextToString(row.CourseName),
-				Credits:        row.Credits,
-				InstructorName: utils.PgTextToString(row.InstructorFullname),
+				ID:               cID.String(),
+				CourseCode:       row.CourseCode,
+				CourseName:       utils.PgTextToString(row.CourseName),
+				Credits:          row.Credits,
+				InstructorName:   utils.PgTextToString(row.InstructorFullname),
+				ScheduleSessions: scheduleSessions,
 			})
 		}
 

@@ -22,25 +22,31 @@ watching sql/queries
 !exclude tmp
 building...
 running...
-08:26:21.176	[34mINFO[0m	cmd/main.go:38	starting course-catalog-service	{"environment": "development", "port": "8004"}
-08:26:21.218	[34mINFO[0m	cmd/main.go:52	database connection established
-08:26:21.218	[34mINFO[0m	rabbitmq/connection.go:37	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
-08:26:21.221	[34mINFO[0m	rabbitmq/connection.go:69	rabbitmq connection established
-08:26:21.221	[34mINFO[0m	cmd/main.go:63	RabbitMQ connection established
-08:26:21.221	[34mINFO[0m	cmd/main.go:230	RabbitMQ exchange declared	{"exchange": "course.events"}
+15:59:38.356	[34mINFO[0m	cmd/main.go:38	starting course-catalog-service	{"environment": "development", "port": "8004"}
+15:59:38.369	[34mINFO[0m	cmd/main.go:52	database connection established
+15:59:38.369	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+15:59:38.373	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+15:59:38.373	[34mINFO[0m	cmd/main.go:63	RabbitMQ connection established
+15:59:38.374	[34mINFO[0m	cmd/main.go:241	RabbitMQ exchange declared	{"exchange": "course.events"}
 [GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
  - using env:	export GIN_MODE=release
  - using code:	gin.SetMode(gin.ReleaseMode)
 
 [GIN-debug] GET    /health                   --> main.setupRouter.func1 (4 handlers)
-08:26:21.221	[34mINFO[0m	worker/outbox_worker.go:39	starting outbox worker	{"interval": "5s", "batch_size": 10}
-[GIN-debug] GET    /api/catalog/courses      --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*CatalogHandler).ListCourses-fm (5 handlers)
-[GIN-debug] GET    /api/catalog/courses/:course_code --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*CatalogHandler).GetCourseByCourseCode-fm (5 handlers)
+[GIN-debug] GET    /api/catalog/courses      --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*CatalogHandler).ListCourses-fm (4 handlers)
+[GIN-debug] GET    /api/catalog/courses/:course_code --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*CatalogHandler).GetCourseByCourseCode-fm (4 handlers)
 [GIN-debug] POST   /api/catalog/courses      --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*CatalogHandler).CreateCourse-fm (6 handlers)
 [GIN-debug] PUT    /api/catalog/courses/:course_code --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*CatalogHandler).UpdateCourse-fm (6 handlers)
+[GIN-debug] GET    /api/semesters/teacher/courses --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*SemesterHandler).GetTeacherCourses-fm (6 handlers)
 [GIN-debug] GET    /api/semesters/:semester_id/courses --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*SemesterHandler).ListSemesterCourses-fm (5 handlers)
 [GIN-debug] GET    /api/semesters/:semester_id/courses/:course_id --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*SemesterHandler).GetSemesterCourseByID-fm (5 handlers)
 [GIN-debug] POST   /api/semesters/:semester_id/courses --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*SemesterHandler).CreateSemesterCourse-fm (6 handlers)
 [GIN-debug] PUT    /api/semesters/:semester_id/courses/:course_id --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*SemesterHandler).UpdateSemesterCourse-fm (6 handlers)
 [GIN-debug] DELETE /api/semesters/:semester_id/courses/:course_id --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*SemesterHandler).DeleteSemesterCourse-fm (6 handlers)
-08:26:21.221	[34mINFO[0m	cmd/main.go:123	server starting	{"port": "8004"}
+15:59:38.374	[34mINFO[0m	worker/outbox_worker.go:39	starting outbox worker	{"interval": "5s", "batch_size": 10}
+15:59:38.374	[34mINFO[0m	cmd/main.go:123	server starting	{"port": "8004"}
+19:44:32.598	[31mERROR[0m	rabbitmq/connection.go:94	rabbitmq connection lost	{"error": "Exception (320) Reason: \"CONNECTION_FORCED - broker forced connection closure with reason 'shutdown'\""}
+github.com/baaaki/mydreamcampus/shared/rabbitmq.(*Connection).handleReconnect
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/rabbitmq/connection.go:94
+19:44:32.598	[34mINFO[0m	rabbitmq/connection.go:99	attempting to reconnect to rabbitmq...
+cleaning...

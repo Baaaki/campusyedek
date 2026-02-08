@@ -230,6 +230,89 @@ func (q *Queries) GetSemesterCourseBySemesterAndCode(ctx context.Context, arg Ge
 	return i, err
 }
 
+const getTeacherCourses = `-- name: GetTeacherCourses :many
+SELECT
+    sc.id,
+    sc.semester,
+    sc.course_code,
+    cc.name as course_name,
+    cc.faculty,
+    cc.department,
+    sc.credits,
+    sc.class_level,
+    sc.instructor_id,
+    sc.instructor_fullname,
+    sc.classroom_location,
+    sc.max_capacity,
+    cc.theoretical_hours,
+    cc.practical_hours,
+    sc.created_at
+FROM semester_courses sc
+JOIN course_catalog cc ON sc.course_code = cc.course_code
+WHERE sc.instructor_id = $1
+  AND ($2::text IS NULL OR sc.semester = $2)
+ORDER BY sc.semester DESC, sc.course_code ASC
+`
+
+type GetTeacherCoursesParams struct {
+	InstructorID pgtype.UUID `json:"instructor_id"`
+	Semester     pgtype.Text `json:"semester"`
+}
+
+type GetTeacherCoursesRow struct {
+	ID                 pgtype.UUID      `json:"id"`
+	Semester           string           `json:"semester"`
+	CourseCode         string           `json:"course_code"`
+	CourseName         string           `json:"course_name"`
+	Faculty            string           `json:"faculty"`
+	Department         string           `json:"department"`
+	Credits            int16            `json:"credits"`
+	ClassLevel         int16            `json:"class_level"`
+	InstructorID       pgtype.UUID      `json:"instructor_id"`
+	InstructorFullname string           `json:"instructor_fullname"`
+	ClassroomLocation  string           `json:"classroom_location"`
+	MaxCapacity        int16            `json:"max_capacity"`
+	TheoreticalHours   int16            `json:"theoretical_hours"`
+	PracticalHours     int16            `json:"practical_hours"`
+	CreatedAt          pgtype.Timestamp `json:"created_at"`
+}
+
+func (q *Queries) GetTeacherCourses(ctx context.Context, arg GetTeacherCoursesParams) ([]GetTeacherCoursesRow, error) {
+	rows, err := q.db.Query(ctx, getTeacherCourses, arg.InstructorID, arg.Semester)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetTeacherCoursesRow{}
+	for rows.Next() {
+		var i GetTeacherCoursesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Semester,
+			&i.CourseCode,
+			&i.CourseName,
+			&i.Faculty,
+			&i.Department,
+			&i.Credits,
+			&i.ClassLevel,
+			&i.InstructorID,
+			&i.InstructorFullname,
+			&i.ClassroomLocation,
+			&i.MaxCapacity,
+			&i.TheoreticalHours,
+			&i.PracticalHours,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listSemesterCourses = `-- name: ListSemesterCourses :many
 SELECT sc.id, sc.semester, sc.course_code, cc.name as course_name, sc.credits, sc.class_level,
        sc.instructor_id, sc.instructor_fullname, sc.classroom_location, sc.max_capacity,

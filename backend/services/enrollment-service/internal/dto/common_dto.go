@@ -8,11 +8,12 @@ type ScheduleSession struct {
 
 // CourseBasic represents basic course information
 type CourseBasic struct {
-	ID               string `json:"id"`
-	CourseCode       string `json:"course_code"`
-	CourseName       string `json:"course_name"`
-	Credits          int16  `json:"credits"`
-	InstructorName   string `json:"instructor,omitempty"`
+	ID               string            `json:"id"`
+	CourseCode       string            `json:"course_code"`
+	CourseName       string            `json:"course_name"`
+	Credits          int16             `json:"credits"`
+	InstructorName   string            `json:"instructor,omitempty"`
+	ScheduleSessions []ScheduleSession `json:"schedule_sessions"`
 }
 
 // PaginationRequest represents pagination parameters

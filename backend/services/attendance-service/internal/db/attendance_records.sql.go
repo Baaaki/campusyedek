@@ -119,6 +119,79 @@ func (q *Queries) CreateAttendanceRecordQR(ctx context.Context, arg CreateAttend
 	return err
 }
 
+const getAttendanceRecordsBySession = `-- name: GetAttendanceRecordsBySession :many
+SELECT
+    ar.id,
+    ar.session_id,
+    ar.student_id,
+    ar.course_id,
+    ar.semester,
+    ar.week_number,
+    ar.is_present,
+    ar.marked_via,
+    ar.scanned_at,
+    ar.qr_timestamp,
+    ar.manually_marked_by,
+    ar.manually_marked_at as marked_at,
+    ar.manual_note,
+    ar.created_at
+FROM attendance_records ar
+WHERE ar.session_id = $1
+ORDER BY ar.created_at DESC
+`
+
+type GetAttendanceRecordsBySessionRow struct {
+	ID               pgtype.UUID      `json:"id"`
+	SessionID        pgtype.UUID      `json:"session_id"`
+	StudentID        pgtype.UUID      `json:"student_id"`
+	CourseID         pgtype.UUID      `json:"course_id"`
+	Semester         string           `json:"semester"`
+	WeekNumber       int16            `json:"week_number"`
+	IsPresent        bool             `json:"is_present"`
+	MarkedVia        string           `json:"marked_via"`
+	ScannedAt        pgtype.Timestamp `json:"scanned_at"`
+	QrTimestamp      pgtype.Int8      `json:"qr_timestamp"`
+	ManuallyMarkedBy pgtype.UUID      `json:"manually_marked_by"`
+	MarkedAt         pgtype.Timestamp `json:"marked_at"`
+	ManualNote       pgtype.Text      `json:"manual_note"`
+	CreatedAt        pgtype.Timestamp `json:"created_at"`
+}
+
+func (q *Queries) GetAttendanceRecordsBySession(ctx context.Context, sessionID pgtype.UUID) ([]GetAttendanceRecordsBySessionRow, error) {
+	rows, err := q.db.Query(ctx, getAttendanceRecordsBySession, sessionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetAttendanceRecordsBySessionRow{}
+	for rows.Next() {
+		var i GetAttendanceRecordsBySessionRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.SessionID,
+			&i.StudentID,
+			&i.CourseID,
+			&i.Semester,
+			&i.WeekNumber,
+			&i.IsPresent,
+			&i.MarkedVia,
+			&i.ScannedAt,
+			&i.QrTimestamp,
+			&i.ManuallyMarkedBy,
+			&i.MarkedAt,
+			&i.ManualNote,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getCourseAttendanceStats = `-- name: GetCourseAttendanceStats :many
 SELECT
     s.id as student_id,

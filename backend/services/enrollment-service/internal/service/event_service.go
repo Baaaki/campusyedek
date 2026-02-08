@@ -231,16 +231,18 @@ func (s *EventService) HandleCourseSemesterCreated(ctx context.Context, event dt
 
 	// Create new sessions
 	for _, session := range event.ScheduleSessions {
-		sessionParams := db.UpsertCourseSessionParams{
-			ID:         utils.UUIDToPgtype(uuid.New()),
-			CourseID:   utils.UUIDToPgtype(event.SemesterCourseID),
-			DayOfWeek:  db.DayOfWeekEnum(session.DayOfWeek),
-			SlotNumber: int32(session.SlotNumber),
-		}
+		for _, slotNumber := range session.SlotNumbers {
+			sessionParams := db.UpsertCourseSessionParams{
+				ID:         utils.UUIDToPgtype(uuid.New()),
+				CourseID:   utils.UUIDToPgtype(event.SemesterCourseID),
+				DayOfWeek:  db.DayOfWeekEnum(session.DayOfWeek),
+				SlotNumber: int32(slotNumber),
+			}
 
-		_, err := s.courseRepo.UpsertCourseSession(ctx, sessionParams)
-		if err != nil {
-			return sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+			_, err := s.courseRepo.UpsertCourseSession(ctx, sessionParams)
+			if err != nil {
+				return sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+			}
 		}
 	}
 

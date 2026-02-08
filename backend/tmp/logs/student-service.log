@@ -22,17 +22,17 @@ watching tests
 !exclude tmp
 building...
 running...
-08:26:21.186	[34mINFO[0m	cmd/main.go:38	starting student-service	{"environment": "development", "port": "8003"}
-08:26:21.220	[34mINFO[0m	cmd/main.go:52	database connection established
-08:26:21.220	[34mINFO[0m	rabbitmq/connection.go:37	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
-08:26:21.222	[34mINFO[0m	rabbitmq/connection.go:69	rabbitmq connection established
-08:26:21.222	[34mINFO[0m	cmd/main.go:63	RabbitMQ connection established
-08:26:21.222	[34mINFO[0m	cmd/main.go:234	RabbitMQ exchange declared	{"exchange": "student.events"}
-08:26:21.223	[34mINFO[0m	worker/event_consumer.go:155	staff events queue setup completed	{"queue": "student.staff_events", "routing_key": "staff.deleted"}
-08:26:21.223	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
-08:26:21.223	[34mINFO[0m	worker/outbox_worker.go:39	starting outbox worker	{"interval": "5s", "batch_size": 10}
-08:26:21.223	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "student.staff_events"}
-08:26:21.223	[34mINFO[0m	worker/event_consumer.go:46	event consumer started successfully
+15:59:38.354	[34mINFO[0m	cmd/main.go:38	starting student-service	{"environment": "development", "port": "8003"}
+15:59:38.360	[34mINFO[0m	cmd/main.go:52	database connection established
+15:59:38.360	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+15:59:38.364	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+15:59:38.364	[34mINFO[0m	cmd/main.go:63	RabbitMQ connection established
+15:59:38.364	[34mINFO[0m	cmd/main.go:234	RabbitMQ exchange declared	{"exchange": "student.events"}
+15:59:38.365	[34mINFO[0m	worker/event_consumer.go:155	staff events queue setup completed	{"queue": "student.staff_events", "routing_key": "staff.deleted"}
+15:59:38.365	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+15:59:38.365	[34mINFO[0m	worker/outbox_worker.go:39	starting outbox worker	{"interval": "5s", "batch_size": 10}
+15:59:38.365	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "student.staff_events"}
+15:59:38.365	[34mINFO[0m	worker/event_consumer.go:46	event consumer started successfully
 [GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
  - using env:	export GIN_MODE=release
  - using code:	gin.SetMode(gin.ReleaseMode)
@@ -50,10 +50,39 @@ running...
 [GIN-debug] POST   /api/students/bulk-import --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).BulkImport-fm (6 handlers)
 [GIN-debug] GET    /api/students/bulk-import/:job_id --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).GetImportJobStatus-fm (6 handlers)
 [GIN-debug] GET    /api/students/bulk-import --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).ListImportJobs-fm (6 handlers)
-08:26:21.223	[34mINFO[0m	cmd/main.go:131	server starting	{"port": "8003"}
-08:26:34.336	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-08:26:34.336	[34mINFO[0m	handler/student_handler.go:262	listing students	{"page": 1, "limit": 10}
-08:26:34.342	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "88f2bec5-d839-4aba-87ea-13a976687b42", "method": "GET", "path": "/api/students", "query": "page=1&limit=10", "status": 200, "duration": "5.626886ms", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-08:26:34.344	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-08:26:34.344	[34mINFO[0m	handler/student_handler.go:262	listing students	{"page": 1, "limit": 10}
-08:26:34.344	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "411468cb-51d0-4423-9b5b-bf817a1311b4", "method": "GET", "path": "/api/students", "query": "page=1&limit=10", "status": 200, "duration": "816.247µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+15:59:38.365	[34mINFO[0m	cmd/main.go:131	server starting	{"port": "8003"}
+16:00:24.474	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+16:00:24.474	[34mINFO[0m	gin@v1.11.0/context.go:192	getting student by ID	{"request_id": "b4b71386-27dd-45fd-9f49-30732f5d1863", "endpoint": "GetStudentByID", "handler": "StudentHandler", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e"}
+16:00:24.478	[34mINFO[0m	handler/student_handler.go:110	student retrieved successfully from database	{"request_id": "b4b71386-27dd-45fd-9f49-30732f5d1863", "service": "StudentService", "method": "GetStudentByID", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "student_number": "2025001"}
+16:00:24.478	[34mINFO[0m	gin@v1.11.0/context.go:192	student retrieved successfully	{"request_id": "b4b71386-27dd-45fd-9f49-30732f5d1863", "endpoint": "GetStudentByID", "handler": "StudentHandler", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e"}
+16:00:24.478	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "b4b71386-27dd-45fd-9f49-30732f5d1863", "method": "GET", "path": "/api/students/d8cadb82-4ee5-4128-b024-bf90ab33db2e", "query": "", "status": 200, "duration": "4.495865ms", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+16:00:24.480	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+16:00:24.480	[34mINFO[0m	gin@v1.11.0/context.go:192	getting student by ID	{"request_id": "811a11da-8d22-4466-8fca-250257c15460", "endpoint": "GetStudentByID", "handler": "StudentHandler", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e"}
+16:00:24.480	[34mINFO[0m	handler/student_handler.go:110	student retrieved successfully from database	{"request_id": "811a11da-8d22-4466-8fca-250257c15460", "service": "StudentService", "method": "GetStudentByID", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "student_number": "2025001"}
+16:00:24.480	[34mINFO[0m	gin@v1.11.0/context.go:192	student retrieved successfully	{"request_id": "811a11da-8d22-4466-8fca-250257c15460", "endpoint": "GetStudentByID", "handler": "StudentHandler", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e"}
+16:00:24.480	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "811a11da-8d22-4466-8fca-250257c15460", "method": "GET", "path": "/api/students/d8cadb82-4ee5-4128-b024-bf90ab33db2e", "query": "", "status": 200, "duration": "358.038µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:27:55.331	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:27:55.331	[34mINFO[0m	gin@v1.11.0/context.go:192	getting student by ID	{"request_id": "2e8d85fc-f6ac-479e-acec-4843b46b92f1", "endpoint": "GetStudentByID", "handler": "StudentHandler", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e"}
+19:27:55.334	[34mINFO[0m	handler/student_handler.go:110	student retrieved successfully from database	{"request_id": "2e8d85fc-f6ac-479e-acec-4843b46b92f1", "service": "StudentService", "method": "GetStudentByID", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "student_number": "2025001"}
+19:27:55.334	[34mINFO[0m	gin@v1.11.0/context.go:192	student retrieved successfully	{"request_id": "2e8d85fc-f6ac-479e-acec-4843b46b92f1", "endpoint": "GetStudentByID", "handler": "StudentHandler", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e"}
+19:27:55.334	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "2e8d85fc-f6ac-479e-acec-4843b46b92f1", "method": "GET", "path": "/api/students/d8cadb82-4ee5-4128-b024-bf90ab33db2e", "query": "", "status": 200, "duration": "2.790314ms", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:27:55.335	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:27:55.335	[34mINFO[0m	gin@v1.11.0/context.go:192	getting student by ID	{"request_id": "9d3c780b-eb63-4e2a-9f6a-7e9673b23735", "endpoint": "GetStudentByID", "handler": "StudentHandler", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e"}
+19:27:55.336	[34mINFO[0m	handler/student_handler.go:110	student retrieved successfully from database	{"request_id": "9d3c780b-eb63-4e2a-9f6a-7e9673b23735", "service": "StudentService", "method": "GetStudentByID", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "student_number": "2025001"}
+19:27:55.336	[34mINFO[0m	gin@v1.11.0/context.go:192	student retrieved successfully	{"request_id": "9d3c780b-eb63-4e2a-9f6a-7e9673b23735", "endpoint": "GetStudentByID", "handler": "StudentHandler", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e"}
+19:27:55.336	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "9d3c780b-eb63-4e2a-9f6a-7e9673b23735", "method": "GET", "path": "/api/students/d8cadb82-4ee5-4128-b024-bf90ab33db2e", "query": "", "status": 200, "duration": "315.899µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:29:50.174	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:29:50.174	[34mINFO[0m	gin@v1.11.0/context.go:192	getting student by ID	{"request_id": "618618e6-eb1d-4397-aeff-22162297e032", "endpoint": "GetStudentByID", "handler": "StudentHandler", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e"}
+19:29:50.175	[34mINFO[0m	handler/student_handler.go:110	student retrieved successfully from database	{"request_id": "618618e6-eb1d-4397-aeff-22162297e032", "service": "StudentService", "method": "GetStudentByID", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "student_number": "2025001"}
+19:29:50.175	[34mINFO[0m	gin@v1.11.0/context.go:192	student retrieved successfully	{"request_id": "618618e6-eb1d-4397-aeff-22162297e032", "endpoint": "GetStudentByID", "handler": "StudentHandler", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e"}
+19:29:50.175	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "618618e6-eb1d-4397-aeff-22162297e032", "method": "GET", "path": "/api/students/d8cadb82-4ee5-4128-b024-bf90ab33db2e", "query": "", "status": 200, "duration": "1.083189ms", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:29:50.178	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:29:50.178	[34mINFO[0m	gin@v1.11.0/context.go:192	getting student by ID	{"request_id": "c1335e16-13b9-4558-bd14-e479eabc1720", "endpoint": "GetStudentByID", "handler": "StudentHandler", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e"}
+19:29:50.179	[34mINFO[0m	handler/student_handler.go:110	student retrieved successfully from database	{"request_id": "c1335e16-13b9-4558-bd14-e479eabc1720", "service": "StudentService", "method": "GetStudentByID", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "student_number": "2025001"}
+19:29:50.179	[34mINFO[0m	gin@v1.11.0/context.go:192	student retrieved successfully	{"request_id": "c1335e16-13b9-4558-bd14-e479eabc1720", "endpoint": "GetStudentByID", "handler": "StudentHandler", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e"}
+19:29:50.179	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "c1335e16-13b9-4558-bd14-e479eabc1720", "method": "GET", "path": "/api/students/d8cadb82-4ee5-4128-b024-bf90ab33db2e", "query": "", "status": 200, "duration": "755.95µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:44:32.598	[31mERROR[0m	rabbitmq/connection.go:94	rabbitmq connection lost	{"error": "Exception (320) Reason: \"CONNECTION_FORCED - broker forced connection closure with reason 'shutdown'\""}
+github.com/baaaki/mydreamcampus/shared/rabbitmq.(*Connection).handleReconnect
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/rabbitmq/connection.go:94
+19:44:32.598	[34mINFO[0m	rabbitmq/connection.go:99	attempting to reconnect to rabbitmq...
+cleaning...

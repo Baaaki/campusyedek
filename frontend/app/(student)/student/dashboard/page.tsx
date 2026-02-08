@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -13,19 +14,30 @@ import {
   Sparkles,
   Calendar,
 } from 'lucide-react';
+import { studentApi } from '@/lib/api-client';
 
-// Mock data
-const mockUser = {
-  name: 'Baki Can Karaşoğlu',
-  studentId: '2021180001',
-  department: 'Bilgisayar Mühendisliği',
-  faculty: 'Mühendislik Fakültesi',
-};
+interface StudentInfo {
+  name: string;
+  studentId: string;
+  department: string;
+  faculty: string;
+  advisorName?: string;
+}
 
-const quoteOfTheDay = {
-  text: 'Başarı, her gün tekrarlanan küçük çabaların toplamıdır.',
-  author: 'Robert Collier',
-};
+const quotes = [
+  { text: 'Başarı, her gün tekrarlanan küçük çabaların toplamıdır.', author: 'Robert Collier' },
+  { text: 'Eğitim en güçlü silahtır. Dünyayı değiştirmek için kullanabilirsiniz.', author: 'Nelson Mandela' },
+  { text: 'Öğrenmenin sınırı yoktur.', author: 'Konfüçyüs' },
+  { text: 'Bugün yapabileceğini yarına bırakma.', author: 'Benjamin Franklin' },
+  { text: 'Bilgi güçtür.', author: 'Francis Bacon' },
+  { text: 'Başarısızlık, başarıya giden yolda sadece bir duraktır.', author: 'Zig Ziglar' },
+  { text: 'Hayatta en hakiki mürşit ilimdir.', author: 'Mustafa Kemal Atatürk' },
+  { text: 'Gelecek, bugünden başlar.', author: 'Malcolm X' },
+  { text: 'Öğrenmek, bir hazineye sahip olmaktır.', author: 'Çin Atasözü' },
+  { text: 'Azim ve kararlılık her şeyi başarır.', author: 'Benjamin Disraeli' },
+  { text: 'Düşünceleriniz kaderinizi belirler.', author: 'Lao Tzu' },
+  { text: 'Başlamak, bitirmenin yarısıdır.', author: 'Aristoteles' },
+];
 
 const announcements = [
   {
@@ -84,6 +96,79 @@ const messages = [
 ];
 
 export default function StudentDashboardPage() {
+  const [studentInfo, setStudentInfo] = useState<StudentInfo>({
+    name: '',
+    studentId: '',
+    department: '',
+    faculty: '',
+  });
+  const [loading, setLoading] = useState(true);
+  const [currentQuote, setCurrentQuote] = useState(quotes[0]);
+
+  useEffect(() => {
+    const fetchStudentInfo = async () => {
+      try {
+        // Get user from localStorage
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          // Fetch student details from API using user ID
+          const response = await studentApi.get(`${user.id}`).json<{
+            id: string;
+            student_number: string;
+            first_name: string;
+            last_name: string;
+            email: string;
+            faculty: string;
+            department: string;
+            advisor_name?: string;
+          }>();
+
+          setStudentInfo({
+            name: `${response.first_name} ${response.last_name}`,
+            studentId: response.student_number,
+            department: response.department,
+            faculty: response.faculty,
+            advisorName: response.advisor_name,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch student info:', error);
+        // Fallback to localStorage user info
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          setStudentInfo({
+            name: user.email?.split('@')[0] || 'Öğrenci',
+            studentId: '-',
+            department: user.department || '-',
+            faculty: '-',
+          });
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStudentInfo();
+  }, []);
+
+  // Rotate quotes every 5 minutes
+  useEffect(() => {
+    const getRandomQuote = () => {
+      const randomIndex = Math.floor(Math.random() * quotes.length);
+      setCurrentQuote(quotes[randomIndex]);
+    };
+
+    // Set initial random quote
+    getRandomQuote();
+
+    // Change quote every 5 minutes (300000ms)
+    const interval = setInterval(getRandomQuote, 5 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   const currentHour = new Date().getHours();
   const greeting = currentHour < 12 ? 'Günaydın' : currentHour < 18 ? 'İyi Günler' : 'İyi Akşamlar';
 
@@ -108,11 +193,14 @@ export default function StudentDashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold mb-2">Sayın {mockUser.name}</p>
+            <p className="text-2xl font-bold mb-2">
+              {loading ? 'Yükleniyor...' : `Sayın ${studentInfo.name}`}
+            </p>
             <div className="space-y-1 text-emerald-100 text-sm">
-              <p>Öğrenci No: {mockUser.studentId}</p>
-              <p>{mockUser.department}</p>
-              <p>{mockUser.faculty}</p>
+              <p>Öğrenci No: {studentInfo.studentId || '-'}</p>
+              <p>{studentInfo.department || '-'}</p>
+              <p>{studentInfo.faculty || '-'}</p>
+              {studentInfo.advisorName && <p>Danışman: {studentInfo.advisorName}</p>}
             </div>
           </CardContent>
         </Card>
@@ -127,9 +215,9 @@ export default function StudentDashboardPage() {
           </CardHeader>
           <CardContent>
             <blockquote className="text-lg italic mb-3">
-              "{quoteOfTheDay.text}"
+              "{currentQuote.text}"
             </blockquote>
-            <p className="text-blue-100 text-right font-medium">— {quoteOfTheDay.author}</p>
+            <p className="text-blue-100 text-right font-medium">— {currentQuote.author}</p>
           </CardContent>
         </Card>
 

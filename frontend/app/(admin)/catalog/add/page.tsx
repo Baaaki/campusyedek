@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -16,6 +17,7 @@ import {
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { mockFaculties } from '@/mock_data/catalog';
+import { catalogApi } from '@/lib/api-client';
 import { Faculty, Department, WeeklyTopic, CourseCoordinator } from '@/lib/types';
 import {
   ArrowLeft,
@@ -27,7 +29,28 @@ import {
   Calendar,
   Library,
   Save,
+  Loader2,
 } from 'lucide-react';
+
+// API request type
+interface CreateCourseRequest {
+  course_code: string;
+  name: string;
+  faculty: string;
+  department: string;
+  class_level: number;
+  credits: number;
+  theoretical_hours: number;
+  practical_hours: number;
+  course_type: string;
+  description?: string;
+  prerequisites?: string[];
+}
+
+// Create course via API
+const createCourse = async (data: CreateCourseRequest) => {
+  return catalogApi.post('courses', { json: data }).json();
+};
 
 interface FormData {
   // Temel Bilgiler
@@ -101,7 +124,19 @@ export default function AddCoursePage() {
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [selectedFaculty, setSelectedFaculty] = useState<Faculty | null>(null);
   const [departments, setDepartments] = useState<Department[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Mutation for creating course
+  const createMutation = useMutation({
+    mutationFn: createCourse,
+    onSuccess: () => {
+      alert('Ders başarıyla eklendi!');
+      router.push('/catalog');
+    },
+    onError: (error: Error) => {
+      console.error('Ders eklenirken hata:', error);
+      alert(`Hata: ${error.message}`);
+    },
+  });
 
   // Fakülte değiştiğinde bölümleri güncelle
   useEffect(() => {
@@ -213,17 +248,34 @@ export default function AddCoursePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
 
-    // Simüle edilmiş kayıt
-    console.log('Form Data:', formData);
+    // Get faculty and department names from IDs
+    const faculty = mockFaculties.find(f => f.id === formData.faculty_id);
+    const department = departments.find(d => d.id === formData.department_id);
 
-    // TODO: API'ye gönder
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    if (!faculty || !department) {
+      alert('Lütfen fakülte ve bölüm seçin!');
+      return;
+    }
 
-    setIsSubmitting(false);
-    alert('Ders başarıyla eklendi!');
-    router.push('/catalog');
+    // Prepare data for API
+    const requestData: CreateCourseRequest = {
+      course_code: formData.course_code,
+      name: formData.name,
+      faculty: faculty.name,
+      department: department.name,
+      class_level: formData.class_level,
+      credits: formData.credits,
+      theoretical_hours: formData.theoretical_hours,
+      practical_hours: formData.practical_hours,
+      course_type: formData.course_type === 'Zorunlu' ? 'mandatory' : 'elective',
+      description: formData.description || undefined,
+    };
+
+    console.log('Course Data:', requestData);
+
+    // Send to API
+    createMutation.mutate(requestData);
   };
 
   return (
@@ -745,12 +797,17 @@ export default function AddCoursePage() {
             type="button"
             variant="outline"
             onClick={() => router.push('/catalog')}
+            disabled={createMutation.isPending}
           >
             İptal
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
-            <Save className="h-4 w-4 mr-2" />
-            {isSubmitting ? 'Kaydediliyor...' : 'Dersi Kaydet'}
+          <Button type="submit" disabled={createMutation.isPending}>
+            {createMutation.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
+            {createMutation.isPending ? 'Kaydediliyor...' : 'Dersi Kaydet'}
           </Button>
         </div>
       </form>

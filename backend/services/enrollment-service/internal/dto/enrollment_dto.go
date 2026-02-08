@@ -13,15 +13,15 @@ type AvailableCoursesRequest struct {
 
 // AvailableCourse represents a course available for enrollment
 type AvailableCourse struct {
-	ID               uuid.UUID         `json:"id"`
-	CourseCode       string            `json:"course_code"`
-	CourseName       string            `json:"course_name"`
-	Credits          int16             `json:"credits"`
-	ScheduleSessions []ScheduleSession `json:"schedule_sessions"`
-	MaxCapacity      int16             `json:"max_capacity"`
-	CurrentEnrollment int16            `json:"current_enrollment"`
-	AvailableSeats   int16             `json:"available_seats"`
-	Instructor       string            `json:"instructor"`
+	ID                uuid.UUID         `json:"id"`
+	CourseCode        string            `json:"course_code"`
+	CourseName        string            `json:"course_name"`
+	Credits           int16             `json:"credits"`
+	ScheduleSessions  []ScheduleSession `json:"schedule_sessions"`
+	MaxCapacity       int16             `json:"max_capacity"`
+	CurrentEnrollment int16             `json:"current_enrollment"`
+	AvailableSeats    int16             `json:"available_seats"`
+	Instructor        string            `json:"instructor"`
 }
 
 // AvailableCoursesResponse represents the response with available courses
@@ -35,19 +35,23 @@ type AvailableCoursesResponse struct {
 
 // CreateEnrollmentRequest represents the request to create an enrollment program
 type CreateEnrollmentRequest struct {
-	StudentID uuid.UUID   `json:"student_id" binding:"required"`
+	StudentID uuid.UUID   `json:"student_id"` // Set from JWT in handler, not from request body
 	Semester  string      `json:"semester" binding:"required"`
 	CourseIDs []uuid.UUID `json:"course_ids" binding:"required,min=1"`
 }
 
 // EnrollmentProgramResponse represents an enrollment program with courses
 type EnrollmentProgramResponse struct {
-	ID        uuid.UUID     `json:"id"`
-	StudentID uuid.UUID     `json:"student_id"`
-	Semester  string        `json:"semester"`
-	Status    string        `json:"status"`
-	Courses   []CourseBasic `json:"courses"`
-	CreatedAt time.Time     `json:"created_at"`
+	ID            uuid.UUID     `json:"id"`
+	StudentID     uuid.UUID     `json:"student_id"`
+	StudentNumber string        `json:"student_number,omitempty"`
+	StudentName   string        `json:"student_name,omitempty"`
+	Department    string        `json:"department,omitempty"`
+	ClassLevel    int16         `json:"class_level,omitempty"`
+	Semester      string        `json:"semester"`
+	Status        string        `json:"status"`
+	Courses       []CourseBasic `json:"courses"`
+	CreatedAt     time.Time     `json:"created_at"`
 }
 
 // MyEnrollmentsRequest represents the request to get student's enrollments
@@ -110,8 +114,8 @@ type MyRejectionsRequest struct {
 
 // MyRejectionsResponse represents the response with all rejections
 type MyRejectionsResponse struct {
-	StudentID  uuid.UUID         `json:"student_id"`
-	Rejections []RejectionDetail `json:"rejections"`
+	StudentID  uuid.UUID          `json:"student_id"`
+	Rejections []RejectionDetail  `json:"rejections"`
 	Pagination PaginationResponse `json:"pagination"`
 }
 

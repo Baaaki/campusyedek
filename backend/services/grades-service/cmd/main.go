@@ -184,6 +184,13 @@ func setupRouter(gradeHandler *handler.GradeHandler, cfg *config.Config) *gin.En
 		transcript.GET("/:studentId", gradeHandler.GetTranscript)
 	}
 
+	// Admin routes (require admin role)
+	admin := api.Group("/admin")
+	admin.Use(sharedMiddleware.RequireAdmin())
+	{
+		admin.POST("/appeal", gradeHandler.ProcessAppeal)
+	}
+
 	return router
 }
 

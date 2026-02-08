@@ -38,13 +38,24 @@ func (h *GradeHandler) GetCourseStatus(c *gin.Context) {
 		zap.String("method", "GetCourseStatus"),
 	)
 
-	// Get instructor ID from JWT context
-	instructorID, exists := c.Get("user_id")
+	// Get instructor ID from context (set by ExtractUserFromHeaders middleware as string)
+	instructorIDStr, exists := c.Get("user_id")
 	if !exists {
 		handlerLogger.Error("user_id not found in context")
 		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
 			Error: sharedErrors.ErrUnauthorized.Message,
 			Code:  sharedErrors.ErrUnauthorized.Code,
+		})
+		return
+	}
+
+	// Parse string to UUID
+	instructorID, err := uuid.Parse(instructorIDStr.(string))
+	if err != nil {
+		handlerLogger.Error("invalid instructor ID format", zap.Error(err))
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error: "invalid instructor ID",
+			Code:  "INVALID_ID",
 		})
 		return
 	}
@@ -62,12 +73,12 @@ func (h *GradeHandler) GetCourseStatus(c *gin.Context) {
 	}
 
 	handlerLogger.Info("getting course status",
-		zap.String("instructor_id", instructorID.(uuid.UUID).String()),
+		zap.String("instructor_id", instructorID.String()),
 		zap.String("course_id", courseID.String()),
 	)
 
 	// Get course status
-	status, err := h.gradeService.GetCourseStatus(c.Request.Context(), instructorID.(uuid.UUID), courseID)
+	status, err := h.gradeService.GetCourseStatus(c.Request.Context(), instructorID, courseID)
 	if err != nil {
 		handlerLogger.Error("failed to get course status", zap.Error(err))
 		h.handleError(c, err)
@@ -84,13 +95,24 @@ func (h *GradeHandler) GetCourseStudents(c *gin.Context) {
 		zap.String("method", "GetCourseStudents"),
 	)
 
-	// Get instructor ID from JWT context
-	instructorID, exists := c.Get("user_id")
+	// Get instructor ID from context (set by ExtractUserFromHeaders middleware as string)
+	instructorIDStr, exists := c.Get("user_id")
 	if !exists {
 		handlerLogger.Error("user_id not found in context")
 		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
 			Error: sharedErrors.ErrUnauthorized.Message,
 			Code:  sharedErrors.ErrUnauthorized.Code,
+		})
+		return
+	}
+
+	// Parse string to UUID
+	instructorID, err := uuid.Parse(instructorIDStr.(string))
+	if err != nil {
+		handlerLogger.Error("invalid instructor ID format", zap.Error(err))
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error: "invalid instructor ID",
+			Code:  "INVALID_ID",
 		})
 		return
 	}
@@ -108,12 +130,12 @@ func (h *GradeHandler) GetCourseStudents(c *gin.Context) {
 	}
 
 	handlerLogger.Info("getting course students",
-		zap.String("instructor_id", instructorID.(uuid.UUID).String()),
+		zap.String("instructor_id", instructorID.String()),
 		zap.String("course_id", courseID.String()),
 	)
 
 	// Get course students
-	students, err := h.gradeService.GetCourseStudents(c.Request.Context(), instructorID.(uuid.UUID), courseID)
+	students, err := h.gradeService.GetCourseStudents(c.Request.Context(), instructorID, courseID)
 	if err != nil {
 		handlerLogger.Error("failed to get course students", zap.Error(err))
 		h.handleError(c, err)
@@ -130,13 +152,24 @@ func (h *GradeHandler) SubmitScore(c *gin.Context) {
 		zap.String("method", "SubmitScore"),
 	)
 
-	// Get instructor ID from JWT context
-	instructorID, exists := c.Get("user_id")
+	// Get instructor ID from context (set by ExtractUserFromHeaders middleware as string)
+	instructorIDStr, exists := c.Get("user_id")
 	if !exists {
 		handlerLogger.Error("user_id not found in context")
 		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
 			Error: sharedErrors.ErrUnauthorized.Message,
 			Code:  sharedErrors.ErrUnauthorized.Code,
+		})
+		return
+	}
+
+	// Parse string to UUID
+	instructorID, err := uuid.Parse(instructorIDStr.(string))
+	if err != nil {
+		handlerLogger.Error("invalid instructor ID format", zap.Error(err))
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error: "invalid instructor ID",
+			Code:  "INVALID_ID",
 		})
 		return
 	}
@@ -165,13 +198,13 @@ func (h *GradeHandler) SubmitScore(c *gin.Context) {
 	}
 
 	handlerLogger.Info("submitting score",
-		zap.String("instructor_id", instructorID.(uuid.UUID).String()),
+		zap.String("instructor_id", instructorID.String()),
 		zap.String("course_id", courseID.String()),
 		zap.String("registration_id", req.RegistrationID.String()),
 	)
 
 	// Submit score
-	result, err := h.gradeService.SubmitScore(c.Request.Context(), instructorID.(uuid.UUID), courseID, req)
+	result, err := h.gradeService.SubmitScore(c.Request.Context(), instructorID, courseID, req)
 	if err != nil {
 		handlerLogger.Error("failed to submit score", zap.Error(err))
 		h.handleError(c, err)
@@ -189,13 +222,24 @@ func (h *GradeHandler) BulkSubmitScores(c *gin.Context) {
 		zap.String("method", "BulkSubmitScores"),
 	)
 
-	// Get instructor ID from JWT context
-	instructorID, exists := c.Get("user_id")
+	// Get instructor ID from context (set by ExtractUserFromHeaders middleware as string)
+	instructorIDStr, exists := c.Get("user_id")
 	if !exists {
 		handlerLogger.Error("user_id not found in context")
 		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
 			Error: sharedErrors.ErrUnauthorized.Message,
 			Code:  sharedErrors.ErrUnauthorized.Code,
+		})
+		return
+	}
+
+	// Parse string to UUID
+	instructorID, err := uuid.Parse(instructorIDStr.(string))
+	if err != nil {
+		handlerLogger.Error("invalid instructor ID format", zap.Error(err))
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error: "invalid instructor ID",
+			Code:  "INVALID_ID",
 		})
 		return
 	}
@@ -224,13 +268,13 @@ func (h *GradeHandler) BulkSubmitScores(c *gin.Context) {
 	}
 
 	handlerLogger.Info("bulk submitting scores",
-		zap.String("instructor_id", instructorID.(uuid.UUID).String()),
+		zap.String("instructor_id", instructorID.String()),
 		zap.String("course_id", courseID.String()),
 		zap.Int("score_count", len(req.Scores)),
 	)
 
 	// Bulk submit scores
-	result, err := h.gradeService.BulkSubmitScores(c.Request.Context(), instructorID.(uuid.UUID), courseID, req)
+	result, err := h.gradeService.BulkSubmitScores(c.Request.Context(), instructorID, courseID, req)
 	if err != nil {
 		handlerLogger.Error("failed to bulk submit scores", zap.Error(err))
 		h.handleError(c, err)
@@ -255,8 +299,8 @@ func (h *GradeHandler) GetMyGrades(c *gin.Context) {
 		zap.String("method", "GetMyGrades"),
 	)
 
-	// Get student ID from JWT context
-	studentID, exists := c.Get("user_id")
+	// Get student ID from context (set by ExtractUserFromHeaders middleware as string)
+	studentIDStr, exists := c.Get("user_id")
 	if !exists {
 		handlerLogger.Error("user_id not found in context")
 		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
@@ -266,12 +310,23 @@ func (h *GradeHandler) GetMyGrades(c *gin.Context) {
 		return
 	}
 
+	// Parse string to UUID
+	studentID, err := uuid.Parse(studentIDStr.(string))
+	if err != nil {
+		handlerLogger.Error("invalid student ID format", zap.Error(err))
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error: "invalid student ID",
+			Code:  "INVALID_ID",
+		})
+		return
+	}
+
 	handlerLogger.Info("getting my grades",
-		zap.String("student_id", studentID.(uuid.UUID).String()),
+		zap.String("student_id", studentID.String()),
 	)
 
 	// Get my grades
-	grades, err := h.studentGradeService.GetMyGrades(c.Request.Context(), studentID.(uuid.UUID))
+	grades, err := h.studentGradeService.GetMyGrades(c.Request.Context(), studentID)
 	if err != nil {
 		handlerLogger.Error("failed to get my grades", zap.Error(err))
 		h.handleError(c, err)
@@ -288,13 +343,24 @@ func (h *GradeHandler) GetTranscript(c *gin.Context) {
 		zap.String("method", "GetTranscript"),
 	)
 
-	// Get requester info from JWT context
-	requesterID, exists := c.Get("user_id")
+	// Get requester info from context (set by ExtractUserFromHeaders middleware as string)
+	requesterIDStr, exists := c.Get("user_id")
 	if !exists {
 		handlerLogger.Error("user_id not found in context")
 		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
 			Error: sharedErrors.ErrUnauthorized.Message,
 			Code:  sharedErrors.ErrUnauthorized.Code,
+		})
+		return
+	}
+
+	// Parse string to UUID
+	requesterID, err := uuid.Parse(requesterIDStr.(string))
+	if err != nil {
+		handlerLogger.Error("invalid requester ID format", zap.Error(err))
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error: "invalid requester ID",
+			Code:  "INVALID_ID",
 		})
 		return
 	}
@@ -322,7 +388,7 @@ func (h *GradeHandler) GetTranscript(c *gin.Context) {
 	}
 
 	handlerLogger.Info("getting transcript",
-		zap.String("requester_id", requesterID.(uuid.UUID).String()),
+		zap.String("requester_id", requesterID.String()),
 		zap.String("requester_role", requesterRole.(string)),
 		zap.String("student_id", studentID.String()),
 	)
@@ -330,7 +396,7 @@ func (h *GradeHandler) GetTranscript(c *gin.Context) {
 	// Get transcript
 	transcript, err := h.studentGradeService.GetTranscript(
 		c.Request.Context(),
-		requesterID.(uuid.UUID),
+		requesterID,
 		requesterRole.(string),
 		studentID,
 	)
@@ -341,6 +407,62 @@ func (h *GradeHandler) GetTranscript(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, transcript)
+}
+
+// ============================================
+// Admin Endpoints
+// ============================================
+
+// ProcessAppeal - POST /api/v1/grades/admin/appeal
+// Admin only: Recalculate a student's grade after score correction using frozen statistics
+func (h *GradeHandler) ProcessAppeal(c *gin.Context) {
+	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+		zap.String("handler", "GradeHandler"),
+		zap.String("method", "ProcessAppeal"),
+	)
+
+	// Verify admin role
+	role, exists := c.Get("role")
+	if !exists || role.(string) != "admin" {
+		handlerLogger.Warn("unauthorized appeal attempt", zap.Any("role", role))
+		c.JSON(http.StatusForbidden, dto.ErrorResponse{
+			Error: "only admins can process appeals",
+			Code:  "FORBIDDEN",
+		})
+		return
+	}
+
+	// Parse request body
+	var req dto.AppealScoreRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		handlerLogger.Error("invalid request body", zap.Error(err))
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error: sharedErrors.ErrValidation.Message,
+			Code:  sharedErrors.ErrValidation.Code,
+		})
+		return
+	}
+
+	handlerLogger.Info("processing appeal",
+		zap.String("student_id", req.StudentID.String()),
+		zap.String("course_id", req.CourseID.String()),
+		zap.String("slug", req.Slug),
+		zap.Float64("new_score", req.NewScore),
+	)
+
+	// Process appeal
+	result, err := h.gradeService.ProcessAppeal(c.Request.Context(), req)
+	if err != nil {
+		handlerLogger.Error("failed to process appeal", zap.Error(err))
+		h.handleError(c, err)
+		return
+	}
+
+	handlerLogger.Info("appeal processed successfully",
+		zap.String("old_grade", result.OldGradePoint),
+		zap.String("new_grade", result.NewGradePoint),
+	)
+	c.JSON(http.StatusOK, result)
 }
 
 // ============================================

@@ -1,0 +1,18 @@
+
+  __    _   ___  
+ / /\  | | | |_) 
+/_/--\ |_| |_| \_ v1.63.0, built with Go go1.25.1
+
+watching .
+watching bin
+watching cmd
+watching config
+watching internal
+watching internal/server
+watching proto
+!exclude tmp
+building...
+running...
+15:59:36.614	[34mINFO[0m	runtime/proc.go:285	starting payment service (gRPC)	{"environment": "development", "port": "50051"}
+15:59:36.615	[34mINFO[0m	runtime/asm_amd64.s:1693	gRPC server listening	{"address": "[::]:50051"}
+cleaning...

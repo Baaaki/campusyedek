@@ -51,8 +51,8 @@ type StudentDeactivatedEvent struct {
 
 // CourseSession represents a course schedule session
 type CourseSession struct {
-	DayOfWeek  string `json:"day_of_week"`
-	SlotNumber int    `json:"slot_number"`
+	DayOfWeek   string `json:"day_of_week"`
+	SlotNumbers []int  `json:"slot_numbers"`
 }
 
 // PrerequisiteCourse represents a prerequisite course

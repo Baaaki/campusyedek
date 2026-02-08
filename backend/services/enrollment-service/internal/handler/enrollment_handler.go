@@ -461,6 +461,69 @@ func (h *EnrollmentHandler) RejectEnrollmentProgram(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "enrollment program rejected successfully"})
 }
 
+// CancelMyEnrollment godoc
+// @Summary Cancel my enrollment
+// @Description Cancel the student's enrollment program for a semester (only if not approved)
+// @Tags enrollment
+// @Accept json
+// @Produce json
+// @Param semester query string true "Semester (e.g. 2024-2025-Fall)"
+// @Security BearerAuth
+// @Success 200 {object} gin.H
+// @Failure 400 {object} gin.H
+// @Failure 401 {object} gin.H
+// @Failure 403 {object} gin.H "Enrollment already approved"
+// @Failure 404 {object} gin.H
+// @Failure 500 {object} gin.H
+// @Router /enrollment/programs [delete]
+func (h *EnrollmentHandler) CancelMyEnrollment(c *gin.Context) {
+	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+		zap.String("handler", "EnrollmentHandler"),
+		zap.String("method", "CancelMyEnrollment"),
+	)
+
+	// Get student ID from JWT context
+	studentIDStr, exists := c.Get("user_id")
+	if !exists {
+		handlerLogger.Error("user_id not found in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": sharedErrors.ErrUnauthorized.Error()})
+		return
+	}
+
+	studentID, err := uuid.Parse(studentIDStr.(string))
+	if err != nil {
+		handlerLogger.Error("invalid user_id format", zap.Error(err))
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user_id"})
+		return
+	}
+
+	// Get semester from query
+	semester := c.Query("semester")
+	if semester == "" {
+		handlerLogger.Error("semester query parameter is required")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "semester query parameter is required"})
+		return
+	}
+
+	handlerLogger.Info("cancelling enrollment",
+		zap.String("student_id", studentID.String()),
+		zap.String("semester", semester),
+	)
+
+	err = h.enrollmentService.CancelMyEnrollment(c.Request.Context(), studentID, semester)
+	if err != nil {
+		handlerLogger.Error("failed to cancel enrollment", zap.Error(err))
+		h.handleError(c, err)
+		return
+	}
+
+	handlerLogger.Info("enrollment cancelled successfully",
+		zap.String("student_id", studentID.String()),
+		zap.String("semester", semester),
+	)
+	c.JSON(http.StatusOK, gin.H{"message": "enrollment cancelled successfully"})
+}
+
 // GetPendingProgramsByAdvisor godoc
 // @Summary Get pending programs
 // @Description Get all pending enrollment programs for an advisor

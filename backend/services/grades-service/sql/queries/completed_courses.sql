@@ -53,3 +53,17 @@ SELECT
 FROM student_completed_courses
 WHERE student_id = $1
 ORDER BY finalized_at;
+
+-- name: GetCompletedCourseByStudentAndCourse :one
+SELECT * FROM student_completed_courses
+WHERE student_id = $1 AND course_id = $2;
+
+-- name: UpdateCompletedCourseAfterAppeal :exec
+UPDATE student_completed_courses
+SET
+    assessment_scores = $3,
+    weighted_average = $4,
+    grade_point = $5,
+    grading_config = $6,
+    finalized_at = NOW()
+WHERE student_id = $1 AND course_id = $2;

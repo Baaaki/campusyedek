@@ -155,10 +155,10 @@ func (w *EventConsumer) handleStudentEvent(body []byte) error {
 }
 
 func (w *EventConsumer) handleStudentCreated(ctx context.Context, event dto.StudentCreatedEvent) error {
-	logger.Info("handling student.created event", zap.String("student_id", event.Data.StudentID.String()))
+	logger.Info("handling student.created event", zap.String("student_id", event.Data.ID.String()))
 
 	_, err := w.cacheRepo.UpsertStudentCache(ctx, db.UpsertStudentCacheParams{
-		ID:            event.Data.StudentID,
+		ID:            event.Data.ID,
 		StudentNumber: event.Data.StudentNumber,
 		FirstName:     utils.StringToPgText(event.Data.FirstName),
 		LastName:      utils.StringToPgText(event.Data.LastName),
@@ -172,10 +172,10 @@ func (w *EventConsumer) handleStudentCreated(ctx context.Context, event dto.Stud
 }
 
 func (w *EventConsumer) handleStudentUpdated(ctx context.Context, event dto.StudentUpdatedEvent) error {
-	logger.Info("handling student.updated event", zap.String("student_id", event.Data.StudentID.String()))
+	logger.Info("handling student.updated event", zap.String("student_id", event.Data.ID.String()))
 
 	_, err := w.cacheRepo.UpsertStudentCache(ctx, db.UpsertStudentCacheParams{
-		ID:            event.Data.StudentID,
+		ID:            event.Data.ID,
 		StudentNumber: event.Data.StudentNumber,
 		FirstName:     utils.StringToPgText(event.Data.FirstName),
 		LastName:      utils.StringToPgText(event.Data.LastName),
@@ -189,9 +189,9 @@ func (w *EventConsumer) handleStudentUpdated(ctx context.Context, event dto.Stud
 }
 
 func (w *EventConsumer) handleStudentDeactivated(ctx context.Context, event dto.StudentDeactivatedEvent) error {
-	logger.Info("handling student.deactivated event", zap.String("student_id", event.Data.StudentID.String()))
+	logger.Info("handling student.deactivated event", zap.String("student_id", event.Data.ID.String()))
 
-	return w.cacheRepo.DeactivateStudentCache(ctx, event.Data.StudentID)
+	return w.cacheRepo.DeactivateStudentCache(ctx, event.Data.ID)
 }
 
 // ============================================
@@ -258,24 +258,24 @@ func (w *EventConsumer) handleCourseEvent(body []byte) error {
 }
 
 func (w *EventConsumer) handleCourseSemesterCreated(ctx context.Context, event dto.CourseSemesterCreatedEvent) error {
-	logger.Info("handling course.semester.created event", zap.String("course_id", event.Data.SemesterCourseID.String()))
+	logger.Info("handling course.semester.created event", zap.String("course_id", event.SemesterCourseID.String()))
 
 	// Marshal assessment schema to JSONB
-	schemaJSON, err := json.Marshal(event.Data.AssessmentSchema)
+	schemaJSON, err := json.Marshal(event.AssessmentSchema)
 	if err != nil {
 		logger.Error("failed to marshal assessment schema", zap.Error(err))
 		return err
 	}
 
 	_, err = w.cacheRepo.UpsertCourseCache(ctx, db.UpsertCourseCacheParams{
-		ID:                 event.Data.SemesterCourseID,
-		CourseCode:         event.Data.CourseCode,
-		CourseName:         event.Data.CourseName,
-		Credits:            event.Data.Credits,
-		Semester:           event.Data.Semester,
-		Department:         utils.StringToPgText(event.Data.Department),
-		InstructorID:       event.Data.InstructorID,
-		InstructorFullname: utils.StringToPgText(event.Data.InstructorFullname),
+		ID:                 event.SemesterCourseID,
+		CourseCode:         event.CourseCode,
+		CourseName:         event.CourseName,
+		Credits:            event.Credits,
+		Semester:           event.Semester,
+		Department:         utils.StringToPgText(event.Department),
+		InstructorID:       event.InstructorID,
+		InstructorFullname: utils.StringToPgText(event.InstructorFullname),
 		AssessmentSchema:   schemaJSON,
 	})
 
@@ -283,24 +283,24 @@ func (w *EventConsumer) handleCourseSemesterCreated(ctx context.Context, event d
 }
 
 func (w *EventConsumer) handleCourseSemesterUpdated(ctx context.Context, event dto.CourseSemesterUpdatedEvent) error {
-	logger.Info("handling course.semester.updated event", zap.String("course_id", event.Data.SemesterCourseID.String()))
+	logger.Info("handling course.semester.updated event", zap.String("course_id", event.SemesterCourseID.String()))
 
 	// Marshal assessment schema to JSONB
-	schemaJSON, err := json.Marshal(event.Data.AssessmentSchema)
+	schemaJSON, err := json.Marshal(event.AssessmentSchema)
 	if err != nil {
 		logger.Error("failed to marshal assessment schema", zap.Error(err))
 		return err
 	}
 
 	_, err = w.cacheRepo.UpsertCourseCache(ctx, db.UpsertCourseCacheParams{
-		ID:                 event.Data.SemesterCourseID,
-		CourseCode:         event.Data.CourseCode,
-		CourseName:         event.Data.CourseName,
-		Credits:            event.Data.Credits,
-		Semester:           event.Data.Semester,
-		Department:         utils.StringToPgText(event.Data.Department),
-		InstructorID:       event.Data.InstructorID,
-		InstructorFullname: utils.StringToPgText(event.Data.InstructorFullname),
+		ID:                 event.SemesterCourseID,
+		CourseCode:         event.CourseCode,
+		CourseName:         event.CourseName,
+		Credits:            event.Credits,
+		Semester:           event.Semester,
+		Department:         utils.StringToPgText(event.Department),
+		InstructorID:       event.InstructorID,
+		InstructorFullname: utils.StringToPgText(event.InstructorFullname),
 		AssessmentSchema:   schemaJSON,
 	})
 
@@ -308,28 +308,28 @@ func (w *EventConsumer) handleCourseSemesterUpdated(ctx context.Context, event d
 }
 
 func (w *EventConsumer) handleCourseSemesterDeleted(ctx context.Context, event dto.CourseSemesterDeletedEvent) error {
-	logger.Info("handling course.semester.deleted event", zap.String("course_id", event.Data.SemesterCourseID.String()))
+	logger.Info("handling course.semester.deleted event", zap.String("course_id", event.SemesterCourseID.String()))
 
 	// CASCADE will handle student_course_registrations and student_assessment_scores
-	return w.cacheRepo.DeleteCourseCache(ctx, event.Data.SemesterCourseID)
+	return w.cacheRepo.DeleteCourseCache(ctx, event.SemesterCourseID)
 }
 
 func (w *EventConsumer) handleCourseInstructorChanged(ctx context.Context, event dto.CourseInstructorChangedEvent) error {
-	logger.Info("handling course.instructor.changed event", zap.String("course_id", event.Data.SemesterCourseID.String()))
+	logger.Info("handling course.instructor.changed event", zap.String("course_id", event.SemesterCourseID.String()))
 
 	return w.cacheRepo.UpdateCourseInstructor(ctx, db.UpdateCourseInstructorParams{
-		ID:                 event.Data.SemesterCourseID,
-		InstructorID:       event.Data.InstructorID,
-		InstructorFullname: utils.StringToPgText(event.Data.InstructorFullname),
+		ID:                 event.SemesterCourseID,
+		InstructorID:       event.InstructorID,
+		InstructorFullname: utils.StringToPgText(event.InstructorFullname),
 	})
 }
 
 func (w *EventConsumer) handleCoursePrerequisitesUpdated(ctx context.Context, event dto.CoursePrerequisitesUpdatedEvent) error {
-	logger.Info("handling course.prerequisites.updated event", zap.Int("count", len(event.Data.PrerequisiteCourses)))
+	logger.Info("handling course.prerequisites.updated event", zap.Int("count", len(event.PrerequisiteCourses)))
 
 	// Build prerequisites for bulk insert
 	var prerequisites []db.BulkInsertPrerequisiteCoursesParams
-	for _, prereq := range event.Data.PrerequisiteCourses {
+	for _, prereq := range event.PrerequisiteCourses {
 		prerequisites = append(prerequisites, db.BulkInsertPrerequisiteCoursesParams{
 			CourseCode: prereq.CourseCode,
 			CourseID:   prereq.CourseID,

@@ -12,6 +12,25 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countLockedScoresBySlugAndCourse = `-- name: CountLockedScoresBySlugAndCourse :one
+SELECT COUNT(DISTINCT sa.registration_id)
+FROM student_assessment_scores sa
+JOIN student_course_registrations r ON sa.registration_id = r.id
+WHERE r.course_id = $1 AND sa.slug = $2 AND sa.is_locked = TRUE
+`
+
+type CountLockedScoresBySlugAndCourseParams struct {
+	CourseID uuid.UUID `json:"course_id"`
+	Slug     string    `json:"slug"`
+}
+
+func (q *Queries) CountLockedScoresBySlugAndCourse(ctx context.Context, arg CountLockedScoresBySlugAndCourseParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countLockedScoresBySlugAndCourse, arg.CourseID, arg.Slug)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countScoresBySlugAndCourse = `-- name: CountScoresBySlugAndCourse :one
 SELECT COUNT(DISTINCT sa.registration_id)
 FROM student_assessment_scores sa
@@ -43,8 +62,34 @@ func (q *Queries) DeleteScoresByCourse(ctx context.Context, courseID uuid.UUID) 
 	return err
 }
 
+const getScoreByRegistrationAndSlug = `-- name: GetScoreByRegistrationAndSlug :one
+SELECT id, registration_id, slug, score, is_absent, graded_by, graded_at, is_locked FROM student_assessment_scores
+WHERE registration_id = $1 AND slug = $2
+`
+
+type GetScoreByRegistrationAndSlugParams struct {
+	RegistrationID uuid.UUID `json:"registration_id"`
+	Slug           string    `json:"slug"`
+}
+
+func (q *Queries) GetScoreByRegistrationAndSlug(ctx context.Context, arg GetScoreByRegistrationAndSlugParams) (StudentAssessmentScore, error) {
+	row := q.db.QueryRow(ctx, getScoreByRegistrationAndSlug, arg.RegistrationID, arg.Slug)
+	var i StudentAssessmentScore
+	err := row.Scan(
+		&i.ID,
+		&i.RegistrationID,
+		&i.Slug,
+		&i.Score,
+		&i.IsAbsent,
+		&i.GradedBy,
+		&i.GradedAt,
+		&i.IsLocked,
+	)
+	return i, err
+}
+
 const getScoresByRegistration = `-- name: GetScoresByRegistration :many
-SELECT id, registration_id, slug, score, is_absent, graded_by, graded_at FROM student_assessment_scores
+SELECT id, registration_id, slug, score, is_absent, graded_by, graded_at, is_locked FROM student_assessment_scores
 WHERE registration_id = $1
 ORDER BY graded_at
 `
@@ -66,6 +111,7 @@ func (q *Queries) GetScoresByRegistration(ctx context.Context, registrationID uu
 			&i.IsAbsent,
 			&i.GradedBy,
 			&i.GradedAt,
+			&i.IsLocked,
 		); err != nil {
 			return nil, err
 		}
@@ -77,18 +123,69 @@ func (q *Queries) GetScoresByRegistration(ctx context.Context, registrationID uu
 	return items, nil
 }
 
+const isScoreLocked = `-- name: IsScoreLocked :one
+SELECT COALESCE(is_locked, FALSE) as is_locked
+FROM student_assessment_scores
+WHERE registration_id = $1 AND slug = $2
+`
+
+type IsScoreLockedParams struct {
+	RegistrationID uuid.UUID `json:"registration_id"`
+	Slug           string    `json:"slug"`
+}
+
+func (q *Queries) IsScoreLocked(ctx context.Context, arg IsScoreLockedParams) (bool, error) {
+	row := q.db.QueryRow(ctx, isScoreLocked, arg.RegistrationID, arg.Slug)
+	var is_locked bool
+	err := row.Scan(&is_locked)
+	return is_locked, err
+}
+
+const lockScore = `-- name: LockScore :exec
+UPDATE student_assessment_scores
+SET is_locked = TRUE
+WHERE registration_id = $1 AND slug = $2
+`
+
+type LockScoreParams struct {
+	RegistrationID uuid.UUID `json:"registration_id"`
+	Slug           string    `json:"slug"`
+}
+
+func (q *Queries) LockScore(ctx context.Context, arg LockScoreParams) error {
+	_, err := q.db.Exec(ctx, lockScore, arg.RegistrationID, arg.Slug)
+	return err
+}
+
+const unlockScore = `-- name: UnlockScore :exec
+UPDATE student_assessment_scores
+SET is_locked = FALSE
+WHERE registration_id = $1 AND slug = $2
+`
+
+type UnlockScoreParams struct {
+	RegistrationID uuid.UUID `json:"registration_id"`
+	Slug           string    `json:"slug"`
+}
+
+func (q *Queries) UnlockScore(ctx context.Context, arg UnlockScoreParams) error {
+	_, err := q.db.Exec(ctx, unlockScore, arg.RegistrationID, arg.Slug)
+	return err
+}
+
 const upsertAssessmentScore = `-- name: UpsertAssessmentScore :one
 INSERT INTO student_assessment_scores (
-    registration_id, slug, score, is_absent, graded_by, graded_at
+    registration_id, slug, score, is_absent, graded_by, graded_at, is_locked
 ) VALUES (
-    $1, $2, $3, $4, $5, NOW()
+    $1, $2, $3, $4, $5, NOW(), TRUE
 )
 ON CONFLICT (registration_id, slug) DO UPDATE SET
     score = EXCLUDED.score,
     is_absent = EXCLUDED.is_absent,
     graded_by = EXCLUDED.graded_by,
     graded_at = NOW()
-RETURNING id, registration_id, slug, score, is_absent, graded_by, graded_at
+WHERE student_assessment_scores.is_locked = FALSE
+RETURNING id, registration_id, slug, score, is_absent, graded_by, graded_at, is_locked
 `
 
 type UpsertAssessmentScoreParams struct {
@@ -116,6 +213,7 @@ func (q *Queries) UpsertAssessmentScore(ctx context.Context, arg UpsertAssessmen
 		&i.IsAbsent,
 		&i.GradedBy,
 		&i.GradedAt,
+		&i.IsLocked,
 	)
 	return i, err
 }

@@ -66,3 +66,26 @@ WHERE sc.semester = sqlc.arg('semester')
   AND (sqlc.narg('instructor_id')::uuid IS NULL OR sc.instructor_id = sqlc.narg('instructor_id'))
   AND (sqlc.narg('course_type')::course_type_enum IS NULL OR cc.course_type = sqlc.narg('course_type'))
   AND (sqlc.narg('class_level')::SMALLINT IS NULL OR sc.class_level = sqlc.narg('class_level'));
+
+-- name: GetTeacherCourses :many
+SELECT
+    sc.id,
+    sc.semester,
+    sc.course_code,
+    cc.name as course_name,
+    cc.faculty,
+    cc.department,
+    sc.credits,
+    sc.class_level,
+    sc.instructor_id,
+    sc.instructor_fullname,
+    sc.classroom_location,
+    sc.max_capacity,
+    cc.theoretical_hours,
+    cc.practical_hours,
+    sc.created_at
+FROM semester_courses sc
+JOIN course_catalog cc ON sc.course_code = cc.course_code
+WHERE sc.instructor_id = $1
+  AND (sqlc.narg('semester')::text IS NULL OR sc.semester = sqlc.narg('semester'))
+ORDER BY sc.semester DESC, sc.course_code ASC;

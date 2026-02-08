@@ -65,7 +65,7 @@ func (s *StaffService) CreateStaff(ctx context.Context, req dto.CreateStaffReque
 	}
 
 	eventPayload := map[string]interface{}{
-		"staff_id":   nil, // Will be set after creation
+		"id":         nil, // Will be set after creation in repository
 		"email":      req.Email,
 		"first_name": req.FirstName,
 		"last_name":  req.LastName,
@@ -342,45 +342,16 @@ func (s *StaffService) ListStaff(ctx context.Context, query dto.PaginationQuery)
 	}, nil
 }
 
-// normalizeDepartment converts Turkish department names to English equivalents
-func normalizeDepartment(dept string) string {
-	mappings := map[string]string{
-		"Bilgisayar Mühendisliği":        "Computer Engineering",
-		"bilgisayar mühendisliği":        "Computer Engineering",
-		"Matematik":                      "Mathematics",
-		"matematik":                      "Mathematics",
-		"Fizik":                          "Physics",
-		"fizik":                          "Physics",
-		"Kimya":                          "Chemistry",
-		"kimya":                          "Chemistry",
-		"Elektrik-Elektronik Mühendisliği": "Electrical Engineering",
-		"elektrik-elektronik mühendisliği": "Electrical Engineering",
-		"Endüstri Mühendisliği":          "Industrial Engineering",
-		"endüstri mühendisliği":          "Industrial Engineering",
-		"Makine Mühendisliği":            "Mechanical Engineering",
-		"makine mühendisliği":            "Mechanical Engineering",
-	}
-
-	if normalized, ok := mappings[dept]; ok {
-		return normalized
-	}
-	return dept
-}
-
 // GetInstructorsByDepartment retrieves instructors by department
 func (s *StaffService) GetInstructorsByDepartment(ctx context.Context, department string) (dto.StaffListResponse, error) {
-	// Normalize department name (Turkish -> English)
-	normalizedDept := normalizeDepartment(department)
-
 	// Create child logger with service context
 	serviceLogger := logger.WithContextAndFields(ctx,
 		zap.String("service", "StaffService"),
 		zap.String("method", "GetInstructorsByDepartment"),
 		zap.String("department", department),
-		zap.String("normalized_department", normalizedDept),
 	)
 
-	instructors, err := s.staffRepo.GetInstructorsByDepartment(ctx, normalizedDept)
+	instructors, err := s.staffRepo.GetInstructorsByDepartment(ctx, department)
 	if err != nil {
 		// Check for query failures - wrap and return, handler will log
 		if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {

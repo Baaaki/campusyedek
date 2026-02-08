@@ -121,7 +121,9 @@ func (r *CatalogRepository) UpdateCourse(ctx context.Context, params db.UpdateCo
 	return course, nil
 }
 
-// Helper: Convert prerequisites to JSONB
+// ==================== JSON Helper Functions ====================
+
+// PrerequisitesToJSON converts prerequisites slice to JSONB bytes
 func PrerequisitesToJSON(prerequisites []dto.Prerequisite) ([]byte, error) {
 	if len(prerequisites) == 0 {
 		return []byte("[]"), nil
@@ -129,7 +131,7 @@ func PrerequisitesToJSON(prerequisites []dto.Prerequisite) ([]byte, error) {
 	return json.Marshal(prerequisites)
 }
 
-// Helper: Convert JSONB to prerequisites
+// JSONToPrerequisites converts JSONB bytes to prerequisites slice
 func JSONToPrerequisites(data []byte) ([]dto.Prerequisite, error) {
 	var prerequisites []dto.Prerequisite
 	if len(data) == 0 || string(data) == "null" {
@@ -139,4 +141,64 @@ func JSONToPrerequisites(data []byte) ([]dto.Prerequisite, error) {
 		return nil, err
 	}
 	return prerequisites, nil
+}
+
+// CoordinatorToJSON converts CourseCoordinator to JSONB bytes
+func CoordinatorToJSON(coordinator *dto.CourseCoordinator) ([]byte, error) {
+	if coordinator == nil {
+		return nil, nil
+	}
+	return json.Marshal(coordinator)
+}
+
+// JSONToCoordinator converts JSONB bytes to CourseCoordinator
+func JSONToCoordinator(data []byte) (*dto.CourseCoordinator, error) {
+	if len(data) == 0 || string(data) == "null" {
+		return nil, nil
+	}
+	var coordinator dto.CourseCoordinator
+	if err := json.Unmarshal(data, &coordinator); err != nil {
+		return nil, err
+	}
+	return &coordinator, nil
+}
+
+// WeeklyTopicsToJSON converts WeeklyTopic slice to JSONB bytes
+func WeeklyTopicsToJSON(topics []dto.WeeklyTopic) ([]byte, error) {
+	if len(topics) == 0 {
+		return []byte("[]"), nil
+	}
+	return json.Marshal(topics)
+}
+
+// JSONToWeeklyTopics converts JSONB bytes to WeeklyTopic slice
+func JSONToWeeklyTopics(data []byte) ([]dto.WeeklyTopic, error) {
+	var topics []dto.WeeklyTopic
+	if len(data) == 0 || string(data) == "null" {
+		return []dto.WeeklyTopic{}, nil
+	}
+	if err := json.Unmarshal(data, &topics); err != nil {
+		return nil, err
+	}
+	return topics, nil
+}
+
+// StringSliceToJSON converts string slice to JSONB bytes
+func StringSliceToJSON(items []string) ([]byte, error) {
+	if len(items) == 0 {
+		return []byte("[]"), nil
+	}
+	return json.Marshal(items)
+}
+
+// JSONToStringSlice converts JSONB bytes to string slice
+func JSONToStringSlice(data []byte) ([]string, error) {
+	var items []string
+	if len(data) == 0 || string(data) == "null" {
+		return []string{}, nil
+	}
+	if err := json.Unmarshal(data, &items); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

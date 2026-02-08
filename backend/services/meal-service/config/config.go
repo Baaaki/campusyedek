@@ -21,9 +21,9 @@ type Config struct {
 	Outbox         OutboxConfig
 }
 
-// PaymentConfig holds payment service configuration
+// PaymentConfig holds payment service configuration (gRPC)
 type PaymentConfig struct {
-	ServiceURL string `mapstructure:"PAYMENT_SERVICE_URL"`
+	GRPCAddress string `mapstructure:"PAYMENT_GRPC_ADDRESS"`
 }
 
 // QRConfig holds QR code configuration
@@ -70,7 +70,7 @@ func Load() (*Config, error) {
 
 	// Load meal-specific config
 	payment := PaymentConfig{
-		ServiceURL: viper.GetString("PAYMENT_SERVICE_URL"),
+		GRPCAddress: viper.GetString("PAYMENT_GRPC_ADDRESS"),
 	}
 
 	qr := QRConfig{
@@ -119,8 +119,8 @@ func Load() (*Config, error) {
 
 // setMealDefaults sets meal-specific default configuration values
 func setMealDefaults() {
-	// Payment service (using catalog service port for now)
-	viper.SetDefault("PAYMENT_SERVICE_URL", "http://localhost:"+config.CatalogServicePort)
+	// Payment service gRPC address
+	viper.SetDefault("PAYMENT_GRPC_ADDRESS", "localhost:50051")
 
 	// QR Code
 	viper.SetDefault("QR_SECRET", "change-this-qr-secret-in-production")
@@ -149,8 +149,8 @@ func (c *Config) Validate() error {
 	}
 
 	// Validate meal-specific config
-	if c.Payment.ServiceURL == "" {
-		return fmt.Errorf("PAYMENT_SERVICE_URL is required")
+	if c.Payment.GRPCAddress == "" {
+		return fmt.Errorf("PAYMENT_GRPC_ADDRESS is required")
 	}
 
 	if c.QR.Secret == "" {

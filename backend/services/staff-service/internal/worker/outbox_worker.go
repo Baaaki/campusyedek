@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/baaaki/mydreamcampus/shared/events"
@@ -80,12 +81,14 @@ func (w *OutboxWorker) processEvents(ctx context.Context) {
 	failCount := 0
 
 	for _, event := range events {
+		eventID := fmt.Sprintf("%d", event.ID)
+
 		// Parse payload to map for publishing
 		var payload map[string]interface{}
 		if err := json.Unmarshal(event.Payload, &payload); err != nil {
 			logger.Error("failed to unmarshal event payload",
 				zap.Error(err),
-				zap.Int32("event_id", event.ID),
+				zap.String("event_id", eventID),
 			)
 			failCount++
 			continue
@@ -94,12 +97,20 @@ func (w *OutboxWorker) processEvents(ctx context.Context) {
 		// Determine routing key from event type using shared events constants
 		routingKey := w.getRoutingKey(event.EventType)
 
+		// Wrap payload with event metadata (required by auth service)
+		eventMessage := map[string]interface{}{
+			"event_id":   eventID,
+			"event_type": event.EventType,
+			"timestamp":  time.Now(),
+			"data":       payload,
+		}
+
 		// Publish to RabbitMQ
-		err := w.publisher.Publish(ctx, "staff.events", routingKey, payload)
+		err := w.publisher.Publish(ctx, "staff.events", routingKey, eventMessage)
 		if err != nil {
 			logger.Error("failed to publish event",
 				zap.Error(err),
-				zap.Int32("event_id", event.ID),
+				zap.String("event_id", eventID),
 				zap.String("event_type", event.EventType),
 				zap.String("routing_key", routingKey),
 			)
@@ -112,14 +123,14 @@ func (w *OutboxWorker) processEvents(ctx context.Context) {
 		if err != nil {
 			logger.Error("failed to mark event as processed",
 				zap.Error(err),
-				zap.Int32("event_id", event.ID),
+				zap.String("event_id", eventID),
 			)
 			failCount++
 			continue
 		}
 
 		logger.Info("event published successfully",
-			zap.Int32("event_id", event.ID),
+			zap.String("event_id", eventID),
 			zap.String("event_type", event.EventType),
 		)
 		successCount++

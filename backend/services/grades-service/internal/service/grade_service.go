@@ -78,23 +78,25 @@ func (s *GradeService) SubmitScore(ctx context.Context, instructorID uuid.UUID, 
 		return nil, errors.ErrAttendanceFailed
 	}
 
-	// 5. Validate score
+	// 5. Check if score is locked (existing score cannot be modified if locked)
+	existingScore, err := s.scoreRepo.GetScoreByRegistrationAndSlug(ctx, req.RegistrationID, req.Slug)
+	if err == nil && existingScore.IsLocked.Valid && existingScore.IsLocked.Bool {
+		return nil, errors.ErrScoreLocked
+	}
+
+	// 6. Validate score
 	if req.Score != nil {
 		if *req.Score < 0 || *req.Score > 100 {
 			return nil, errors.ErrInvalidScore
 		}
 	}
 
-	// 6. Upsert score
+	// 7. Upsert score
 	var scoreValue pgtype.Numeric
 	if req.Score != nil {
-		scoreValue = pgtype.Numeric{
-			Int:   nil,
-			Exp:   0,
-			NaN:   false,
-			Valid: true,
-		}
-		if err := scoreValue.Scan(*req.Score); err != nil {
+		// Convert to string for pgtype.Numeric - it accepts string format
+		scoreStr := fmt.Sprintf("%d", int(*req.Score))
+		if err := scoreValue.Scan(scoreStr); err != nil {
 			logger.Error("failed to scan score", zap.Error(err))
 			return nil, err
 		}
@@ -139,25 +141,23 @@ func (s *GradeService) SubmitScore(ctx context.Context, instructorID uuid.UUID, 
 		}
 	}
 
-	// 9. Check if this is final slug and all finals are complete
-	if req.Slug == "final" {
-		allComplete, err := s.checkAllFinalScoresComplete(ctx, courseID)
+	// 9. Check if all scores for all assessments are locked → auto-finalize
+	allLocked, err := s.checkAllScoresLocked(ctx, courseID)
+	if err != nil {
+		logger.Error("failed to check locked scores", zap.Error(err))
+		return response, nil
+	}
+
+	if allLocked {
+		logger.Info("all scores locked, triggering auto-finalize", zap.String("course_id", courseID.String()))
+		finalizeResult, err := s.AutoFinalize(ctx, courseID, instructorID)
 		if err != nil {
-			logger.Error("failed to check final scores", zap.Error(err))
+			logger.Error("auto-finalize failed", zap.Error(err))
 			return response, nil
 		}
 
-		if allComplete {
-			logger.Info("all final scores complete, triggering auto-finalize", zap.String("course_id", courseID.String()))
-			finalizeResult, err := s.AutoFinalize(ctx, courseID, instructorID)
-			if err != nil {
-				logger.Error("auto-finalize failed", zap.Error(err))
-				return response, nil
-			}
-
-			response.AutoFinalized = true
-			response.FinalizeResult = finalizeResult
-		}
+		response.AutoFinalized = true
+		response.FinalizeResult = finalizeResult
 	}
 
 	return response, nil
@@ -187,25 +187,23 @@ func (s *GradeService) BulkSubmitScores(ctx context.Context, instructorID uuid.U
 		SuccessCount: successCount,
 	}
 
-	// Check auto-finalize after bulk submission
-	if req.Slug == "final" {
-		allComplete, err := s.checkAllFinalScoresComplete(ctx, courseID)
+	// Check auto-finalize after bulk submission - triggers when all scores are locked
+	allLocked, err := s.checkAllScoresLocked(ctx, courseID)
+	if err != nil {
+		logger.Error("failed to check locked scores", zap.Error(err))
+		return response, nil
+	}
+
+	if allLocked {
+		logger.Info("all scores locked after bulk, triggering auto-finalize", zap.String("course_id", courseID.String()))
+		finalizeResult, err := s.AutoFinalize(ctx, courseID, instructorID)
 		if err != nil {
-			logger.Error("failed to check final scores", zap.Error(err))
+			logger.Error("auto-finalize failed", zap.Error(err))
 			return response, nil
 		}
 
-		if allComplete {
-			logger.Info("all final scores complete after bulk, triggering auto-finalize", zap.String("course_id", courseID.String()))
-			finalizeResult, err := s.AutoFinalize(ctx, courseID, instructorID)
-			if err != nil {
-				logger.Error("auto-finalize failed", zap.Error(err))
-				return response, nil
-			}
-
-			response.AutoFinalized = true
-			response.FinalizeResult = finalizeResult
-		}
+		response.AutoFinalized = true
+		response.FinalizeResult = finalizeResult
 	}
 
 	return response, nil
@@ -612,6 +610,7 @@ func (s *GradeService) GetCourseStudents(ctx context.Context, instructorID uuid.
 		for _, score := range scores {
 			detail := dto.ScoreDetail{
 				IsAbsent: utils.PgBoolToBool(score.IsAbsent),
+				IsLocked: score.IsLocked.Valid && score.IsLocked.Bool,
 			}
 			if score.Score.Valid {
 				scoreFloat, err := utils.PgNumericToFloat64(score.Score)
@@ -675,6 +674,50 @@ func (s *GradeService) checkAllFinalScoresComplete(ctx context.Context, courseID
 	return finalGradedCount >= totalStudents, nil
 }
 
+// checkAllScoresLocked checks if all assessment scores for a course are locked
+// Returns true only when every student has a locked score for every assessment
+func (s *GradeService) checkAllScoresLocked(ctx context.Context, courseID uuid.UUID) (bool, error) {
+	// 1. Get course and parse assessment schema
+	course, err := s.cacheRepo.GetCourseCacheByID(ctx, courseID)
+	if err != nil {
+		return false, err
+	}
+
+	var schema []AssessmentSchemaItem
+	if err := json.Unmarshal(course.AssessmentSchema, &schema); err != nil {
+		return false, err
+	}
+
+	// 2. Get total students
+	totalStudents, err := s.registrationRepo.CountRegistrationsByCourse(ctx, courseID)
+	if err != nil {
+		return false, err
+	}
+
+	if totalStudents == 0 {
+		return false, nil
+	}
+
+	// 3. For each assessment, check if all students have locked scores
+	for _, item := range schema {
+		lockedCount, err := s.scoreRepo.CountLockedScoresBySlugAndCourse(ctx, courseID, item.Slug)
+		if err != nil {
+			return false, err
+		}
+
+		if lockedCount < totalStudents {
+			logger.Debug("not all scores locked",
+				zap.String("slug", item.Slug),
+				zap.Int64("locked_count", lockedCount),
+				zap.Int64("total_students", totalStudents),
+			)
+			return false, nil
+		}
+	}
+
+	return true, nil
+}
+
 func isValidSlug(schema []AssessmentSchemaItem, slug string) bool {
 	for _, item := range schema {
 		if item.Slug == slug {
@@ -710,4 +753,133 @@ func (s *GradeService) publishGradeSubmitted(ctx context.Context, studentID uuid
 	})
 
 	return err
+}
+
+// ============================================
+// Appeal (İtiraz) - Recalculate using frozen statistics
+// ============================================
+
+func (s *GradeService) ProcessAppeal(ctx context.Context, req dto.AppealScoreRequest) (*dto.AppealScoreResponse, error) {
+	// 1. Get the student's completed course record (contains frozen statistics)
+	completedCourse, err := s.completedRepo.GetCompletedCourseByStudentAndCourse(ctx, req.StudentID, req.CourseID)
+	if err != nil {
+		logger.Error("failed to get completed course", zap.Error(err))
+		return nil, errors.ErrCourseNotFound
+	}
+
+	// 2. Parse existing assessment scores
+	var scores map[string]float64
+	if err := json.Unmarshal(completedCourse.AssessmentScores, &scores); err != nil {
+		logger.Error("failed to unmarshal assessment scores", zap.Error(err))
+		return nil, err
+	}
+
+	// 3. Check if the slug exists
+	oldScore, exists := scores[req.Slug]
+	if !exists {
+		return nil, errors.ErrInvalidSlug
+	}
+
+	// 4. Parse frozen class statistics
+	var frozenStats struct {
+		Mean   float64 `json:"mean"`
+		StdDev float64 `json:"stddev"`
+		Min    float64 `json:"min"`
+		Max    float64 `json:"max"`
+		Count  int     `json:"total_students"`
+	}
+	if err := json.Unmarshal(completedCourse.ClassStatistics, &frozenStats); err != nil {
+		logger.Error("failed to unmarshal class statistics", zap.Error(err))
+		return nil, err
+	}
+
+	// 5. Get course to parse assessment schema for weight calculation
+	course, err := s.cacheRepo.GetCourseCacheByID(ctx, req.CourseID)
+	if err != nil {
+		logger.Error("failed to get course", zap.Error(err))
+		return nil, errors.ErrCourseNotFound
+	}
+
+	var schema []AssessmentSchemaItem
+	if err := json.Unmarshal(course.AssessmentSchema, &schema); err != nil {
+		logger.Error("failed to unmarshal assessment schema", zap.Error(err))
+		return nil, err
+	}
+
+	// 6. Update the score
+	scores[req.Slug] = req.NewScore
+
+	// 7. Recalculate weighted average
+	oldWeightedAvg, _ := utils.PgNumericToFloat64(completedCourse.WeightedAverage)
+	newWeightedAvg := calculateWeightedAverage(scores, schema)
+
+	// 8. Recalculate grade point using FROZEN statistics
+	var newGradePoint db.GradePointEnum
+	var newZScore float64
+
+	if completedCourse.GradingType == db.GradingTypeEnumAbsolute {
+		newGradePoint = calculateAbsoluteGradePoint(newWeightedAvg)
+	} else {
+		newGradePoint, newZScore = calculateZScoreGradePoint(newWeightedAvg, frozenStats.Mean, frozenStats.StdDev)
+	}
+
+	// 9. Marshal updated scores
+	updatedScoresJSON, err := json.Marshal(scores)
+	if err != nil {
+		logger.Error("failed to marshal updated scores", zap.Error(err))
+		return nil, err
+	}
+
+	// 10. Update grading config with new z-score if relative
+	gradingConfig := make(map[string]interface{})
+	if completedCourse.GradingType == db.GradingTypeEnumRelative {
+		gradingConfig["class_mean"] = frozenStats.Mean
+		gradingConfig["class_stddev"] = frozenStats.StdDev
+		gradingConfig["student_z_score"] = newZScore
+	}
+	gradingConfigJSON, _ := json.Marshal(gradingConfig)
+
+	// 11. Update the completed course record
+	err = s.completedRepo.UpdateCompletedCourseAfterAppeal(ctx, db.UpdateCompletedCourseAfterAppealParams{
+		StudentID:        req.StudentID,
+		CourseID:         req.CourseID,
+		AssessmentScores: updatedScoresJSON,
+		WeightedAverage:  utils.Float64ToPgNumeric(newWeightedAvg),
+		GradePoint:       newGradePoint,
+		GradingConfig:    gradingConfigJSON,
+	})
+	if err != nil {
+		logger.Error("failed to update completed course after appeal", zap.Error(err))
+		return nil, err
+	}
+
+	logger.Info("appeal processed successfully",
+		zap.String("student_id", req.StudentID.String()),
+		zap.String("course_code", completedCourse.CourseCode),
+		zap.String("slug", req.Slug),
+		zap.Float64("old_score", oldScore),
+		zap.Float64("new_score", req.NewScore),
+		zap.String("old_grade", string(completedCourse.GradePoint)),
+		zap.String("new_grade", string(newGradePoint)),
+	)
+
+	response := &dto.AppealScoreResponse{
+		StudentID:          req.StudentID,
+		CourseCode:         completedCourse.CourseCode,
+		Slug:               req.Slug,
+		OldScore:           oldScore,
+		NewScore:           req.NewScore,
+		OldWeightedAverage: oldWeightedAvg,
+		NewWeightedAverage: newWeightedAvg,
+		OldGradePoint:      string(completedCourse.GradePoint),
+		NewGradePoint:      string(newGradePoint),
+		GradingType:        string(completedCourse.GradingType),
+		FrozenClassMean:    frozenStats.Mean,
+	}
+
+	if completedCourse.GradingType == db.GradingTypeEnumRelative {
+		response.FrozenClassStdDev = frozenStats.StdDev
+	}
+
+	return response, nil
 }

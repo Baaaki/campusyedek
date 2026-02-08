@@ -57,7 +57,7 @@ export default function LoginPage() {
           router.push("/dashboard");
           break;
         case "teacher":
-          router.push("/dashboard");
+          router.push("/teacher/attendance");
           break;
         case "student":
           router.push("/student/dashboard");

@@ -21,17 +21,16 @@ watching sql/queries
 !exclude tmp
 building...
 running...
-08:26:21.950	[34mINFO[0m	cmd/main.go:38	starting staff-service	{"environment": "development", "port": "8002"}
-08:26:21.956	[34mINFO[0m	cmd/main.go:52	database connection established
-08:26:21.956	[34mINFO[0m	rabbitmq/connection.go:37	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
-08:26:21.958	[34mINFO[0m	rabbitmq/connection.go:69	rabbitmq connection established
-08:26:21.958	[34mINFO[0m	cmd/main.go:63	RabbitMQ connection established
-08:26:21.958	[34mINFO[0m	cmd/main.go:227	RabbitMQ exchange declared	{"exchange": "staff.events"}
+15:59:38.321	[34mINFO[0m	cmd/main.go:38	starting staff-service	{"environment": "development", "port": "8002"}
+15:59:38.329	[34mINFO[0m	cmd/main.go:52	database connection established
+15:59:38.329	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+15:59:38.334	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+15:59:38.334	[34mINFO[0m	cmd/main.go:63	RabbitMQ connection established
+15:59:38.334	[34mINFO[0m	cmd/main.go:228	RabbitMQ exchange declared	{"exchange": "staff.events"}
 [GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
  - using env:	export GIN_MODE=release
  - using code:	gin.SetMode(gin.ReleaseMode)
 
-08:26:21.958	[34mINFO[0m	worker/outbox_worker.go:38	starting outbox worker	{"interval": "5s", "batch_size": 10}
 [GIN-debug] GET    /health                   --> main.setupRouter.func1 (4 handlers)
 [GIN-debug] GET    /public/teachers          --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*TeacherProfileHandler).ListTeacherProfiles-fm (4 handlers)
 [GIN-debug] GET    /public/teachers/:id      --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*TeacherProfileHandler).GetTeacherProfileByStaffID-fm (4 handlers)
@@ -40,12 +39,15 @@ running...
 [GIN-debug] GET    /internal/staff/instructors --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).GetInstructorsByDepartment-fm (4 handlers)
 [GIN-debug] GET    /api/staff                --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).ListStaff-fm (5 handlers)
 [GIN-debug] GET    /api/staff/:id            --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).GetStaffByID-fm (5 handlers)
+[GIN-debug] GET    /api/staff/instructors    --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).GetInstructorsByDepartment-fm (5 handlers)
 [GIN-debug] POST   /api/staff                --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).CreateStaff-fm (6 handlers)
 [GIN-debug] PUT    /api/staff/:id            --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).UpdateStaff-fm (6 handlers)
 [GIN-debug] DELETE /api/staff/:id            --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).DeleteStaff-fm (6 handlers)
+15:59:38.334	[34mINFO[0m	worker/outbox_worker.go:39	starting outbox worker	{"interval": "5s", "batch_size": 10}
 [GIN-debug] PUT    /api/staff/:id/profile    --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*TeacherProfileHandler).UpdateTeacherProfile-fm (6 handlers)
-08:26:21.958	[34mINFO[0m	cmd/main.go:113	server starting	{"port": "8002"}
-08:26:21.958	[31mFATAL[0m	cmd/main.go:117	failed to start server	{"error": "listen tcp :8002: bind: address already in use"}
-main.main.func1
-	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/staff-service/cmd/main.go:117
-Process Exit with Code: 1
+15:59:38.334	[34mINFO[0m	cmd/main.go:113	server starting	{"port": "8002"}
+19:44:32.598	[31mERROR[0m	rabbitmq/connection.go:94	rabbitmq connection lost	{"error": "Exception (320) Reason: \"CONNECTION_FORCED - broker forced connection closure with reason 'shutdown'\""}
+github.com/baaaki/mydreamcampus/shared/rabbitmq.(*Connection).handleReconnect
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/rabbitmq/connection.go:94
+19:44:32.598	[34mINFO[0m	rabbitmq/connection.go:99	attempting to reconnect to rabbitmq...
+cleaning...

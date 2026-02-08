@@ -81,6 +81,34 @@ func (q *Queries) CleanupExpiredReservations(ctx context.Context, limit int32) e
 	return err
 }
 
+const countStudentReservationsFiltered = `-- name: CountStudentReservationsFiltered :one
+SELECT COUNT(*) as total
+FROM reservations r
+WHERE r.student_id = $1
+  AND ($2::date IS NULL OR r.reservation_date >= $2)
+  AND ($3::date IS NULL OR r.reservation_date <= $3)
+  AND ($4::reservation_status_enum IS NULL OR r.status = $4)
+`
+
+type CountStudentReservationsFilteredParams struct {
+	StudentID pgtype.UUID               `json:"student_id"`
+	Column2   pgtype.Date               `json:"column_2"`
+	Column3   pgtype.Date               `json:"column_3"`
+	Column4   NullReservationStatusEnum `json:"column_4"`
+}
+
+func (q *Queries) CountStudentReservationsFiltered(ctx context.Context, arg CountStudentReservationsFilteredParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countStudentReservationsFiltered,
+		arg.StudentID,
+		arg.Column2,
+		arg.Column3,
+		arg.Column4,
+	)
+	var total int64
+	err := row.Scan(&total)
+	return total, err
+}
+
 const createReservation = `-- name: CreateReservation :one
 INSERT INTO reservations (batch_id, student_id, cafeteria_id, reservation_date, meal_time, menu_type, status, expires_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -334,13 +362,16 @@ WHERE r.student_id = $1
   AND ($3::date IS NULL OR r.reservation_date <= $3)
   AND ($4::reservation_status_enum IS NULL OR r.status = $4)
 ORDER BY r.reservation_date DESC, r.meal_time ASC
+LIMIT NULLIF($5, 0) OFFSET $6
 `
 
 type GetStudentReservationsFilteredParams struct {
-	StudentID pgtype.UUID           `json:"student_id"`
-	Column2   pgtype.Date           `json:"column_2"`
-	Column3   pgtype.Date           `json:"column_3"`
-	Column4   ReservationStatusEnum `json:"column_4"`
+	StudentID pgtype.UUID               `json:"student_id"`
+	Column2   pgtype.Date               `json:"column_2"`
+	Column3   pgtype.Date               `json:"column_3"`
+	Column4   NullReservationStatusEnum `json:"column_4"`
+	Column5   interface{}               `json:"column_5"`
+	Offset    int32                     `json:"offset"`
 }
 
 type GetStudentReservationsFilteredRow struct {
@@ -367,6 +398,8 @@ func (q *Queries) GetStudentReservationsFiltered(ctx context.Context, arg GetStu
 		arg.Column2,
 		arg.Column3,
 		arg.Column4,
+		arg.Column5,
+		arg.Offset,
 	)
 	if err != nil {
 		return nil, err

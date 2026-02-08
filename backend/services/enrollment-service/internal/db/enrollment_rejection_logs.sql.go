@@ -111,7 +111,7 @@ SELECT id, original_program_id, student_id, advisor_id, advisor_fullname,
        semester, rejection_reason, rejected_courses, rejected_at
 FROM enrollment_rejection_logs
 WHERE student_id = $1
-  AND ($2::VARCHAR IS NULL OR semester = $2)
+  AND ($2::VARCHAR IS NULL OR $2 = '' OR semester = $2)
 ORDER BY rejected_at DESC
 `
 

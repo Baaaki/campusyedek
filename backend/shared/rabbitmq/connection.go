@@ -18,15 +18,31 @@ type Connection struct {
 	connected  bool
 }
 
-// NewConnection creates a new RabbitMQ connection
+// NewConnection creates a new RabbitMQ connection with retry backoff
 func NewConnection(url string) (*Connection, error) {
 	c := &Connection{
 		URL:       url,
 		connected: false,
 	}
 
-	if err := c.connect(); err != nil {
-		return nil, err
+	// Retry connection with backoff (max 5 attempts)
+	maxRetries := 5
+	for i := 0; i < maxRetries; i++ {
+		if err := c.connect(); err != nil {
+			logger.Error("rabbitmq connection failed",
+				zap.Error(err),
+				zap.Int("attempt", i+1),
+				zap.Int("max_retries", maxRetries),
+			)
+
+			if i < maxRetries-1 {
+				logger.Info("retrying rabbitmq connection in 5 seconds...")
+				time.Sleep(5 * time.Second)
+				continue
+			}
+			return nil, err
+		}
+		break
 	}
 
 	return c, nil

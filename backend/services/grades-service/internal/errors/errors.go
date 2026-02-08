@@ -20,6 +20,7 @@ var (
 	ErrAlreadyFinalized = sharedErrors.New("ALREADY_FINALIZED", "course already finalized, cannot modify scores", http.StatusConflict)
 	ErrScoreExists      = sharedErrors.New("SCORE_EXISTS", "score already exists for this assessment", http.StatusConflict)
 	ErrAttendanceFailed = sharedErrors.New("ATTENDANCE_FAILED", "student failed due to attendance, cannot enter score manually", http.StatusBadRequest)
+	ErrScoreLocked      = sharedErrors.New("SCORE_LOCKED", "score is locked and cannot be modified", http.StatusForbidden)
 
 	// Authorization errors (AppError for HTTP responses)
 	ErrNotCourseInstructor = sharedErrors.New("NOT_COURSE_INSTRUCTOR", "you are not the instructor of this course", http.StatusForbidden)

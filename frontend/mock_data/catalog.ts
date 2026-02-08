@@ -1,4 +1,4 @@
-import { CourseCatalog, AvailableCourse, EnrollmentProgram, Faculty, Department } from '@/lib/types';
+import { CourseCatalog, AvailableCourse, EnrollmentProgramResponse, Faculty, Department } from '@/lib/types';
 
 // DEU Fakülte ve Bölüm Yapısı
 export const mockFaculties: Faculty[] = [
@@ -1973,7 +1973,7 @@ export const mockAvailableCourses: AvailableCourse[] = [
 ];
 
 // Mock Enrollment Programs (from enrollment-service)
-export const mockEnrollmentPrograms: EnrollmentProgram[] = [
+export const mockEnrollmentPrograms: EnrollmentProgramResponse[] = [
   {
     id: '550e8400-e29b-41d4-a716-446655440401',
     student_id: '550e8400-e29b-41d4-a716-446655440005',

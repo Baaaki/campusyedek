@@ -47,8 +47,8 @@ const (
 
 const (
 	// Auth Service Queues (consumes from other services)
-	QueueAuthStaffEvents   = "auth.staff_events"
-	QueueAuthStudentEvents = "auth.student_events"
+	QueueAuthStaffEvents   = "auth_events_queue"
+	QueueAuthStudentEvents = "auth_events_queue"
 
 	// Student Service Queues (consumes from staff service)
 	QueueStudentStaffEvents = "student.staff_events"

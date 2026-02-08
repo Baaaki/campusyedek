@@ -1,6 +1,6 @@
 .PHONY: dev dev-all stop stop-all logs help \
-        dev-auth dev-staff dev-student dev-course dev-enrollment dev-attendance dev-grades dev-meal \
-        stop-auth stop-staff stop-student stop-course stop-enrollment stop-attendance stop-grades stop-meal \
+        dev-auth dev-staff dev-student dev-course dev-enrollment dev-attendance dev-grades dev-meal dev-payment \
+        stop-auth stop-staff stop-student stop-course stop-enrollment stop-attendance stop-grades stop-meal stop-payment \
         infra infra-down status
 
 # Use bash for proper shell features
@@ -11,8 +11,11 @@ BACKEND_DIR := $(shell pwd)
 SERVICES_DIR := $(BACKEND_DIR)/services
 LOG_DIR := $(BACKEND_DIR)/tmp/logs
 
-# Service list
-SERVICES := auth-service staff-service student-service course-catalog-service enrollment-service attendance-service grades-service meal-service
+# Service list (HTTP services using air)
+SERVICES := auth-service staff-service student-service course-catalog-service enrollment-service attendance-service grades-service meal-service payment-service
+
+# gRPC services (run with go run)
+GRPC_SERVICES := 
 
 # Colors
 GREEN := \033[0;32m
@@ -35,6 +38,10 @@ dev-all:
 		echo -e "$(BLUE)  Starting $$service...$(NC)"; \
 		cd $(SERVICES_DIR)/$$service && nohup air > $(LOG_DIR)/$$service.log 2>&1 & echo $$! > $(LOG_DIR)/$$service.pid; \
 	done
+	@for service in $(GRPC_SERVICES); do \
+		echo -e "$(BLUE)  Starting $$service (gRPC)...$(NC)"; \
+		cd $(SERVICES_DIR)/$$service && nohup go run ./cmd/main.go > $(LOG_DIR)/$$service.log 2>&1 & echo $$! > $(LOG_DIR)/$$service.pid; \
+	done
 	@sleep 2
 	@echo ""
 	@echo -e "$(GREEN)✅ All services started!$(NC)"
@@ -46,7 +53,7 @@ stop: stop-all
 
 stop-all:
 	@echo -e "$(RED)🛑 Stopping all backend services...$(NC)"
-	@for service in $(SERVICES); do \
+	@for service in $(SERVICES) $(GRPC_SERVICES); do \
 		if [ -f $(LOG_DIR)/$$service.pid ]; then \
 			pid=$$(cat $(LOG_DIR)/$$service.pid); \
 			if ps -p $$pid > /dev/null 2>&1; then \
@@ -68,7 +75,7 @@ status:
 	@echo ""
 	@printf "%-25s %-10s %-10s\n" "SERVICE" "STATUS" "PID"
 	@printf "%-25s %-10s %-10s\n" "-------" "------" "---"
-	@for service in $(SERVICES); do \
+	@for service in $(SERVICES) $(GRPC_SERVICES); do \
 		if [ -f $(LOG_DIR)/$$service.pid ]; then \
 			pid=$$(cat $(LOG_DIR)/$$service.pid); \
 			if ps -p $$pid > /dev/null 2>&1; then \
@@ -112,6 +119,9 @@ logs-grades:
 
 logs-meal:
 	@tail -f $(LOG_DIR)/meal-service.log
+
+logs-payment:
+	@tail -f $(LOG_DIR)/payment-service.log
 
 # ============================================
 # 🔧 INDIVIDUAL SERVICES
@@ -165,6 +175,12 @@ dev-meal:
 	@cd $(SERVICES_DIR)/meal-service && nohup air > $(LOG_DIR)/meal-service.log 2>&1 & echo $$! > $(LOG_DIR)/meal-service.pid
 	@echo -e "$(GREEN)✅ meal-service started (logs: make logs-meal)$(NC)"
 
+dev-payment:
+	@mkdir -p $(LOG_DIR)
+	@echo -e "$(GREEN)🚀 Starting payment-service (gRPC)...$(NC)"
+	@cd $(SERVICES_DIR)/payment-service && nohup air > $(LOG_DIR)/payment-service.log 2>&1 & echo $$! > $(LOG_DIR)/payment-service.pid
+	@echo -e "$(GREEN)✅ payment-service started on port 50051 (logs: make logs-payment)$(NC)"
+
 # Stop individual services
 stop-auth:
 	@if [ -f $(LOG_DIR)/auth-service.pid ]; then kill $$(cat $(LOG_DIR)/auth-service.pid) 2>/dev/null || true; rm -f $(LOG_DIR)/auth-service.pid; fi
@@ -197,6 +213,10 @@ stop-grades:
 stop-meal:
 	@if [ -f $(LOG_DIR)/meal-service.pid ]; then kill $$(cat $(LOG_DIR)/meal-service.pid) 2>/dev/null || true; rm -f $(LOG_DIR)/meal-service.pid; fi
 	@echo -e "$(RED)🛑 meal-service stopped$(NC)"
+
+stop-payment:
+	@if [ -f $(LOG_DIR)/payment-service.pid ]; then kill $$(cat $(LOG_DIR)/payment-service.pid) 2>/dev/null || true; rm -f $(LOG_DIR)/payment-service.pid; fi
+	@echo -e "$(RED)🛑 payment-service stopped$(NC)"
 
 # ============================================
 # 🏗️ INFRASTRUCTURE SHORTCUTS
@@ -236,6 +256,7 @@ help:
 	@echo "  make logs-attendance Tail attendance-service logs"
 	@echo "  make logs-grades     Tail grades-service logs"
 	@echo "  make logs-meal       Tail meal-service logs"
+	@echo "  make logs-payment    Tail payment-service logs"
 	@echo ""
 	@echo -e "$(BLUE)🔧 Individual Services:$(NC)"
 	@echo "  make dev-auth        Start auth-service"
@@ -246,6 +267,7 @@ help:
 	@echo "  make dev-attendance  Start attendance-service"
 	@echo "  make dev-grades      Start grades-service"
 	@echo "  make dev-meal        Start meal-service"
+	@echo "  make dev-payment     Start payment-service (gRPC)"
 	@echo ""
 	@echo -e "$(RED)🛑 Stop Individual:$(NC)"
 	@echo "  make stop-auth       Stop auth-service"

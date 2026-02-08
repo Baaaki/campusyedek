@@ -17,7 +17,7 @@ export function StudentLayout({ children }: StudentLayoutProps) {
       <Header />
 
       {/* Main Content */}
-      <main className="ml-64 pt-16 min-h-screen">
+      <main className="ml-52 pt-16 min-h-screen">
         <div className="p-6">
           {children}
         </div>

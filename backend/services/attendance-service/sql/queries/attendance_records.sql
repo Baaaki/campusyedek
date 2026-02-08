@@ -83,3 +83,23 @@ LEFT JOIN attendance_records ar ON ar.student_id = s.id AND ar.course_id = e.cou
 WHERE e.course_id = $1 AND e.semester = $2
 GROUP BY s.id, s.student_number, s.first_name, s.last_name, s.email
 HAVING COUNT(*) FILTER (WHERE ar.is_present = FALSE) >= 4;
+
+-- name: GetAttendanceRecordsBySession :many
+SELECT
+    ar.id,
+    ar.session_id,
+    ar.student_id,
+    ar.course_id,
+    ar.semester,
+    ar.week_number,
+    ar.is_present,
+    ar.marked_via,
+    ar.scanned_at,
+    ar.qr_timestamp,
+    ar.manually_marked_by,
+    ar.manually_marked_at as marked_at,
+    ar.manual_note,
+    ar.created_at
+FROM attendance_records ar
+WHERE ar.session_id = $1
+ORDER BY ar.created_at DESC;

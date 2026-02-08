@@ -192,6 +192,7 @@ type StudentAssessmentScore struct {
 	IsAbsent       pgtype.Bool      `json:"is_absent"`
 	GradedBy       uuid.UUID        `json:"graded_by"`
 	GradedAt       pgtype.Timestamp `json:"graded_at"`
+	IsLocked       pgtype.Bool      `json:"is_locked"`
 }
 
 type StudentCompletedCourse struct {

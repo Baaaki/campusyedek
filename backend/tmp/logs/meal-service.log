@@ -15,13 +15,268 @@ watching internal/handler
 watching internal/repository
 watching internal/service
 watching internal/worker
+watching proto
 watching sql
 watching sql/migrations
 watching sql/queries
 !exclude tmp
 building...
 running...
-08:26:21.184	[34mINFO[0m	runtime/proc.go:285	starting meal service	{"environment": "development", "port": "8008"}
-08:26:21.193	[31mFATAL[0m	runtime/proc.go:285	failed to connect to database	{"error": "unable to ping database: failed to connect to `user=postgres database=mydreamcampus_meal`: 127.0.0.1:5433 (localhost): server error: FATAL: database \"mydreamcampus_meal\" does not exist (SQLSTATE 3D000)"}
-runtime.main
-	/usr/local/go/src/runtime/proc.go:285
+15:59:38.438	[34mINFO[0m	runtime/proc.go:285	starting meal service	{"environment": "development", "port": "8008"}
+15:59:38.442	[34mINFO[0m	runtime/proc.go:285	connected to database
+15:59:38.442	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+15:59:38.445	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+15:59:38.445	[34mINFO[0m	runtime/proc.go:285	connected to RabbitMQ
+15:59:38.446	[34mINFO[0m	cmd/main.go:73	connected to payment service via gRPC	{"address": "localhost:50051"}
+15:59:38.446	[34mINFO[0m	cmd/main.go:106	starting reservation worker
+15:59:38.446	[34mINFO[0m	cmd/main.go:107	starting outbox worker	{"poll_interval": "5s"}
+15:59:38.448	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "meal.student.events.queue"}
+15:59:38.448	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "meal.payment.events.queue"}
+15:59:38.449	[34mINFO[0m	cmd/main.go:114	RabbitMQ consumers started
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /health                   --> github.com/baaaki/mydreamcampus/meal-service/internal/handler.(*MealHandler).Health-fm (4 handlers)
+[GIN-debug] GET    /api/meals/menu/monthly   --> github.com/baaaki/mydreamcampus/meal-service/internal/handler.(*MealHandler).GetMonthlyMenu-fm (4 handlers)
+[GIN-debug] GET    /api/meals/cafeterias     --> github.com/baaaki/mydreamcampus/meal-service/internal/handler.(*MealHandler).GetCafeterias-fm (5 handlers)
+[GIN-debug] POST   /api/meals/cafeterias     --> github.com/baaaki/mydreamcampus/meal-service/internal/handler.(*MealHandler).CreateCafeteria-fm (6 handlers)
+[GIN-debug] PUT    /api/meals/cafeterias/:cafeteria_id --> github.com/baaaki/mydreamcampus/meal-service/internal/handler.(*MealHandler).UpdateCafeteria-fm (6 handlers)
+[GIN-debug] DELETE /api/meals/cafeterias/:cafeteria_id --> github.com/baaaki/mydreamcampus/meal-service/internal/handler.(*MealHandler).DeleteCafeteria-fm (6 handlers)
+[GIN-debug] GET    /api/meals/cafeterias/:cafeteria_id/qr --> github.com/baaaki/mydreamcampus/meal-service/internal/handler.(*MealHandler).GenerateQR-fm (6 handlers)
+[GIN-debug] POST   /api/meals/menu/monthly   --> github.com/baaaki/mydreamcampus/meal-service/internal/handler.(*MealHandler).CreateMonthlyMenu-fm (6 handlers)
+[GIN-debug] POST   /api/meals/reservations   --> github.com/baaaki/mydreamcampus/meal-service/internal/handler.(*MealHandler).CreateReservation-fm (6 handlers)
+[GIN-debug] POST   /api/meals/reservations/batch --> github.com/baaaki/mydreamcampus/meal-service/internal/handler.(*MealHandler).CreateBatchReservation-fm (6 handlers)
+[GIN-debug] GET    /api/meals/reservations/my --> github.com/baaaki/mydreamcampus/meal-service/internal/handler.(*MealHandler).GetMyReservations-fm (6 handlers)
+[GIN-debug] DELETE /api/meals/reservations/:reservation_id --> github.com/baaaki/mydreamcampus/meal-service/internal/handler.(*MealHandler).CancelReservation-fm (6 handlers)
+[GIN-debug] POST   /api/meals/reservations/use --> github.com/baaaki/mydreamcampus/meal-service/internal/handler.(*MealHandler).UseReservation-fm (6 handlers)
+15:59:38.449	[34mINFO[0m	runtime/asm_amd64.s:1693	starting HTTP server	{"port": "8008"}
+16:00:38.470	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:01:38.453	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:02:38.454	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:03:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:04:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:05:38.453	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:06:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:07:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:08:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:09:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:10:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:11:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:12:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:13:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:14:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:15:38.461	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:16:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:17:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:18:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:19:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:20:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:21:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:22:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:23:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:24:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:25:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:26:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:27:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:28:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:29:38.446	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:30:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:31:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:32:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:33:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:34:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:35:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:36:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:37:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:38:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:39:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:40:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:41:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:42:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:43:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:44:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:45:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:46:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:47:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:48:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:49:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:50:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:51:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:52:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:53:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:54:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:55:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:56:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:57:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:58:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+16:59:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:00:38.453	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:01:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:02:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:03:38.451	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:04:38.446	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:05:38.450	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:06:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:07:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:08:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:09:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:10:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:11:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:12:38.450	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:13:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:14:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:15:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:16:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:17:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:18:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:19:38.450	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:20:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:21:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:22:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:23:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:24:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:25:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:26:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:27:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:28:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:29:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:30:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:31:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:32:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:33:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:34:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:35:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:36:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:37:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:38:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:39:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:40:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:41:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:42:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:43:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:44:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:45:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:46:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:47:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:48:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:49:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:50:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:51:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:52:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:53:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:54:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:55:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:56:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:57:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:58:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+17:59:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:00:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:01:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:02:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:03:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:04:38.452	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:05:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:06:38.452	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:07:38.450	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:08:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:09:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:10:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:11:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:12:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:13:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:14:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:15:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:16:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:17:38.453	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:18:38.453	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:19:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:20:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:21:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:22:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:23:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:24:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:25:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:26:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:27:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:28:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:29:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:30:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:31:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:32:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:33:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:34:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:35:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:36:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:37:38.446	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:38:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:39:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:40:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:41:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:42:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:43:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:44:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:45:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:46:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:47:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:48:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:49:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:50:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:51:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:52:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:53:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:54:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:55:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:56:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:57:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:58:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+18:59:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:00:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:01:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:02:38.456	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:03:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:04:38.454	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:05:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:06:38.453	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:07:38.454	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:08:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:09:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:10:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:11:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:12:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:13:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:14:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:15:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:16:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:17:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:18:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:19:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:20:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:21:38.450	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:22:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:23:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:24:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:25:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:26:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:27:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:28:38.448	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:29:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:30:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:31:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:32:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:33:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:34:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:35:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:36:38.446	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:37:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:38:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:39:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:40:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:41:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:42:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:43:38.447	[35mDEBUG[0m	worker/reservation_worker.go:54	expired pending reservations	{"batch_size": 100}
+19:44:32.599	[31mERROR[0m	rabbitmq/connection.go:94	rabbitmq connection lost	{"error": "Exception (320) Reason: \"CONNECTION_FORCED - broker forced connection closure with reason 'shutdown'\""}
+github.com/baaaki/mydreamcampus/shared/rabbitmq.(*Connection).handleReconnect
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/rabbitmq/connection.go:94
+19:44:32.599	[34mINFO[0m	rabbitmq/connection.go:99	attempting to reconnect to rabbitmq...
+cleaning...

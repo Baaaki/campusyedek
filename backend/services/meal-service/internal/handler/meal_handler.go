@@ -39,14 +39,25 @@ func NewMealHandler(
 // ============================================================================
 
 // GetCafeterias godoc
-// @Summary Get active cafeterias
+// @Summary Get cafeterias (admin sees all, others see only active)
 // @Tags cafeterias
 // @Accept json
 // @Produce json
 // @Success 200 {object} dto.CafeteriaListResponse
 // @Router /api/v1/meals/cafeterias [get]
 func (h *MealHandler) GetCafeterias(c *gin.Context) {
-	cafeterias, err := h.cafeteriaService.GetActiveCafeterias(c.Request.Context())
+	// Check if user is admin to show all cafeterias including inactive
+	role, _ := c.Get("role")
+
+	var cafeterias *dto.CafeteriaListResponse
+	var err error
+
+	if role == "admin" {
+		cafeterias, err = h.cafeteriaService.GetAllCafeterias(c.Request.Context())
+	} else {
+		cafeterias, err = h.cafeteriaService.GetActiveCafeterias(c.Request.Context())
+	}
+
 	if err != nil {
 		h.handleError(c, err)
 		return
@@ -207,6 +218,7 @@ func (h *MealHandler) CreateBatchReservation(c *gin.Context) {
 
 	reservation, err := h.reservationService.CreateBatchReservation(c.Request.Context(), studentID, req)
 	if err != nil {
+		h.logger.Error("failed to create batch reservation", zap.Error(err))
 		h.handleError(c, err)
 		return
 	}

@@ -98,8 +98,16 @@ func (w *OutboxWorker) processEvents(ctx context.Context) {
 		// Determine routing key from event type using shared events constants
 		routingKey := w.getRoutingKey(event.EventType)
 
+		// Wrap payload with event metadata (required by auth service)
+		eventMessage := map[string]interface{}{
+			"event_id":   eventID,
+			"event_type": event.EventType,
+			"timestamp":  event.CreatedAt.Time,
+			"data":       payload,
+		}
+
 		// Publish to RabbitMQ
-		err := w.publisher.Publish(ctx, "student.events", routingKey, payload)
+		err := w.publisher.Publish(ctx, "student.events", routingKey, eventMessage)
 		if err != nil {
 			logger.Error("failed to publish event",
 				zap.Error(err),

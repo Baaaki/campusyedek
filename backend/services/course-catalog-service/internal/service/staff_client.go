@@ -55,8 +55,8 @@ func (c *HTTPStaffClient) GetInstructor(ctx context.Context, instructorID uuid.U
 		zap.String("department", department),
 	)
 
-	// Fetch instructor by ID
-	url := fmt.Sprintf("%s/api/staff/%s", c.baseURL, instructorID.String())
+	// Fetch instructor by ID (using internal endpoint - no auth required)
+	url := fmt.Sprintf("%s/internal/staff/%s", c.baseURL, instructorID.String())
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -140,8 +140,8 @@ func (c *HTTPStaffClient) GetInstructorsByDepartment(ctx context.Context, depart
 		zap.String("department", department),
 	)
 
-	// Fetch instructors by department
-	url := fmt.Sprintf("%s/api/staff/instructors?department=%s&status=active", c.baseURL, department)
+	// Fetch instructors by department (using internal endpoint - no auth required)
+	url := fmt.Sprintf("%s/internal/staff/instructors?department=%s&status=active", c.baseURL, department)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {

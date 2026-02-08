@@ -9,6 +9,7 @@ import (
 	sharedErrors "github.com/baaaki/mydreamcampus/shared/errors"
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -265,6 +266,97 @@ func (h *SemesterHandler) UpdateSemesterCourse(c *gin.Context) {
 
 	reqLogger.Info("semester course updated successfully",
 		zap.String("course_code", response.CourseCode),
+	)
+
+	c.JSON(http.StatusOK, response)
+}
+
+// GetTeacherCourses handles GET /api/v1/semesters/teacher/courses
+// Role: Teacher
+func (h *SemesterHandler) GetTeacherCourses(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	reqLogger := logger.WithContextAndFields(ctx,
+		zap.String("handler", "SemesterHandler"),
+		zap.String("endpoint", "GetTeacherCourses"),
+	)
+
+	// Get instructor ID from context (set by auth middleware)
+	instructorIDRaw, exists := c.Get("user_id")
+	if !exists {
+		reqLogger.Error("user_id not found in context")
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
+			Error: "unauthorized",
+			Code:  "UNAUTHORIZED",
+		})
+		return
+	}
+
+	// Handle both string and uuid.UUID types (middleware may set either)
+	var instructorID uuid.UUID
+	var parseErr error
+	switch v := instructorIDRaw.(type) {
+	case string:
+		instructorID, parseErr = uuid.Parse(v)
+		if parseErr != nil {
+			reqLogger.Error("failed to parse user_id string as UUID",
+				zap.String("user_id_raw", v),
+				zap.Error(parseErr),
+			)
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+				Error: "invalid user_id format",
+				Code:  "INVALID_USER_ID",
+			})
+			return
+		}
+	case uuid.UUID:
+		instructorID = v
+	default:
+		reqLogger.Error("invalid user_id type in context")
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error: "invalid user_id",
+			Code:  "INVALID_USER_ID",
+		})
+		return
+	}
+
+	// Get optional semester filter
+	var semester *string
+	if s := c.Query("semester"); s != "" {
+		semester = &s
+	}
+
+	reqLogger.Info("getting teacher courses",
+		zap.String("instructor_id", instructorID.String()),
+	)
+
+	response, err := h.semesterService.GetTeacherCourses(ctx, instructorID, semester)
+	if err != nil {
+		if appErr, ok := sharedErrors.As(err); ok {
+			reqLogger.Error("failed to get teacher courses",
+				zap.Error(err),
+				zap.String("error_code", appErr.Code),
+			)
+			c.JSON(appErr.HTTPStatus, dto.ErrorResponse{
+				Error: appErr.Message,
+				Code:  appErr.Code,
+			})
+			return
+		}
+
+		reqLogger.Error("unexpected error getting teacher courses",
+			zap.Error(err),
+		)
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
+			Error: sharedErrors.ErrInternal.Message,
+			Code:  sharedErrors.ErrInternal.Code,
+		})
+		return
+	}
+
+	reqLogger.Info("teacher courses retrieved successfully",
+		zap.Int("total_courses", response.TotalCourses),
 	)
 
 	c.JSON(http.StatusOK, response)

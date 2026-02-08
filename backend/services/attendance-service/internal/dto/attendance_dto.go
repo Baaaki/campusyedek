@@ -205,3 +205,61 @@ type ErrorResponse struct {
 	Error string `json:"error"`
 	Code  string `json:"code"`
 }
+
+// GetSessionDetailsResponse is the response for session details
+type GetSessionDetailsResponse struct {
+	SessionID            uuid.UUID `json:"session_id"`
+	CourseID             uuid.UUID `json:"course_id"`
+	CourseCode           string    `json:"course_code"`
+	CourseName           string    `json:"course_name"`
+	WeekNumber           int16     `json:"week_number"`
+	SessionDate          string    `json:"session_date"`
+	Semester             string    `json:"semester"`
+	IsActive             bool      `json:"is_active"`
+	QRRotationInterval   int16     `json:"qr_rotation_interval"`
+	StartedAt            time.Time `json:"started_at"`
+	ExpiresAt            time.Time `json:"expires_at"`
+	EnrolledStudentCount int       `json:"enrolled_student_count"`
+	PresentCount         int       `json:"present_count"`
+	AbsentCount          int       `json:"absent_count"`
+}
+
+// AttendanceRecordItem represents a single attendance record
+type AttendanceRecordItem struct {
+	ID            uuid.UUID  `json:"id"`
+	StudentID     uuid.UUID  `json:"student_id"`
+	StudentNumber string     `json:"student_number"`
+	StudentName   string     `json:"student_name"`
+	IsPresent     bool       `json:"is_present"`
+	MarkedVia     string     `json:"marked_via"`
+	MarkedAt      *time.Time `json:"marked_at,omitempty"`
+	Note          *string    `json:"note,omitempty"`
+}
+
+// GetSessionRecordsResponse is the response for session attendance records
+type GetSessionRecordsResponse struct {
+	SessionID    uuid.UUID              `json:"session_id"`
+	WeekNumber   int16                  `json:"week_number"`
+	TotalCount   int                    `json:"total_count"`
+	PresentCount int                    `json:"present_count"`
+	Records      []AttendanceRecordItem `json:"records"`
+}
+
+// EnrolledStudentItem represents a student enrolled in the course
+type EnrolledStudentItem struct {
+	StudentID     uuid.UUID `json:"student_id"`
+	StudentNumber string    `json:"student_number"`
+	FirstName     string    `json:"first_name"`
+	LastName      string    `json:"last_name"`
+	Email         string    `json:"email"`
+	IsMarked      bool      `json:"is_marked"`
+}
+
+// GetSessionStudentsResponse is the response for enrolled students
+type GetSessionStudentsResponse struct {
+	SessionID      uuid.UUID             `json:"session_id"`
+	CourseID       uuid.UUID             `json:"course_id"`
+	TotalEnrolled  int                   `json:"total_enrolled"`
+	MarkedCount    int                   `json:"marked_count"`
+	Students       []EnrolledStudentItem `json:"students"`
+}

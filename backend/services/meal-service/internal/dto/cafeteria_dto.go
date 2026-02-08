@@ -8,6 +8,7 @@ type CreateCafeteriaRequest struct {
 	Location      string `json:"location" binding:"required"`
 	HasVeganMenu  bool   `json:"has_vegan_menu"`
 	ServesDinner  bool   `json:"serves_dinner"`
+	IsActive      bool   `json:"is_active"`
 }
 
 // UpdateCafeteriaRequest represents the request body for updating a cafeteria
@@ -16,6 +17,7 @@ type UpdateCafeteriaRequest struct {
 	Location      string `json:"location" binding:"required"`
 	HasVeganMenu  bool   `json:"has_vegan_menu"`
 	ServesDinner  bool   `json:"serves_dinner"`
+	IsActive      bool   `json:"is_active"`
 }
 
 // CafeteriaResponse represents cafeteria response

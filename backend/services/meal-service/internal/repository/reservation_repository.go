@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	sharedErrors "github.com/baaaki/mydreamcampus/shared/errors"
-	"github.com/baaaki/mydreamcampus/shared/utils"
 	"github.com/baaaki/mydreamcampus/meal-service/internal/db"
 	serviceErrors "github.com/baaaki/mydreamcampus/meal-service/internal/errors"
+	sharedErrors "github.com/baaaki/mydreamcampus/shared/errors"
+	"github.com/baaaki/mydreamcampus/shared/utils"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -133,6 +133,15 @@ func (r *ReservationRepository) GetStudentReservationsFiltered(ctx context.Conte
 	return reservations, nil
 }
 
+// CountStudentReservationsFiltered returns the total count of filtered reservations for a student
+func (r *ReservationRepository) CountStudentReservationsFiltered(ctx context.Context, params db.CountStudentReservationsFilteredParams) (int64, error) {
+	count, err := r.queries.CountStudentReservationsFiltered(ctx, params)
+	if err != nil {
+		return 0, fmt.Errorf("%w: failed to count student reservations: %v", sharedErrors.ErrQueryFailed, err)
+	}
+	return count, nil
+}
+
 // UpdateReservationByID updates reservation status and expires_at
 func (r *ReservationRepository) UpdateReservationByID(ctx context.Context, params db.UpdateReservationByIDParams) (db.Reservation, error) {
 	reservation, err := r.queries.UpdateReservationByID(ctx, params)
@@ -204,7 +213,7 @@ func (r *ReservationRepository) CancelReservationWithRefund(ctx context.Context,
 	}
 
 	_, err = qtx.CreateOutboxEvent(ctx, db.CreateOutboxEventParams{
-		AggregateID: utils.UUIDToPgtype(reservationID),
+		AggregateID:   utils.UUIDToPgtype(reservationID),
 		AggregateType: "reservation",
 		EventType:     "meal.reservation.cancelled",
 		Payload:       payloadJSON,
@@ -252,7 +261,7 @@ func (r *ReservationRepository) ConfirmReservationsWithEvents(ctx context.Contex
 	// Update reservations to confirmed status
 	for _, id := range reservationIDs {
 		_, err := qtx.UpdateReservationByID(ctx, db.UpdateReservationByIDParams{
-			ID: utils.UUIDToPgtype(id),
+			ID:        utils.UUIDToPgtype(id),
 			Status:    db.ReservationStatusEnumConfirmed,
 			ExpiresAt: pgtype.Timestamptz{Valid: false}, // Clear expires_at
 		})
@@ -269,7 +278,7 @@ func (r *ReservationRepository) ConfirmReservationsWithEvents(ctx context.Contex
 		}
 
 		_, err = qtx.CreateOutboxEvent(ctx, db.CreateOutboxEventParams{
-			AggregateID: utils.UUIDToPgtype(reservationIDs[i]),
+			AggregateID:   utils.UUIDToPgtype(reservationIDs[i]),
 			AggregateType: "reservation",
 			EventType:     "meal.reservation.created",
 			Payload:       payloadJSON,

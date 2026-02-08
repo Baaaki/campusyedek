@@ -21,10 +21,67 @@ watching sql/queries
 !exclude tmp
 building...
 running...
-08:26:21.170	[34mINFO[0m	cmd/main.go:39	starting enrollment-service	{"environment": "development", "port": "8005"}
-08:26:21.187	[31mFATAL[0m	cmd/main.go:47	failed to connect to database	{"error": "unable to ping database: failed to connect to `user=postgres database=mydreamcampus_enrollment`: 127.0.0.1:5434 (localhost): server error: FATAL: database \"mydreamcampus_enrollment\" does not exist (SQLSTATE 3D000)"}
-main.main
-	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/enrollment-service/cmd/main.go:47
-runtime.main
-	/usr/local/go/src/runtime/proc.go:285
-Process Exit with Code: 1
+15:59:38.394	[34mINFO[0m	cmd/main.go:39	starting enrollment-service	{"environment": "development", "port": "8005"}
+15:59:38.401	[34mINFO[0m	cmd/main.go:53	database connection established
+15:59:38.401	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+15:59:38.401	[34mINFO[0m	redis/redis.go:41	redis connection established
+15:59:38.401	[34mINFO[0m	cmd/main.go:64	Redis connection established
+15:59:38.401	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+15:59:38.404	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+15:59:38.404	[34mINFO[0m	cmd/main.go:75	RabbitMQ connection established
+15:59:38.404	[34mINFO[0m	cmd/main.go:252	RabbitMQ exchange declared	{"exchange": "enrollment.events"}
+15:59:38.404	[34mINFO[0m	cmd/main.go:292	RabbitMQ queue bindings created	{"queue": "enrollment.events", "bindings": ["course.events", "student.events"]}
+15:59:38.405	[34mINFO[0m	worker/event_consumer.go:58	starting event consumer
+15:59:38.405	[34mINFO[0m	worker/outbox_worker.go:39	starting outbox worker	{"interval": "5s", "batch_size": 10}
+15:59:38.405	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "enrollment.events"}
+15:59:38.405	[34mINFO[0m	worker/event_consumer.go:69	event consumer started successfully
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (4 handlers)
+[GIN-debug] GET    /api/enrollment/available-courses --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).GetAvailableCourses-fm (6 handlers)
+[GIN-debug] POST   /api/enrollment/programs  --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).CreateEnrollmentProgram-fm (6 handlers)
+[GIN-debug] DELETE /api/enrollment/programs  --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).CancelMyEnrollment-fm (6 handlers)
+[GIN-debug] GET    /api/enrollment/my-enrollments --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).GetMyEnrollments-fm (6 handlers)
+[GIN-debug] GET    /api/enrollment/latest-rejection --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).GetLatestRejection-fm (6 handlers)
+[GIN-debug] GET    /api/enrollment/my-rejections --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).GetMyRejections-fm (6 handlers)
+[GIN-debug] GET    /api/enrollment/advisor/pending-programs --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).GetPendingProgramsByAdvisor-fm (6 handlers)
+[GIN-debug] POST   /api/enrollment/advisor/programs/:program_id/approve --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).ApproveEnrollmentProgram-fm (6 handlers)
+[GIN-debug] POST   /api/enrollment/advisor/programs/:program_id/reject --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).RejectEnrollmentProgram-fm (6 handlers)
+15:59:38.405	[34mINFO[0m	cmd/main.go:153	server starting	{"port": "8005"}
+19:32:01.420	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:32:01.420	[34mINFO[0m	gin@v1.11.0/context.go:192	getting available courses	{"request_id": "4c38da5f-2fee-4609-acbc-10ed0b799eb5", "handler": "EnrollmentHandler", "method": "GetAvailableCourses", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "semester": "2026-2027-Fall"}
+19:32:01.429	[34mINFO[0m	handler/enrollment_handler.go:72	available courses retrieved	{"request_id": "4c38da5f-2fee-4609-acbc-10ed0b799eb5", "service": "EnrollmentService", "method": "GetAvailableCourses", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "semester": "2026-2027-Fall", "course_count": 2}
+19:32:01.429	[34mINFO[0m	gin@v1.11.0/context.go:192	available courses retrieved successfully	{"request_id": "4c38da5f-2fee-4609-acbc-10ed0b799eb5", "handler": "EnrollmentHandler", "method": "GetAvailableCourses", "total_courses": 2}
+19:32:01.429	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "4c38da5f-2fee-4609-acbc-10ed0b799eb5", "method": "GET", "path": "/api/enrollment/available-courses", "query": "semester=2026-2027-Fall", "status": 200, "duration": "9.208708ms", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:32:01.431	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:32:01.431	[34mINFO[0m	gin@v1.11.0/context.go:192	getting available courses	{"request_id": "aedad278-a3e4-42e6-8498-f20c1f4affc0", "handler": "EnrollmentHandler", "method": "GetAvailableCourses", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "semester": "2026-2027-Fall"}
+19:32:01.431	[34mINFO[0m	handler/enrollment_handler.go:72	available courses retrieved	{"request_id": "aedad278-a3e4-42e6-8498-f20c1f4affc0", "service": "EnrollmentService", "method": "GetAvailableCourses", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "semester": "2026-2027-Fall", "course_count": 2}
+19:32:01.431	[34mINFO[0m	gin@v1.11.0/context.go:192	available courses retrieved successfully	{"request_id": "aedad278-a3e4-42e6-8498-f20c1f4affc0", "handler": "EnrollmentHandler", "method": "GetAvailableCourses", "total_courses": 2}
+19:32:01.431	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "aedad278-a3e4-42e6-8498-f20c1f4affc0", "method": "GET", "path": "/api/enrollment/available-courses", "query": "semester=2026-2027-Fall", "status": 200, "duration": "769.711µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:32:01.432	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:32:01.432	[34mINFO[0m	gin@v1.11.0/context.go:192	getting my enrollments	{"request_id": "ed45d2dc-65fd-489f-b6a8-803de40c8850", "handler": "EnrollmentHandler", "method": "GetMyEnrollments", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e"}
+19:32:01.436	[34mINFO[0m	handler/enrollment_handler.go:198	enrollment programs retrieved	{"request_id": "ed45d2dc-65fd-489f-b6a8-803de40c8850", "service": "EnrollmentService", "method": "GetMyEnrollments", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "program_count": 1}
+19:32:01.436	[34mINFO[0m	gin@v1.11.0/context.go:192	my enrollments retrieved successfully	{"request_id": "ed45d2dc-65fd-489f-b6a8-803de40c8850", "handler": "EnrollmentHandler", "method": "GetMyEnrollments", "total_programs": 1}
+19:32:01.436	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "ed45d2dc-65fd-489f-b6a8-803de40c8850", "method": "GET", "path": "/api/enrollment/my-enrollments", "query": "semester=2026-2027-Fall", "status": 200, "duration": "4.254865ms", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:32:01.440	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:32:01.440	[34mINFO[0m	gin@v1.11.0/context.go:192	getting my enrollments	{"request_id": "8dfd486f-2e51-467f-81a2-30b7c677b5cb", "handler": "EnrollmentHandler", "method": "GetMyEnrollments", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e"}
+19:32:01.441	[34mINFO[0m	handler/enrollment_handler.go:198	enrollment programs retrieved	{"request_id": "8dfd486f-2e51-467f-81a2-30b7c677b5cb", "service": "EnrollmentService", "method": "GetMyEnrollments", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "program_count": 1}
+19:32:01.441	[34mINFO[0m	gin@v1.11.0/context.go:192	my enrollments retrieved successfully	{"request_id": "8dfd486f-2e51-467f-81a2-30b7c677b5cb", "handler": "EnrollmentHandler", "method": "GetMyEnrollments", "total_programs": 1}
+19:32:01.441	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "8dfd486f-2e51-467f-81a2-30b7c677b5cb", "method": "GET", "path": "/api/enrollment/my-enrollments", "query": "semester=2026-2027-Fall", "status": 200, "duration": "747.63µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:32:03.259	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:32:03.259	[34mINFO[0m	gin@v1.11.0/context.go:192	getting my rejections	{"request_id": "e3b3911e-3233-417a-909d-4df881b52b99", "handler": "EnrollmentHandler", "method": "GetMyRejections", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e"}
+19:32:03.264	[34mINFO[0m	handler/enrollment_handler.go:311	rejections retrieved	{"request_id": "e3b3911e-3233-417a-909d-4df881b52b99", "service": "EnrollmentService", "method": "GetMyRejections", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "rejection_count": 2}
+19:32:03.264	[34mINFO[0m	gin@v1.11.0/context.go:192	my rejections retrieved successfully	{"request_id": "e3b3911e-3233-417a-909d-4df881b52b99", "handler": "EnrollmentHandler", "method": "GetMyRejections", "total_rejections": 2}
+19:32:03.264	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "e3b3911e-3233-417a-909d-4df881b52b99", "method": "GET", "path": "/api/enrollment/my-rejections", "query": "", "status": 200, "duration": "5.20359ms", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:32:03.266	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:32:03.266	[34mINFO[0m	gin@v1.11.0/context.go:192	getting my rejections	{"request_id": "511f5ad1-bdaf-490b-9f72-861cc220e8af", "handler": "EnrollmentHandler", "method": "GetMyRejections", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e"}
+19:32:03.266	[34mINFO[0m	handler/enrollment_handler.go:311	rejections retrieved	{"request_id": "511f5ad1-bdaf-490b-9f72-861cc220e8af", "service": "EnrollmentService", "method": "GetMyRejections", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "rejection_count": 2}
+19:32:03.266	[34mINFO[0m	gin@v1.11.0/context.go:192	my rejections retrieved successfully	{"request_id": "511f5ad1-bdaf-490b-9f72-861cc220e8af", "handler": "EnrollmentHandler", "method": "GetMyRejections", "total_rejections": 2}
+19:32:03.267	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "511f5ad1-bdaf-490b-9f72-861cc220e8af", "method": "GET", "path": "/api/enrollment/my-rejections", "query": "", "status": 200, "duration": "505.264µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:44:32.599	[31mERROR[0m	rabbitmq/connection.go:94	rabbitmq connection lost	{"error": "Exception (320) Reason: \"CONNECTION_FORCED - broker forced connection closure with reason 'shutdown'\""}
+github.com/baaaki/mydreamcampus/shared/rabbitmq.(*Connection).handleReconnect
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/rabbitmq/connection.go:94
+19:44:32.599	[34mINFO[0m	rabbitmq/connection.go:99	attempting to reconnect to rabbitmq...
+cleaning...

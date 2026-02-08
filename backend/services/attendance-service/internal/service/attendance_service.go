@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/baaaki/mydreamcampus/attendance-service/internal/db"
@@ -99,7 +100,7 @@ func (s *AttendanceService) CreateSession(ctx context.Context, instructorID uuid
 
 	// 5. Warm Redis cache
 	sessionID := utils.PgUUIDToUUID(session.ID).String()
-	
+
 	// Get enrolled students
 	enrolledStudents, err := s.cacheRepo.GetEnrolledStudentsByCourse(ctx, req.CourseID, course.Semester)
 	if err != nil {
@@ -408,7 +409,7 @@ func (s *AttendanceService) GetMyAttendance(ctx context.Context, studentID uuid.
 
 	for _, enrollment := range enrollments {
 		courseID := utils.PgUUIDToUUID(enrollment.CourseID)
-		
+
 		// Get attendance records
 		records, err := s.attendanceRepo.GetStudentAttendanceByCourse(ctx, studentID, courseID, semester)
 		if err != nil {
@@ -538,6 +539,137 @@ func (s *AttendanceService) FinalizeAttendance(ctx context.Context, courseID, in
 	}, nil
 }
 
+// GetCourseSessions returns all sessions for a course
+func (s *AttendanceService) GetCourseSessions(ctx context.Context, courseID, instructorID uuid.UUID) (dto.GetCourseSessionsResponse, error) {
+	// Check ownership
+	course, err := s.cacheRepo.GetCourseCacheByID(ctx, courseID)
+	if err != nil {
+		return dto.GetCourseSessionsResponse{}, errors.ErrCourseNotFound
+	}
+	if utils.PgUUIDToUUID(course.InstructorID) != instructorID {
+		return dto.GetCourseSessionsResponse{}, errors.ErrForbidden
+	}
+
+	// Get sessions
+	sessions, err := s.sessionRepo.GetSessionsByCourse(ctx, courseID, course.Semester)
+	if err != nil {
+		return dto.GetCourseSessionsResponse{}, err
+	}
+
+	var sessionList []dto.SessionListItem
+	completedSessions := 0
+
+	for _, session := range sessions {
+		sessionID := utils.PgUUIDToUUID(session.ID)
+		isActive := utils.PgBoolToBool(session.IsActive)
+		sessionDate := session.SessionDate.Time.Format("2006-01-02")
+
+		// Get counts
+		counts, _ := s.attendanceRepo.GetSessionAttendanceCounts(ctx, sessionID)
+
+		// Status
+		status := "expired"
+		if isActive {
+			status = "active"
+		}
+
+		presentCount := int(counts.PresentCount)
+		absentCount := int(counts.AbsentCount)
+
+		if !isActive {
+			completedSessions++
+		}
+
+		sessionList = append(sessionList, dto.SessionListItem{
+			SessionID:    &sessionID,
+			WeekNumber:   session.WeekNumber,
+			SessionDate:  &sessionDate,
+			PresentCount: &presentCount,
+			AbsentCount:  &absentCount,
+			IsActive:     &isActive,
+			Status:       &status,
+		})
+	}
+
+	return dto.GetCourseSessionsResponse{
+		CourseID:   courseID,
+		CourseCode: course.CourseCode,
+		CourseName: course.CourseName,
+		Semester:   course.Semester,
+		TotalWeeks: course.TotalWeeks.Int16,
+		Sessions:   sessionList,
+		OverallStats: struct {
+			CompletedSessions int `json:"completed_sessions"`
+		}{
+			CompletedSessions: completedSessions,
+		},
+	}, nil
+}
+
+// GetCourseSessions returns all sessions for a course
+func (s *AttendanceService) GetCourseSessions(ctx context.Context, courseID, instructorID uuid.UUID) (dto.GetCourseSessionsResponse, error) {
+	// Check ownership
+	course, err := s.cacheRepo.GetCourseCacheByID(ctx, courseID)
+	if err != nil {
+		return dto.GetCourseSessionsResponse{}, errors.ErrCourseNotFound
+	}
+	if utils.PgUUIDToUUID(course.InstructorID) != instructorID {
+		return dto.GetCourseSessionsResponse{}, errors.ErrForbidden
+	}
+
+	// Get sessions
+	sessions, err := s.sessionRepo.GetSessionsByCourse(ctx, courseID, course.Semester)
+	if err != nil {
+		return dto.GetCourseSessionsResponse{}, err
+	}
+
+	var sessionList []dto.SessionListItem
+	completedSessions := 0
+
+	for _, session := range sessions {
+		sessionID := utils.PgUUIDToUUID(session.ID)
+		isActive := utils.PgBoolToBool(session.IsActive)
+		sessionDate := session.SessionDate.Time.Format("2006-01-02")
+
+		// Status
+		status := "expired"
+		if isActive {
+			status = "active"
+		}
+
+		presentCount := int(session.PresentCount)
+		absentCount := int(session.AbsentCount)
+
+		if !isActive {
+			completedSessions++
+		}
+
+		sessionList = append(sessionList, dto.SessionListItem{
+			SessionID:    &sessionID,
+			WeekNumber:   session.WeekNumber,
+			SessionDate:  &sessionDate,
+			PresentCount: &presentCount,
+			AbsentCount:  &absentCount,
+			IsActive:     &isActive,
+			Status:       &status,
+		})
+	}
+
+	return dto.GetCourseSessionsResponse{
+		CourseID:   courseID,
+		CourseCode: course.CourseCode,
+		CourseName: course.CourseName,
+		Semester:   course.Semester,
+		TotalWeeks: course.TotalWeeks.Int16,
+		Sessions:   sessionList,
+		OverallStats: struct {
+			CompletedSessions int `json:"completed_sessions"`
+		}{
+			CompletedSessions: completedSessions,
+		},
+	}, nil
+}
+
 // Helper functions
 
 func (s *AttendanceService) getSessionWithFallback(ctx context.Context, sessionID string) (db.AttendanceSession, error) {
@@ -603,4 +735,182 @@ func (s *AttendanceService) publishFailedAttendanceEvent(ctx context.Context, da
 	}
 
 	return s.outboxRepo.CreateOutboxEvent(ctx, "attendance.semester.failed", "attendance.semester.failed", payload)
+}
+
+// GetSessionDetails returns session details for instructor
+func (s *AttendanceService) GetSessionDetails(ctx context.Context, sessionID, instructorID uuid.UUID) (dto.GetSessionDetailsResponse, error) {
+	session, err := s.sessionRepo.GetSessionByID(ctx, sessionID)
+	if err != nil {
+		return dto.GetSessionDetailsResponse{}, errors.ErrSessionNotFound
+	}
+
+	// Check ownership
+	if utils.PgUUIDToUUID(session.InstructorID) != instructorID {
+		return dto.GetSessionDetailsResponse{}, errors.ErrForbidden
+	}
+
+	// Get course info
+	courseID := utils.PgUUIDToUUID(session.CourseID)
+	course, err := s.cacheRepo.GetCourseCacheByID(ctx, courseID)
+	if err != nil {
+		return dto.GetSessionDetailsResponse{}, errors.ErrCourseNotFound
+	}
+
+	// Get enrolled count
+	enrolledStudents, _ := s.cacheRepo.GetEnrolledStudentsByCourse(ctx, courseID, session.Semester)
+
+	// Get attendance counts
+	counts, _ := s.attendanceRepo.GetSessionAttendanceCounts(ctx, sessionID)
+
+	return dto.GetSessionDetailsResponse{
+		SessionID:            sessionID,
+		CourseID:             courseID,
+		CourseCode:           course.CourseCode,
+		CourseName:           course.CourseName,
+		WeekNumber:           session.WeekNumber,
+		SessionDate:          session.SessionDate.Time.Format("2006-01-02"),
+		Semester:             session.Semester,
+		IsActive:             utils.PgBoolToBool(session.IsActive),
+		QRRotationInterval:   session.QrRotationInterval.Int16,
+		StartedAt:            utils.PgTimestampToTime(session.StartedAt),
+		ExpiresAt:            utils.PgTimestampToTime(session.ExpiresAt),
+		EnrolledStudentCount: len(enrolledStudents),
+		PresentCount:         int(counts.PresentCount),
+		AbsentCount:          int(counts.AbsentCount),
+	}, nil
+}
+
+// GetSessionRecords returns attendance records for a session
+func (s *AttendanceService) GetSessionRecords(ctx context.Context, sessionID, instructorID uuid.UUID) (dto.GetSessionRecordsResponse, error) {
+	session, err := s.sessionRepo.GetSessionByID(ctx, sessionID)
+	if err != nil {
+		return dto.GetSessionRecordsResponse{}, errors.ErrSessionNotFound
+	}
+
+	// Check ownership
+	if utils.PgUUIDToUUID(session.InstructorID) != instructorID {
+		return dto.GetSessionRecordsResponse{}, errors.ErrForbidden
+	}
+
+	// Get all attendance records for this session
+	records, err := s.attendanceRepo.GetAttendanceRecordsBySession(ctx, sessionID)
+	if err != nil {
+		return dto.GetSessionRecordsResponse{}, err
+	}
+
+	var items []dto.AttendanceRecordItem
+	presentCount := 0
+
+	for _, record := range records {
+		studentID := utils.PgUUIDToUUID(record.StudentID)
+		student, _ := s.cacheRepo.GetStudentCacheByID(ctx, studentID)
+
+		markedAt := utils.PgTimestampToTime(record.MarkedAt)
+		var markedAtPtr *time.Time
+		if !markedAt.IsZero() {
+			markedAtPtr = &markedAt
+		}
+
+		var notePtr *string
+		if record.ManualNote.Valid {
+			notePtr = &record.ManualNote.String
+		}
+
+		items = append(items, dto.AttendanceRecordItem{
+			ID:            utils.PgUUIDToUUID(record.ID),
+			StudentID:     studentID,
+			StudentNumber: student.StudentNumber,
+			StudentName:   fmt.Sprintf("%s %s", utils.PgTextToString(student.FirstName), utils.PgTextToString(student.LastName)),
+			IsPresent:     record.IsPresent,
+			MarkedVia:     record.MarkedVia,
+			MarkedAt:      markedAtPtr,
+			Note:          notePtr,
+		})
+
+		if record.IsPresent {
+			presentCount++
+		}
+	}
+
+	return dto.GetSessionRecordsResponse{
+		SessionID:    sessionID,
+		WeekNumber:   session.WeekNumber,
+		TotalCount:   len(records),
+		PresentCount: presentCount,
+		Records:      items,
+	}, nil
+}
+
+// GetSessionStudents returns enrolled students for a session with their marked status
+func (s *AttendanceService) GetSessionStudents(ctx context.Context, sessionID, instructorID uuid.UUID, search string) (dto.GetSessionStudentsResponse, error) {
+	session, err := s.sessionRepo.GetSessionByID(ctx, sessionID)
+	if err != nil {
+		return dto.GetSessionStudentsResponse{}, errors.ErrSessionNotFound
+	}
+
+	// Check ownership
+	if utils.PgUUIDToUUID(session.InstructorID) != instructorID {
+		return dto.GetSessionStudentsResponse{}, errors.ErrForbidden
+	}
+
+	courseID := utils.PgUUIDToUUID(session.CourseID)
+
+	// Get enrolled students
+	enrolledStudents, err := s.cacheRepo.GetEnrolledStudentsByCourse(ctx, courseID, session.Semester)
+	if err != nil {
+		return dto.GetSessionStudentsResponse{}, err
+	}
+
+	// Get marked students
+	markedStudents, err := s.attendanceRepo.GetMarkedStudentsBySession(ctx, sessionID)
+	if err != nil {
+		return dto.GetSessionStudentsResponse{}, err
+	}
+
+	markedMap := make(map[uuid.UUID]bool)
+	for _, id := range markedStudents {
+		markedMap[id] = true
+	}
+
+	var students []dto.EnrolledStudentItem
+	markedCount := 0
+
+	for _, student := range enrolledStudents {
+		studentID := utils.PgUUIDToUUID(student.ID)
+		firstName := utils.PgTextToString(student.FirstName)
+		lastName := utils.PgTextToString(student.LastName)
+		email := utils.PgTextToString(student.Email)
+
+		// Apply search filter if provided
+		if search != "" {
+			searchLower := strings.ToLower(search)
+			if !strings.Contains(strings.ToLower(student.StudentNumber), searchLower) &&
+				!strings.Contains(strings.ToLower(firstName), searchLower) &&
+				!strings.Contains(strings.ToLower(lastName), searchLower) {
+				continue
+			}
+		}
+
+		isMarked := markedMap[studentID]
+		if isMarked {
+			markedCount++
+		}
+
+		students = append(students, dto.EnrolledStudentItem{
+			StudentID:     studentID,
+			StudentNumber: student.StudentNumber,
+			FirstName:     firstName,
+			LastName:      lastName,
+			Email:         email,
+			IsMarked:      isMarked,
+		})
+	}
+
+	return dto.GetSessionStudentsResponse{
+		SessionID:     sessionID,
+		CourseID:      courseID,
+		TotalEnrolled: len(enrolledStudents),
+		MarkedCount:   markedCount,
+		Students:      students,
+	}, nil
 }

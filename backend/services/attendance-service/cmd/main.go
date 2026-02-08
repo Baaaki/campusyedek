@@ -180,7 +180,10 @@ func setupRouter(cfg *config.Config, attendanceHandler *handler.AttendanceHandle
 
 	// Instructor routes
 	api.POST("/sessions", sharedMiddleware.RequireRole("teacher"), attendanceHandler.CreateSession)
+	api.GET("/sessions/:sessionId", sharedMiddleware.RequireRole("teacher"), attendanceHandler.GetSessionDetails)
 	api.GET("/sessions/:sessionId/qr", sharedMiddleware.RequireRole("teacher"), attendanceHandler.GetQRCode)
+	api.GET("/sessions/:sessionId/records", sharedMiddleware.RequireRole("teacher"), attendanceHandler.GetSessionRecords)
+	api.GET("/sessions/:sessionId/students", sharedMiddleware.RequireRole("teacher"), attendanceHandler.GetSessionStudents)
 	api.POST("/sessions/:sessionId/manual", sharedMiddleware.RequireRole("teacher"), attendanceHandler.CreateManualAttendance)
 	api.POST("/sessions/:sessionId/close", sharedMiddleware.RequireRole("teacher"), attendanceHandler.CloseSession)
 	api.POST("/courses/:courseId/finalize", sharedMiddleware.RequireRole("teacher"), attendanceHandler.FinalizeAttendance)
@@ -196,6 +199,36 @@ func setupRabbitMQ(conn *rabbitmq.Connection) error {
 	exchanges := []string{"student.events", "course.events", "enrollment.events", "attendance.events"}
 	for _, exchange := range exchanges {
 		if err := ch.ExchangeDeclare(exchange, "topic", true, false, false, false, nil); err != nil {
+			return err
+		}
+	}
+
+	// Declare attendance.events queue for consuming events
+	_, err := ch.QueueDeclare(
+		"attendance.events", // name
+		true,                // durable
+		false,               // delete when unused
+		false,               // exclusive
+		false,               // no-wait
+		nil,                 // arguments
+	)
+	if err != nil {
+		return err
+	}
+
+	// Bind queue to exchanges with relevant routing keys
+	bindings := []struct {
+		queue      string
+		exchange   string
+		routingKey string
+	}{
+		{"attendance.events", "student.events", "student.#"},
+		{"attendance.events", "course.events", "course_semester.#"},
+		{"attendance.events", "enrollment.events", "enrollment_program.approved"},
+	}
+
+	for _, b := range bindings {
+		if err := ch.QueueBind(b.queue, b.routingKey, b.exchange, false, nil); err != nil {
 			return err
 		}
 	}

@@ -17,13 +17,21 @@ export function Header() {
   const router = useRouter();
 
   const handleLogout = () => {
-    // TODO: Implement logout logic
-    localStorage.removeItem('token');
+    // Clear localStorage
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user');
+
+    // Clear cookies
+    document.cookie = 'access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    document.cookie = 'user=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+
+    // Redirect to login
     router.push('/auth/login');
   };
 
   return (
-    <header className="fixed top-0 right-0 left-64 z-30 h-16 border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 transition-colors">
+    <header className="fixed top-0 right-0 left-52 z-30 h-16 border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 transition-colors">
       <div className="flex h-full items-center justify-between px-6">
         {/* Left side - Page title or breadcrumb can go here */}
         <div className="flex items-center gap-4">

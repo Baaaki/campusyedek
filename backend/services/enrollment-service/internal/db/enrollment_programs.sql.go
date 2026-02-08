@@ -98,15 +98,15 @@ const getEnrollmentProgramsByStudent = `-- name: GetEnrollmentProgramsByStudent 
 SELECT id, student_id, semester, status, created_at
 FROM enrollment_programs
 WHERE student_id = $1
-  AND ($2::VARCHAR IS NULL OR semester = $2)
-  AND ($3::enrollment_status_enum IS NULL OR status = $3)
+  AND ($2::VARCHAR IS NULL OR $2 = '' OR semester = $2)
+  AND ($3::VARCHAR IS NULL OR $3 = '' OR status = $3::enrollment_status_enum)
 ORDER BY created_at DESC
 `
 
 type GetEnrollmentProgramsByStudentParams struct {
-	StudentID pgtype.UUID          `json:"student_id"`
-	Column2   string               `json:"column_2"`
-	Column3   EnrollmentStatusEnum `json:"column_3"`
+	StudentID pgtype.UUID `json:"student_id"`
+	Column2   string      `json:"column_2"`
+	Column3   string      `json:"column_3"`
 }
 
 func (q *Queries) GetEnrollmentProgramsByStudent(ctx context.Context, arg GetEnrollmentProgramsByStudentParams) ([]EnrollmentProgram, error) {
@@ -136,28 +136,56 @@ func (q *Queries) GetEnrollmentProgramsByStudent(ctx context.Context, arg GetEnr
 }
 
 const getPendingProgramsByAdvisor = `-- name: GetPendingProgramsByAdvisor :many
-SELECT ep.id, ep.student_id, ep.semester, ep.status, ep.created_at
+SELECT 
+    ep.id, 
+    ep.student_id, 
+    ep.semester, 
+    ep.status, 
+    ep.created_at,
+    sc.first_name,
+    sc.last_name,
+    sc.student_number,
+    sc.department,
+    sc.class_level
 FROM enrollment_programs ep
 JOIN students_cache sc ON ep.student_id = sc.id
 WHERE sc.advisor_id = $1 AND ep.status = 'pending'
 ORDER BY ep.created_at
 `
 
-func (q *Queries) GetPendingProgramsByAdvisor(ctx context.Context, advisorID pgtype.UUID) ([]EnrollmentProgram, error) {
+type GetPendingProgramsByAdvisorRow struct {
+	ID            pgtype.UUID              `json:"id"`
+	StudentID     pgtype.UUID              `json:"student_id"`
+	Semester      string                   `json:"semester"`
+	Status        NullEnrollmentStatusEnum `json:"status"`
+	CreatedAt     pgtype.Timestamp         `json:"created_at"`
+	FirstName     pgtype.Text              `json:"first_name"`
+	LastName      pgtype.Text              `json:"last_name"`
+	StudentNumber string                   `json:"student_number"`
+	Department    pgtype.Text              `json:"department"`
+	ClassLevel    pgtype.Int2              `json:"class_level"`
+}
+
+func (q *Queries) GetPendingProgramsByAdvisor(ctx context.Context, advisorID pgtype.UUID) ([]GetPendingProgramsByAdvisorRow, error) {
 	rows, err := q.db.Query(ctx, getPendingProgramsByAdvisor, advisorID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []EnrollmentProgram{}
+	items := []GetPendingProgramsByAdvisorRow{}
 	for rows.Next() {
-		var i EnrollmentProgram
+		var i GetPendingProgramsByAdvisorRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.StudentID,
 			&i.Semester,
 			&i.Status,
 			&i.CreatedAt,
+			&i.FirstName,
+			&i.LastName,
+			&i.StudentNumber,
+			&i.Department,
+			&i.ClassLevel,
 		); err != nil {
 			return nil, err
 		}

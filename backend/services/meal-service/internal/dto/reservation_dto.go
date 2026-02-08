@@ -17,15 +17,15 @@ type BatchReservationRequest struct {
 
 // ReservationResponse represents reservation details
 type ReservationResponse struct {
-	ID            string            `json:"id"`
-	Date          string            `json:"date"`
-	MealTime      string            `json:"meal_time"`
-	MenuType      string            `json:"menu_type"`
-	CafeteriaName string            `json:"cafeteria_name"`
-	Cafeteria     *CafeteriaInfo    `json:"cafeteria,omitempty"`
-	Status        string            `json:"status"`
-	IsUsed        bool              `json:"is_used"`
-	CreatedAt     time.Time         `json:"created_at"`
+	ID            string         `json:"id"`
+	Date          string         `json:"date"`
+	MealTime      string         `json:"meal_time"`
+	MenuType      string         `json:"menu_type"`
+	CafeteriaName string         `json:"cafeteria_name"`
+	Cafeteria     *CafeteriaInfo `json:"cafeteria,omitempty"`
+	Status        string         `json:"status"`
+	IsUsed        bool           `json:"is_used"`
+	CreatedAt     time.Time      `json:"created_at"`
 }
 
 // CafeteriaInfo embedded cafeteria info
@@ -60,12 +60,23 @@ type MyReservationsQuery struct {
 	FromDate string `form:"from_date"` // YYYY-MM-DD
 	ToDate   string `form:"to_date"`   // YYYY-MM-DD
 	Status   string `form:"status" binding:"omitempty,oneof=pending confirmed cancelled expired"`
+	Page     int    `form:"page" binding:"omitempty,min=1"`
+	Limit    int    `form:"limit" binding:"omitempty,min=1,max=50"`
+}
+
+// PaginationInfo represents pagination metadata
+type PaginationInfo struct {
+	Page       int `json:"page"`
+	Limit      int `json:"limit"`
+	TotalItems int `json:"total_items"`
+	TotalPages int `json:"total_pages"`
 }
 
 // MyReservationsResponse represents user's reservations with summary
 type MyReservationsResponse struct {
-	Reservations []ReservationResponse  `json:"reservations"`
-	Summary      ReservationSummary     `json:"summary"`
+	Reservations []ReservationResponse `json:"reservations"`
+	Summary      ReservationSummary    `json:"summary"`
+	Pagination   *PaginationInfo       `json:"pagination,omitempty"`
 }
 
 // ReservationSummary represents summary of user's reservations
@@ -110,18 +121,18 @@ type ValidationError struct {
 
 // ReservationConflict represents a reservation conflict in batch request
 type ReservationConflict struct {
-	Date                   string `json:"date"`
-	MealTime               string `json:"meal_time"`
-	ExistingReservationID  string `json:"existing_reservation_id"`
-	CafeteriaName          string `json:"cafeteria_name"`
-	Status                 string `json:"status"`
+	Date                  string `json:"date"`
+	MealTime              string `json:"meal_time"`
+	ExistingReservationID string `json:"existing_reservation_id"`
+	CafeteriaName         string `json:"cafeteria_name"`
+	Status                string `json:"status"`
 }
 
 // BatchValidationErrorResponse represents response when batch validation fails
 type BatchValidationErrorResponse struct {
-	Code    string             `json:"code"`
-	Message string             `json:"message"`
-	Errors  []ValidationError  `json:"errors"`
+	Code    string            `json:"code"`
+	Message string            `json:"message"`
+	Errors  []ValidationError `json:"errors"`
 }
 
 // BatchConflictErrorResponse represents response when batch has conflicts

@@ -54,6 +54,34 @@ func (s *CafeteriaService) GetActiveCafeterias(ctx context.Context) (*dto.Cafete
 	return response, nil
 }
 
+// GetAllCafeterias returns all cafeterias including inactive ones (for admin)
+func (s *CafeteriaService) GetAllCafeterias(ctx context.Context) (*dto.CafeteriaListResponse, error) {
+	cafeterias, err := s.cafeteriaRepo.GetAllCafeterias(ctx)
+	if err != nil {
+		s.logger.Error("failed to get all cafeterias", zap.Error(err))
+		return nil, err
+	}
+
+	response := &dto.CafeteriaListResponse{
+		Cafeterias: make([]dto.CafeteriaResponse, 0, len(cafeterias)),
+	}
+
+	for _, c := range cafeterias {
+		response.Cafeterias = append(response.Cafeterias, dto.CafeteriaResponse{
+			ID:           c.ID.String(),
+			Name:         c.Name,
+			Location:     c.Location,
+			HasVeganMenu: c.HasVeganMenu,
+			ServesDinner: c.ServesDinner,
+			IsActive:     c.IsActive,
+			CreatedAt:    c.CreatedAt.Time,
+			UpdatedAt:    c.UpdatedAt.Time,
+		})
+	}
+
+	return response, nil
+}
+
 // GetCafeteriaByID returns cafeteria by ID
 func (s *CafeteriaService) GetCafeteriaByID(ctx context.Context, id string) (*dto.CafeteriaResponse, error) {
 	cafeteriaID, err := uuid.Parse(id)
@@ -89,6 +117,7 @@ func (s *CafeteriaService) CreateCafeteria(ctx context.Context, req dto.CreateCa
 		Location:     req.Location,
 		HasVeganMenu: req.HasVeganMenu,
 		ServesDinner: req.ServesDinner,
+		IsActive:     req.IsActive,
 	})
 	if err != nil {
 		s.logger.Error("failed to create cafeteria", zap.Error(err))
@@ -117,11 +146,12 @@ func (s *CafeteriaService) UpdateCafeteria(ctx context.Context, id string, req d
 	}
 
 	cafeteria, err := s.cafeteriaRepo.UpdateCafeteria(ctx, db.UpdateCafeteriaParams{
-		ID: utils.UUIDToPgtype(cafeteriaID),
+		ID:           utils.UUIDToPgtype(cafeteriaID),
 		Name:         req.Name,
 		Location:     req.Location,
 		HasVeganMenu: req.HasVeganMenu,
 		ServesDinner: req.ServesDinner,
+		IsActive:     req.IsActive,
 	})
 	if err != nil {
 		if errors.Is(err, serviceErrors.ErrCafeteriaNotFoundRepo) {

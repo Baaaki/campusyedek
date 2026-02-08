@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -11,6 +13,7 @@ import (
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	"github.com/baaaki/mydreamcampus/shared/utils"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
 )
 
@@ -67,13 +70,23 @@ func (s *StudentGradesService) GetMyGrades(ctx context.Context, studentID uuid.U
 			weightedAvg = 0.0
 		}
 
+		// Parse assessment scores from JSONB
+		var assessmentScores map[string]float64
+		if len(cc.AssessmentScores) > 0 {
+			if err := json.Unmarshal(cc.AssessmentScores, &assessmentScores); err != nil {
+				logger.Error("failed to unmarshal assessment scores", zap.Error(err))
+				assessmentScores = nil
+			}
+		}
+
 		completedCoursesDTO = append(completedCoursesDTO, dto.CompletedCourse{
-			CourseCode:      cc.CourseCode,
-			CourseName:      cc.CourseName,
-			Semester:        cc.Semester,
-			Credits:         int(cc.Credits),
-			WeightedAverage: weightedAvg,
-			GradePoint:      string(cc.GradePoint),
+			CourseCode:       cc.CourseCode,
+			CourseName:       cc.CourseName,
+			Semester:         cc.Semester,
+			Credits:          int(cc.Credits),
+			WeightedAverage:  weightedAvg,
+			GradePoint:       string(cc.GradePoint),
+			AssessmentScores: assessmentScores,
 		})
 	}
 
@@ -84,18 +97,8 @@ func (s *StudentGradesService) GetMyGrades(ctx context.Context, studentID uuid.U
 		return nil, err
 	}
 
-	var gpa float64
-	var totalCredits int64
-	if gpaResult.Gpa != nil {
-		if gpaFloat, ok := gpaResult.Gpa.(float64); ok {
-			gpa = gpaFloat
-		}
-	}
-	if gpaResult.TotalCredits != nil {
-		if creditsInt, ok := gpaResult.TotalCredits.(int64); ok {
-			totalCredits = creditsInt
-		}
-	}
+	gpa := parseInterfaceToFloat64(gpaResult.Gpa)
+	totalCredits := parseInterfaceToInt64(gpaResult.TotalCredits)
 
 	return &dto.MyGradesResponse{
 		StudentID:        studentID,
@@ -179,18 +182,8 @@ func (s *StudentGradesService) GetTranscript(ctx context.Context, requesterID uu
 		return nil, err
 	}
 
-	var gpa float64
-	var totalCredits int64
-	if gpaResult.Gpa != nil {
-		if gpaFloat, ok := gpaResult.Gpa.(float64); ok {
-			gpa = gpaFloat
-		}
-	}
-	if gpaResult.TotalCredits != nil {
-		if creditsInt, ok := gpaResult.TotalCredits.(int64); ok {
-			totalCredits = creditsInt
-		}
-	}
+	gpa := parseInterfaceToFloat64(gpaResult.Gpa)
+	totalCredits := parseInterfaceToInt64(gpaResult.TotalCredits)
 
 	// 7. Extract enrollment year from student number (assuming format: 2021123456)
 	enrollmentYear := 0
@@ -256,4 +249,63 @@ func gradePointToFloat(gp string) float64 {
 		return 0.0
 	}
 	return val
+}
+
+// parseInterfaceToFloat64 safely converts interface{} (from pgx scan) to float64.
+// PostgreSQL numeric/decimal types may arrive as pgtype.Numeric, string, or float64.
+func parseInterfaceToFloat64(v interface{}) float64 {
+	if v == nil {
+		return 0
+	}
+	switch val := v.(type) {
+	case pgtype.Numeric:
+		f, err := val.Float64Value()
+		if err != nil {
+			return 0
+		}
+		return f.Float64
+	case float64:
+		return val
+	case float32:
+		return float64(val)
+	case int64:
+		return float64(val)
+	case int32:
+		return float64(val)
+	case string:
+		f, _ := strconv.ParseFloat(val, 64)
+		return f
+	default:
+		s := fmt.Sprintf("%v", val)
+		f, _ := strconv.ParseFloat(s, 64)
+		return f
+	}
+}
+
+// parseInterfaceToInt64 safely converts interface{} (from pgx scan) to int64.
+func parseInterfaceToInt64(v interface{}) int64 {
+	if v == nil {
+		return 0
+	}
+	switch val := v.(type) {
+	case pgtype.Numeric:
+		f, err := val.Float64Value()
+		if err != nil {
+			return 0
+		}
+		return int64(f.Float64)
+	case int64:
+		return val
+	case int32:
+		return int64(val)
+	case float64:
+		return int64(val)
+	case string:
+		i, _ := strconv.ParseInt(val, 10, 64)
+		return i
+	default:
+		s := fmt.Sprintf("%v", val)
+		i, _ := strconv.ParseInt(s, 10, 64)
+		return i
+	}
 }

@@ -86,7 +86,6 @@ const navItems: NavItem[] = [
     icon: UtensilsCrossed,
     children: [
       { label: 'Yemekhaneler', href: '/meal/cafeterias' },
-      { label: 'Menüyü Göster', href: '/meal/menu' },
       { label: 'Menü Ekle', href: '/meal/menus' },
     ],
   },

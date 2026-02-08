@@ -57,6 +57,51 @@ func (ns NullCourseCatalogStatusEnum) Value() (driver.Value, error) {
 	return string(ns.CourseCatalogStatusEnum), nil
 }
 
+type CourseCategoryEnum string
+
+const (
+	CourseCategoryEnumTheoretical CourseCategoryEnum = "theoretical"
+	CourseCategoryEnumPractical   CourseCategoryEnum = "practical"
+	CourseCategoryEnumInternship  CourseCategoryEnum = "internship"
+	CourseCategoryEnumProject     CourseCategoryEnum = "project"
+	CourseCategoryEnumSeminar     CourseCategoryEnum = "seminar"
+)
+
+func (e *CourseCategoryEnum) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = CourseCategoryEnum(s)
+	case string:
+		*e = CourseCategoryEnum(s)
+	default:
+		return fmt.Errorf("unsupported scan type for CourseCategoryEnum: %T", src)
+	}
+	return nil
+}
+
+type NullCourseCategoryEnum struct {
+	CourseCategoryEnum CourseCategoryEnum `json:"course_category_enum"`
+	Valid              bool               `json:"valid"` // Valid is true if CourseCategoryEnum is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullCourseCategoryEnum) Scan(value interface{}) error {
+	if value == nil {
+		ns.CourseCategoryEnum, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.CourseCategoryEnum.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullCourseCategoryEnum) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.CourseCategoryEnum), nil
+}
+
 type CourseTypeEnum string
 
 const (
@@ -146,6 +191,49 @@ func (ns NullDayOfWeekEnum) Value() (driver.Value, error) {
 	return string(ns.DayOfWeekEnum), nil
 }
 
+type EducationLevelEnum string
+
+const (
+	EducationLevelEnumUndergraduate EducationLevelEnum = "undergraduate"
+	EducationLevelEnumGraduate      EducationLevelEnum = "graduate"
+	EducationLevelEnumDoctorate     EducationLevelEnum = "doctorate"
+)
+
+func (e *EducationLevelEnum) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = EducationLevelEnum(s)
+	case string:
+		*e = EducationLevelEnum(s)
+	default:
+		return fmt.Errorf("unsupported scan type for EducationLevelEnum: %T", src)
+	}
+	return nil
+}
+
+type NullEducationLevelEnum struct {
+	EducationLevelEnum EducationLevelEnum `json:"education_level_enum"`
+	Valid              bool               `json:"valid"` // Valid is true if EducationLevelEnum is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullEducationLevelEnum) Scan(value interface{}) error {
+	if value == nil {
+		ns.EducationLevelEnum, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.EducationLevelEnum.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullEducationLevelEnum) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.EducationLevelEnum), nil
+}
+
 type OutboxStatusEnum string
 
 const (
@@ -189,24 +277,80 @@ func (ns NullOutboxStatusEnum) Value() (driver.Value, error) {
 	return string(ns.OutboxStatusEnum), nil
 }
 
+type TeachingTypeEnum string
+
+const (
+	TeachingTypeEnumOnCampus TeachingTypeEnum = "on_campus"
+	TeachingTypeEnumOnline   TeachingTypeEnum = "online"
+	TeachingTypeEnumHybrid   TeachingTypeEnum = "hybrid"
+)
+
+func (e *TeachingTypeEnum) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = TeachingTypeEnum(s)
+	case string:
+		*e = TeachingTypeEnum(s)
+	default:
+		return fmt.Errorf("unsupported scan type for TeachingTypeEnum: %T", src)
+	}
+	return nil
+}
+
+type NullTeachingTypeEnum struct {
+	TeachingTypeEnum TeachingTypeEnum `json:"teaching_type_enum"`
+	Valid            bool             `json:"valid"` // Valid is true if TeachingTypeEnum is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullTeachingTypeEnum) Scan(value interface{}) error {
+	if value == nil {
+		ns.TeachingTypeEnum, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.TeachingTypeEnum.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullTeachingTypeEnum) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.TeachingTypeEnum), nil
+}
+
 type CourseCatalog struct {
-	ID               pgtype.UUID                 `json:"id"`
-	CourseCode       string                      `json:"course_code"`
-	Name             string                      `json:"name"`
-	Faculty          string                      `json:"faculty"`
-	Department       string                      `json:"department"`
-	ClassLevel       int16                       `json:"class_level"`
-	Credits          int16                       `json:"credits"`
-	TheoreticalHours int16                       `json:"theoretical_hours"`
-	PracticalHours   int16                       `json:"practical_hours"`
-	CourseType       CourseTypeEnum              `json:"course_type"`
-	Prerequisites    []byte                      `json:"prerequisites"`
-	Description      pgtype.Text                 `json:"description"`
-	LearningOutcomes pgtype.Text                 `json:"learning_outcomes"`
-	Syllabus         pgtype.Text                 `json:"syllabus"`
-	Status           NullCourseCatalogStatusEnum `json:"status"`
-	CreatedAt        pgtype.Timestamp            `json:"created_at"`
-	UpdatedAt        pgtype.Timestamp            `json:"updated_at"`
+	ID                   pgtype.UUID             `json:"id"`
+	CourseCode           string                  `json:"course_code"`
+	Name                 string                  `json:"name"`
+	Faculty              string                  `json:"faculty"`
+	Department           string                  `json:"department"`
+	OfferingUnit         pgtype.Text             `json:"offering_unit"`
+	ClassLevel           int16                   `json:"class_level"`
+	Semester             pgtype.Int2             `json:"semester"`
+	Credits              int16                   `json:"credits"`
+	Ects                 pgtype.Int2             `json:"ects"`
+	TheoreticalHours     int16                   `json:"theoretical_hours"`
+	PracticalHours       int16                   `json:"practical_hours"`
+	LabHours             int16                   `json:"lab_hours"`
+	CourseType           CourseTypeEnum          `json:"course_type"`
+	CourseCategory       CourseCategoryEnum      `json:"course_category"`
+	EducationLevel       EducationLevelEnum      `json:"education_level"`
+	TeachingType         TeachingTypeEnum        `json:"teaching_type"`
+	Language             string                  `json:"language"`
+	Prerequisites        []byte                  `json:"prerequisites"`
+	Coordinator          []byte                  `json:"coordinator"`
+	Purpose              pgtype.Text             `json:"purpose"`
+	Description          pgtype.Text             `json:"description"`
+	LearningOutcomes     pgtype.Text             `json:"learning_outcomes"`
+	LearningOutcomesList []byte                  `json:"learning_outcomes_list"`
+	WeeklyTopics         []byte                  `json:"weekly_topics"`
+	RecommendedSources   []byte                  `json:"recommended_sources"`
+	Syllabus             pgtype.Text             `json:"syllabus"`
+	Status               CourseCatalogStatusEnum `json:"status"`
+	CreatedAt            pgtype.Timestamp        `json:"created_at"`
+	UpdatedAt            pgtype.Timestamp        `json:"updated_at"`
 }
 
 type CourseScheduleSession struct {
@@ -240,9 +384,8 @@ type SemesterCourse struct {
 	InstructorFullname string           `json:"instructor_fullname"`
 	ClassroomLocation  string           `json:"classroom_location"`
 	MaxCapacity        int16            `json:"max_capacity"`
+	Prerequisites      []byte           `json:"prerequisites"`
 	AssessmentSchema   []byte           `json:"assessment_schema"`
 	CreatedAt          pgtype.Timestamp `json:"created_at"`
 	UpdatedAt          pgtype.Timestamp `json:"updated_at"`
-	// Snapshot of course prerequisites at the time of semester course creation. Format: [{"course_code":"MAT101","min_grade":60}]
-	Prerequisites []byte `json:"prerequisites"`
 }

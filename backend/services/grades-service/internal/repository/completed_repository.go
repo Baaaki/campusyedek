@@ -43,3 +43,14 @@ func (r *CompletedRepository) CalculateStudentGPA(ctx context.Context, studentID
 func (r *CompletedRepository) GetTranscriptData(ctx context.Context, studentID uuid.UUID) ([]db.GetTranscriptDataRow, error) {
 	return r.queries.GetTranscriptData(ctx, studentID)
 }
+
+func (r *CompletedRepository) GetCompletedCourseByStudentAndCourse(ctx context.Context, studentID uuid.UUID, courseID uuid.UUID) (db.StudentCompletedCourse, error) {
+	return r.queries.GetCompletedCourseByStudentAndCourse(ctx, db.GetCompletedCourseByStudentAndCourseParams{
+		StudentID: studentID,
+		CourseID:  courseID,
+	})
+}
+
+func (r *CompletedRepository) UpdateCompletedCourseAfterAppeal(ctx context.Context, arg db.UpdateCompletedCourseAfterAppealParams) error {
+	return r.queries.UpdateCompletedCourseAfterAppeal(ctx, arg)
+}

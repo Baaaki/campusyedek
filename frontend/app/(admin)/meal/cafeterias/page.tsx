@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { mealApi } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,10 +34,41 @@ import {
   Leaf,
   Moon,
   Search,
+  Loader2,
 } from 'lucide-react';
 
-// Mock data
-const initialCafeterias: Cafeteria[] = [
+// API Response types
+interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+}
+
+interface CafeteriaListData {
+  cafeterias: Cafeteria[];
+}
+
+// API functions
+const fetchCafeterias = async (): Promise<Cafeteria[]> => {
+  const response = await mealApi.get('cafeterias').json<ApiResponse<CafeteriaListData>>();
+  return response.data.cafeterias;
+};
+
+const createCafeteria = async (data: CafeteriaFormData): Promise<Cafeteria> => {
+  const response = await mealApi.post('cafeterias', { json: data }).json<ApiResponse<Cafeteria>>();
+  return response.data;
+};
+
+const updateCafeteria = async ({ id, data }: { id: string; data: CafeteriaFormData }): Promise<Cafeteria> => {
+  const response = await mealApi.put(`cafeterias/${id}`, { json: data }).json<ApiResponse<Cafeteria>>();
+  return response.data;
+};
+
+const deleteCafeteria = async (id: string): Promise<void> => {
+  await mealApi.delete(`cafeterias/${id}`);
+};
+
+// Mock data - Backend'den veri gelmezse gösterilir
+const mockCafeterias: Cafeteria[] = [
   {
     id: '1',
     name: 'Merkez Yemekhane',
@@ -95,14 +128,66 @@ const initialFormData: CafeteriaFormData = {
 };
 
 export default function CafeteriasPage() {
-  const [cafeterias, setCafeterias] = useState<Cafeteria[]>(initialCafeterias);
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editingCafeteria, setEditingCafeteria] = useState<Cafeteria | null>(null);
   const [deletingCafeteria, setDeletingCafeteria] = useState<Cafeteria | null>(null);
   const [formData, setFormData] = useState<CafeteriaFormData>(initialFormData);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Fetch cafeterias - backend'den veri gelmezse mock kullan
+  const { data: apiCafeterias, isLoading, error } = useQuery({
+    queryKey: ['cafeterias'],
+    queryFn: fetchCafeterias,
+    retry: 1,
+  });
+
+  // Backend'den veri varsa onu kullan, yoksa mock veri
+  const cafeterias = apiCafeterias && apiCafeterias.length > 0 ? apiCafeterias : mockCafeterias;
+  const isUsingMockData = !apiCafeterias || apiCafeterias.length === 0;
+
+  // Create mutation
+  const createMutation = useMutation({
+    mutationFn: createCafeteria,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cafeterias'] });
+      setIsDialogOpen(false);
+      setFormData(initialFormData);
+    },
+    onError: (error) => {
+      console.error('Create failed:', error);
+    },
+  });
+
+  // Update mutation
+  const updateMutation = useMutation({
+    mutationFn: updateCafeteria,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cafeterias'] });
+      setIsDialogOpen(false);
+      setFormData(initialFormData);
+      setEditingCafeteria(null);
+    },
+    onError: (error) => {
+      console.error('Update failed:', error);
+    },
+  });
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: deleteCafeteria,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cafeterias'] });
+      setIsDeleteDialogOpen(false);
+      setDeletingCafeteria(null);
+    },
+    onError: (error) => {
+      console.error('Delete failed:', error);
+    },
+  });
+
+  const isSubmitting = createMutation.isPending || updateMutation.isPending || deleteMutation.isPending;
 
   // Filtreleme
   const filteredCafeterias = cafeterias.filter(
@@ -139,56 +224,38 @@ export default function CafeteriasPage() {
 
   // Form gönderimi
   const handleSubmit = async () => {
-    setIsSubmitting(true);
-
-    // Simüle edilmiş API çağrısı
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
     if (editingCafeteria) {
-      // Güncelleme
-      setCafeterias((prev) =>
-        prev.map((c) =>
-          c.id === editingCafeteria.id
-            ? {
-                ...c,
-                ...formData,
-                updated_at: new Date().toISOString(),
-              }
-            : c
-        )
-      );
+      updateMutation.mutate({ id: editingCafeteria.id, data: formData });
     } else {
-      // Yeni ekleme
-      const newCafeteria: Cafeteria = {
-        id: Date.now().toString(),
-        ...formData,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      setCafeterias((prev) => [...prev, newCafeteria]);
+      createMutation.mutate(formData);
     }
-
-    setIsSubmitting(false);
-    setIsDialogOpen(false);
-    setFormData(initialFormData);
   };
 
   // Silme işlemi
   const handleDelete = async () => {
     if (!deletingCafeteria) return;
-
-    setIsSubmitting(true);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    setCafeterias((prev) => prev.filter((c) => c.id !== deletingCafeteria.id));
-
-    setIsSubmitting(false);
-    setIsDeleteDialogOpen(false);
-    setDeletingCafeteria(null);
+    deleteMutation.mutate(deletingCafeteria.id);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
+      {/* Mock data uyarısı */}
+      {isUsingMockData && (
+        <div className="rounded-md bg-yellow-50 border border-yellow-200 p-4">
+          <p className="text-sm text-yellow-800">
+            ⚠️ Backend'e bağlanılamadı, örnek veriler gösteriliyor.
+          </p>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

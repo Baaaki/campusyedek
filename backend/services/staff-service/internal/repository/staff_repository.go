@@ -61,6 +61,9 @@ func (r *StaffRepository) CreateStaffWithEvent(ctx context.Context, params db.Cr
 		}
 	}
 
+	// Set the staff ID in event payload (was nil before creation)
+	eventPayload["id"] = utils.PgtypeToUUIDString(staff.ID)
+
 	// Create outbox event
 	payload, _ := json.Marshal(eventPayload)
 	_, err = qtx.CreateOutboxEvent(ctx, db.CreateOutboxEventParams{

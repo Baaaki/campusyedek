@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import ky from 'ky';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,7 +18,8 @@ import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { mockFaculties } from '@/mock_data/catalog';
-import { Faculty, Department, AssessmentItem, ScheduleSessionDTO, CourseCatalog } from '@/lib/types';
+import { Faculty, Department, AssessmentItem, ScheduleSessionDTO, CourseCatalog, CreateSemesterCourseRequest, SemesterCourse } from '@/lib/types';
+import { catalogApi, staffApi, semesterApi } from '@/lib/api-client';
 import {
   Plus,
   Trash2,
@@ -37,69 +37,76 @@ import {
   Loader2,
 } from 'lucide-react';
 
-// Mock courses by department
-const mockCoursesByDepartment: Record<string, CourseCatalog[]> = {
-  'dept-bil': [
-    { id: '1', course_code: 'BIL101', name: 'Programlamaya Giriş', faculty: 'Fen Fakültesi', department: 'Bilgisayar Bilimleri', class_level: 1, credits: 4, theoretical_hours: 3, practical_hours: 2, course_type: 'mandatory', prerequisites: [], status: 'active', created_at: '', updated_at: '' },
-    { id: '2', course_code: 'BIL102', name: 'Veri Yapıları', faculty: 'Fen Fakültesi', department: 'Bilgisayar Bilimleri', class_level: 1, credits: 4, theoretical_hours: 3, practical_hours: 2, course_type: 'mandatory', prerequisites: [], status: 'active', created_at: '', updated_at: '' },
-    { id: '3', course_code: 'BIL201', name: 'Algoritmalar', faculty: 'Fen Fakültesi', department: 'Bilgisayar Bilimleri', class_level: 2, credits: 4, theoretical_hours: 3, practical_hours: 2, course_type: 'mandatory', prerequisites: [], status: 'active', created_at: '', updated_at: '' },
-    { id: '4', course_code: 'BIL202', name: 'Veritabanı Sistemleri', faculty: 'Fen Fakültesi', department: 'Bilgisayar Bilimleri', class_level: 2, credits: 3, theoretical_hours: 2, practical_hours: 2, course_type: 'mandatory', prerequisites: [], status: 'active', created_at: '', updated_at: '' },
-    { id: '5', course_code: 'BIL301', name: 'Yazılım Mühendisliği', faculty: 'Fen Fakültesi', department: 'Bilgisayar Bilimleri', class_level: 3, credits: 3, theoretical_hours: 3, practical_hours: 0, course_type: 'mandatory', prerequisites: [], status: 'active', created_at: '', updated_at: '' },
-  ],
-  'dept-matematik': [
-    { id: '6', course_code: 'MAT101', name: 'Matematik I', faculty: 'Fen Fakültesi', department: 'Matematik', class_level: 1, credits: 5, theoretical_hours: 4, practical_hours: 2, course_type: 'mandatory', prerequisites: [], status: 'active', created_at: '', updated_at: '' },
-    { id: '7', course_code: 'MAT102', name: 'Matematik II', faculty: 'Fen Fakültesi', department: 'Matematik', class_level: 1, credits: 5, theoretical_hours: 4, practical_hours: 2, course_type: 'mandatory', prerequisites: [], status: 'active', created_at: '', updated_at: '' },
-    { id: '8', course_code: 'MAT201', name: 'Lineer Cebir', faculty: 'Fen Fakültesi', department: 'Matematik', class_level: 2, credits: 4, theoretical_hours: 3, practical_hours: 2, course_type: 'mandatory', prerequisites: [], status: 'active', created_at: '', updated_at: '' },
-  ],
-  'dept-fizik': [
-    { id: '9', course_code: 'FIZ101', name: 'Fizik I', faculty: 'Fen Fakültesi', department: 'Fizik', class_level: 1, credits: 4, theoretical_hours: 3, practical_hours: 2, course_type: 'mandatory', prerequisites: [], status: 'active', created_at: '', updated_at: '' },
-    { id: '10', course_code: 'FIZ102', name: 'Fizik II', faculty: 'Fen Fakültesi', department: 'Fizik', class_level: 1, credits: 4, theoretical_hours: 3, practical_hours: 2, course_type: 'mandatory', prerequisites: [], status: 'active', created_at: '', updated_at: '' },
-  ],
-};
-
-// Mock instructors by department (simulating API response)
-const mockInstructorsByDepartment: Record<string, { id: string; fullname: string; title: string }[]> = {
-  'dept-bil': [
-    { id: 'inst-1', fullname: 'Prof. Dr. Ahmet Yılmaz', title: 'Profesör' },
-    { id: 'inst-2', fullname: 'Doç. Dr. Mehmet Kaya', title: 'Doçent' },
-    { id: 'inst-3', fullname: 'Dr. Öğr. Üyesi Ayşe Demir', title: 'Dr. Öğretim Üyesi' },
-  ],
-  'dept-matematik': [
-    { id: 'inst-4', fullname: 'Prof. Dr. Fatma Özkan', title: 'Profesör' },
-    { id: 'inst-6', fullname: 'Dr. Öğr. Üyesi Zeynep Arslan', title: 'Dr. Öğretim Üyesi' },
-  ],
-  'dept-fizik': [
-    { id: 'inst-5', fullname: 'Doç. Dr. Ali Çelik', title: 'Doçent' },
-    { id: 'inst-7', fullname: 'Prof. Dr. Mustafa Yıldız', title: 'Profesör' },
-  ],
-};
-
+// Types for API responses
 interface Instructor {
   id: string;
   fullname: string;
   title: string;
+  first_name?: string;
+  last_name?: string;
 }
 
-interface DepartmentData {
-  courses: CourseCatalog[];
-  instructors: Instructor[];
-}
-
-// API fetch function for department data
-const fetchDepartmentData = async (facultyId: string, departmentId: string): Promise<DepartmentData> => {
-  // Dynamic URL with faculty and department
-  const url = `https://jsonplaceholder.typicode.com/posts?facultyId=${facultyId}&departmentId=${departmentId}`;
-  
-  // GET request with ky
-  await ky.get(url).json();
-  
-  // Return mock data (in production, this would be the API response)
-  console.log(`📦 Fetching department data for: ${facultyId}/${departmentId}`);
-  
-  return {
-    courses: mockCoursesByDepartment[departmentId] || [],
-    instructors: mockInstructorsByDepartment[departmentId] || [],
+interface CoursesResponse {
+  data: CourseCatalog[];
+  pagination: {
+    total: number;
+    page: number;
+    per_page: number;
+    total_pages: number;
   };
+}
+
+interface StaffResponse {
+  data: Array<{
+    id: string;
+    first_name: string;
+    last_name: string;
+    role: string;
+    faculty?: string;
+    department?: string;
+  }>;
+  pagination: {
+    total: number;
+    page: number;
+    per_page: number;
+    total_pages: number;
+  };
+}
+
+// Fetch courses from catalog API
+const fetchCourses = async (department: string): Promise<CourseCatalog[]> => {
+  const response = await catalogApi.get('courses', {
+    searchParams: { department, limit: 100 },
+  }).json<CoursesResponse>();
+  return response.data || [];
+};
+
+// Fetch instructors from staff API
+const fetchInstructors = async (department: string): Promise<Instructor[]> => {
+  const response = await staffApi.get('instructors', {
+    searchParams: { department, limit: 100 },
+  }).json<StaffResponse>();
+
+  return (response.data || []).map(staff => ({
+    id: staff.id,
+    fullname: `${staff.first_name} ${staff.last_name}`,
+    title: staff.role,
+    first_name: staff.first_name,
+    last_name: staff.last_name,
+  }));
+};
+
+// Create semester course via API
+const createSemesterCourse = async (semester: string, data: CreateSemesterCourseRequest) => {
+  return semesterApi.post(`${semester}/courses`, { json: data }).json();
+};
+
+// Fetch existing semester courses for a department
+const fetchSemesterCourses = async (semester: string, department: string) => {
+  const response = await semesterApi.get(`${semester}/courses`, {
+    searchParams: { department, limit: 100 },
+  }).json<{ data: SemesterCourse[] }>();
+  return response.data || [];
 };
 
 // Predefined assessment types
@@ -125,16 +132,15 @@ const daysOfWeek = [
 
 // Time slots (ders saatleri)
 const timeSlots = [
-  { slot: 1, time: '08:30 - 09:20' },
-  { slot: 2, time: '09:30 - 10:20' },
-  { slot: 3, time: '10:30 - 11:20' },
-  { slot: 4, time: '11:30 - 12:20' },
-  { slot: 5, time: '13:30 - 14:20' },
-  { slot: 6, time: '14:30 - 15:20' },
-  { slot: 7, time: '15:30 - 16:20' },
-  { slot: 8, time: '16:30 - 17:20' },
-  { slot: 9, time: '17:30 - 18:20' },
-  { slot: 10, time: '18:30 - 19:20' },
+  { slot: 1, time: '08:30 - 09:15' },
+  { slot: 2, time: '09:25 - 10:10' },
+  { slot: 3, time: '10:20 - 11:05' },
+  { slot: 4, time: '11:15 - 12:00' },
+  { slot: 5, time: '12:10 - 12:55' },
+  { slot: 6, time: '13:00 - 13:45' },
+  { slot: 7, time: '13:55 - 14:40' },
+  { slot: 8, time: '14:50 - 15:35' },
+  { slot: 9, time: '15:45 - 16:30' },
 ];
 
 interface FormData {
@@ -168,30 +174,103 @@ const initialFormData: FormData = {
 
 export default function SemesterCoursesPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<CourseCatalog | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [semester, setSemester] = useState('2024-2025-Fall'); // Current semester
 
   // Calculate total assessment weight
   const totalWeight = formData.assessment_schema.reduce((sum, item) => sum + item.weight, 0);
   const isWeightValid = totalWeight === 100;
 
-  // TanStack Query - Fetch department data (courses + instructors) with caching
-  const { 
-    data: departmentData, 
-    isLoading: isLoadingDepartmentData,
-    isFetching: isFetchingDepartmentData,
+  // Get department name from ID for API calls
+  const getDepartmentName = (deptId: string): string => {
+    const dept = departments.find(d => d.id === deptId);
+    return dept?.name || '';
+  };
+
+  // TanStack Query - Fetch courses from catalog API
+  const {
+    data: courses = [],
+    isLoading: isLoadingCourses,
   } = useQuery({
-    queryKey: ['departmentData', formData.faculty_id, formData.department_id],
-    queryFn: () => fetchDepartmentData(formData.faculty_id, formData.department_id),
-    enabled: !!formData.faculty_id && !!formData.department_id, // Only fetch when both are selected
-    staleTime: 10 * 60 * 1000, // 10 dakika boyunca cache'den kullan
+    queryKey: ['courses', formData.department_id],
+    queryFn: () => fetchCourses(getDepartmentName(formData.department_id)),
+    enabled: !!formData.department_id,
+    staleTime: 10 * 60 * 1000,
   });
 
-  // Extract courses and instructors from cached data
-  const courses = departmentData?.courses || [];
-  const instructors = departmentData?.instructors || [];
+  // TanStack Query - Fetch instructors from staff API
+  const {
+    data: instructors = [],
+    isLoading: isLoadingInstructors,
+  } = useQuery({
+    queryKey: ['instructors', formData.department_id],
+    queryFn: () => fetchInstructors(getDepartmentName(formData.department_id)),
+    enabled: !!formData.department_id,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  // TanStack Query - Fetch existing semester courses for the department
+  const {
+    data: existingSemesterCourses = [],
+    isLoading: isLoadingExistingCourses,
+  } = useQuery({
+    queryKey: ['semesterCourses', semester, formData.department_id],
+    queryFn: () => fetchSemesterCourses(semester, getDepartmentName(formData.department_id)),
+    enabled: !!formData.department_id,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Mutation for creating semester course
+  const createMutation = useMutation({
+    mutationFn: (data: CreateSemesterCourseRequest) => createSemesterCourse(semester, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['semesterCourses', semester] });
+      alert('Dönemlik ders başarıyla açıldı!');
+      setFormData(initialFormData);
+      setSelectedCourse(null);
+    },
+    onError: (error: Error) => {
+      console.error('Ders açılırken hata:', error);
+      alert(`Hata: ${error.message}`);
+    },
+  });
+
+  const isLoadingDepartmentData = isLoadingCourses || isLoadingInstructors;
+
+  // Calculate occupied time slots from existing semester courses
+  const occupiedSlots = React.useMemo(() => {
+    const slots = new Set<string>(); // Format: "day_slot" e.g., "monday_1"
+
+    existingSemesterCourses.forEach((course) => {
+      course.schedule_sessions.forEach((session) => {
+        session.slot_numbers.forEach((slotNum) => {
+          slots.add(`${session.day_of_week}_${slotNum}`);
+        });
+      });
+    });
+
+    return slots;
+  }, [existingSemesterCourses]);
+
+  // Check if a specific slot is occupied
+  const isSlotOccupied = (day: string, slot: number): boolean => {
+    return occupiedSlots.has(`${day}_${slot}`);
+  };
+
+  // Get course code for an occupied slot
+  const getOccupiedSlotCourse = (day: string, slot: number): string | null => {
+    for (const course of existingSemesterCourses) {
+      for (const session of course.schedule_sessions) {
+        if (session.day_of_week === day && session.slot_numbers.includes(slot)) {
+          return course.course_code;
+        }
+      }
+    }
+    return null;
+  };
 
   // Update departments when faculty changes
   useEffect(() => {
@@ -338,13 +417,16 @@ export default function SemesterCoursesPage() {
       return;
     }
 
-    setIsSubmitting(true);
+    if (!selectedCourse) {
+      alert('Lütfen bir ders seçin!');
+      return;
+    }
 
     // Prepare data for API - DTO uyumlu
-    const requestData = {
-      course_code: selectedCourse?.course_code,
-      class_level: selectedCourse?.class_level, // Dersin sınıf seviyesi
-      instructor_id: formData.instructor_id, // UUID string
+    const requestData: CreateSemesterCourseRequest = {
+      course_code: selectedCourse.course_code,
+      class_level: selectedCourse.class_level,
+      instructor_id: formData.instructor_id,
       instructor_fullname: formData.instructor_fullname,
       classroom_location: formData.classroom_location,
       max_capacity: formData.max_capacity,
@@ -354,15 +436,8 @@ export default function SemesterCoursesPage() {
 
     console.log('Semester Course Data:', requestData);
 
-    // TODO: API'ye gönder
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    setIsSubmitting(false);
-    alert('Dönemlik ders başarıyla açıldı!');
-
-    // Reset form
-    setFormData(initialFormData);
-    setSelectedCourse(null);
+    // Send to API
+    createMutation.mutate(requestData);
   };
 
   return (
@@ -580,6 +655,17 @@ export default function SemesterCoursesPage() {
             <CardDescription>Dersin hangi gün ve saatlerde yapılacağını seçin</CardDescription>
           </CardHeader>
           <CardContent>
+            {existingSemesterCourses.length > 0 && (
+              <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <p className="text-sm text-blue-900 dark:text-blue-100 flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>
+                    <strong>{existingSemesterCourses.length}</strong> ders bu dönem için açılmış.
+                    Kırmızı alanlar dolu saatleri gösterir.
+                  </span>
+                </p>
+              </div>
+            )}
             <div className="overflow-x-auto">
               <table className="w-full border-collapse">
                 <thead>
@@ -599,15 +685,35 @@ export default function SemesterCoursesPage() {
                         {slot.slot}. Ders<br />
                         <span className="text-[10px]">{slot.time}</span>
                       </td>
-                      {daysOfWeek.map((day) => (
-                        <td key={day.key} className="border dark:border-gray-700 p-1 text-center">
-                          <Checkbox
-                            checked={isSlotSelected(day.key, slot.slot)}
-                            onCheckedChange={() => toggleScheduleSlot(day.key, slot.slot)}
-                            className="h-5 w-5"
-                          />
-                        </td>
-                      ))}
+                      {daysOfWeek.map((day) => {
+                        const occupied = isSlotOccupied(day.key, slot.slot);
+                        const selected = isSlotSelected(day.key, slot.slot);
+                        const courseCode = occupied ? getOccupiedSlotCourse(day.key, slot.slot) : null;
+
+                        return (
+                          <td
+                            key={day.key}
+                            className={`border dark:border-gray-700 p-1 text-center ${
+                              occupied ? 'bg-red-50 dark:bg-red-950/20' : ''
+                            }`}
+                            title={occupied ? `Dolu: ${courseCode}` : ''}
+                          >
+                            {occupied ? (
+                              <div className="flex items-center justify-center h-full py-2">
+                                <span className="text-[10px] font-semibold text-red-600 dark:text-red-400 leading-tight text-center">
+                                  {courseCode}
+                                </span>
+                              </div>
+                            ) : (
+                              <Checkbox
+                                checked={selected}
+                                onCheckedChange={() => toggleScheduleSlot(day.key, slot.slot)}
+                                className="h-5 w-5"
+                              />
+                            )}
+                          </td>
+                        );
+                      })}
                     </tr>
                   ))}
                 </tbody>
@@ -723,10 +829,10 @@ export default function SemesterCoursesPage() {
           </Button>
           <Button
             type="submit"
-            disabled={isSubmitting || !selectedCourse || !formData.instructor_id || !isWeightValid}
+            disabled={createMutation.isPending || !selectedCourse || !formData.instructor_id || !isWeightValid}
           >
             <Save className="h-4 w-4 mr-2" />
-            {isSubmitting ? 'Kaydediliyor...' : 'Dersi Aç'}
+            {createMutation.isPending ? 'Kaydediliyor...' : 'Dersi Aç'}
           </Button>
         </div>
       </form>

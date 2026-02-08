@@ -6,6 +6,10 @@ interface WeeklyScheduleGridProps {
   selectedCourseIds: string[];
   courseColorMap: Record<string, number>;
   onRemoveCourse: (courseId: string) => void;
+  onEnroll: () => void;
+  readOnly?: boolean;
+  submitButtonText?: string;
+  showSubmitButton?: boolean;
 }
 
 // Days of week for the grid
@@ -41,14 +45,33 @@ interface Conflict {
   courses: string[];
 }
 
-export default function WeeklyScheduleGrid({ sessions, selectedCourseIds, courseColorMap, onRemoveCourse }: WeeklyScheduleGridProps) {
+export default function WeeklyScheduleGrid({ sessions, selectedCourseIds, courseColorMap, onRemoveCourse, onEnroll, readOnly = false, submitButtonText = "Ders Kaydını Tamamla", showSubmitButton = true }: WeeklyScheduleGridProps) {
+  // Day string to key mapping
+  const dayMapping: Record<string, number> = {
+    'monday': 1,
+    'tuesday': 2,
+    'wednesday': 3,
+    'thursday': 4,
+    'friday': 5,
+    'saturday': 6,
+    'sunday': 7
+  };
+
   // Create a Map: "1-1" (day-slot) -> array of courses (to detect conflicts)
   const slotSessionsMap = new Map<string, AvailableCourse[]>();
   sessions.forEach(course => {
     course.schedule_sessions.forEach(scheduleItem => {
-      const key = `${scheduleItem.day}-${scheduleItem.slot}`;
-      const existing = slotSessionsMap.get(key) || [];
-      slotSessionsMap.set(key, [...existing, course]);
+      const dayKey = dayMapping[scheduleItem.day_of_week.toLowerCase()];
+      if (!dayKey) return;
+
+      scheduleItem.slot_numbers.forEach(slotNum => {
+        const key = `${dayKey}-${slotNum}`;
+        const existing = slotSessionsMap.get(key) || [];
+        // Avoid adding same course multiple times to same slot if backend data has duplicates (shouldn't happen but safe)
+        if (!existing.some(c => c.id === course.id)) {
+           slotSessionsMap.set(key, [...existing, course]);
+        }
+      });
     });
   });
 
@@ -75,7 +98,8 @@ export default function WeeklyScheduleGrid({ sessions, selectedCourseIds, course
     return COURSE_COLORS[colorIndex % COURSE_COLORS.length];
   };
 
-  const totalSessions = sessions.reduce((sum, course) => sum + course.schedule_sessions.length, 0);
+  const totalSessions = sessions.reduce((sum, course) => 
+    sum + course.schedule_sessions.reduce((s, session) => s + session.slot_numbers.length, 0), 0);
 
   return (
     <div className="h-full flex flex-col bg-white">
@@ -190,13 +214,18 @@ export default function WeeklyScheduleGrid({ sessions, selectedCourseIds, course
                         return (
                           <td
                             key={key}
-                            onClick={() => onRemoveCourse(course.id)}
-                            className={`border border-gray-300 p-3 transition-all duration-200 cursor-pointer ${color.bg} ${color.hover}`}
+                            onClick={() => !readOnly && onRemoveCourse(course.id)}
+                            className={`border border-gray-300 p-2 transition-all duration-200 ${
+                              readOnly ? 'cursor-default' : 'cursor-pointer hover:opacity-90'
+                            } ${color.bg} ${color.hover}`}
                           >
-                            <div className="flex items-center justify-center h-12">
+                            <div className="flex items-center justify-center min-h-[56px]">
                               <div className={`text-center ${color.text}`}>
                                 <div className="font-bold text-sm">{course.course_code}</div>
-                                <div className="text-xs opacity-90">Kaldırmak için tıkla</div>
+                                {course.instructor && (
+                                  <div className="text-xs opacity-80 mt-0.5">{course.instructor}</div>
+                                )}
+                                {!readOnly && <div className="text-xs opacity-70 mt-1">Kaldırmak için tıkla</div>}
                               </div>
                             </div>
                           </td>
@@ -232,37 +261,36 @@ export default function WeeklyScheduleGrid({ sessions, selectedCourseIds, course
         </div>
       )}
 
-      {/* Enrollment button - always visible */}
-      <div className="p-4 border-t border-gray-200 bg-white mt-auto">
-        <button
-          onClick={() => {
-            // TODO: Implement enrollment completion logic
-            alert('Ders kaydı tamamlanıyor...');
-          }}
-          disabled={conflicts.length > 0}
-          className={`w-full py-4 px-6 rounded-lg font-bold text-lg transition-all duration-200 ${
-            conflicts.length > 0
-              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              : 'bg-indigo-600 text-white hover:bg-indigo-700 active:bg-indigo-800 shadow-lg hover:shadow-xl'
-          }`}
-        >
-          {conflicts.length > 0 ? (
-            <span className="flex items-center justify-center gap-2">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              Ders Çakışması Var - Kaydı Tamamlayamazsınız
-            </span>
-          ) : (
-            <span className="flex items-center justify-center gap-2">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Ders Kaydını Tamamla ({selectedCourseIds.length} Ders)
-            </span>
-          )}
-        </button>
-      </div>
+      {/* Enrollment button - always visible unless explicitly hidden or readOnly without override */}
+      {(showSubmitButton && (!readOnly || showSubmitButton)) && (
+        <div className="p-4 border-t border-gray-200 bg-white mt-auto">
+          <button
+            onClick={onEnroll}
+            disabled={conflicts.length > 0}
+            className={`w-full py-4 px-6 rounded-lg font-bold text-lg transition-all duration-200 ${
+              conflicts.length > 0
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-indigo-600 text-white hover:bg-indigo-700 active:bg-indigo-800 shadow-lg hover:shadow-xl'
+            }`}
+          >
+            {conflicts.length > 0 ? (
+              <span className="flex items-center justify-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                Ders Çakışması Var - Kaydı Tamamlayamazsınız
+              </span>
+            ) : (
+              <span className="flex items-center justify-center gap-2">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {submitButtonText} ({selectedCourseIds.length} Ders)
+              </span>
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

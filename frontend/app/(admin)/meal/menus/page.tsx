@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import ky from 'ky';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { mealApi } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
   SelectContent,
@@ -13,13 +14,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Cafeteria } from '@/lib/types';
+import { Label } from '@/components/ui/label';
 import {
   Save,
   Printer,
-  Download,
+  Pencil,
+  Lock,
+  AlertTriangle,
+  X,
+  Plus,
+  Calendar,
+  Eye,
+  Loader2,
 } from 'lucide-react';
+import Toast from '@/components/enrollment/Toast';
 
 // Autocomplete Combobox Component
 interface MealAutocompleteProps {
@@ -27,9 +35,10 @@ interface MealAutocompleteProps {
   onChange: (value: string, calories: number) => void;
   placeholder: string;
   categoryFilter?: 'soup' | 'main' | 'side' | 'dessert' | 'other';
+  disabled?: boolean;
 }
 
-function MealAutocomplete({ value, onChange, placeholder, categoryFilter }: MealAutocompleteProps) {
+function MealAutocomplete({ value, onChange, placeholder, categoryFilter, disabled = false }: MealAutocompleteProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState(value);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -80,11 +89,12 @@ function MealAutocomplete({ value, onChange, placeholder, categoryFilter }: Meal
         <Input
           value={searchTerm}
           onChange={handleInputChange}
-          onFocus={() => setIsOpen(true)}
+          onFocus={() => !disabled && setIsOpen(true)}
           placeholder={placeholder}
-          className="h-8 text-xs text-center uppercase border-0 bg-transparent focus:bg-white dark:focus:bg-gray-800 pr-6"
+          disabled={disabled}
+          className={`h-8 text-xs text-center uppercase border-0 bg-transparent focus:bg-white dark:focus:bg-gray-800 pr-6 ${disabled ? 'cursor-not-allowed opacity-60' : ''}`}
         />
-        {searchTerm && (
+        {searchTerm && !disabled && (
           <button
             onClick={handleClear}
             className="absolute right-1 p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
@@ -94,7 +104,7 @@ function MealAutocomplete({ value, onChange, placeholder, categoryFilter }: Meal
           </button>
         )}
       </div>
-      {isOpen && filteredMeals.length > 0 && (
+      {isOpen && !disabled && filteredMeals.length > 0 && (
         <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg max-h-48 overflow-y-auto">
           {filteredMeals.map((meal, idx) => (
             <button
@@ -114,7 +124,7 @@ function MealAutocomplete({ value, onChange, placeholder, categoryFilter }: Meal
 }
 
 // Vegan Autocomplete Combobox Component
-function VeganMealAutocomplete({ value, onChange, placeholder, categoryFilter }: MealAutocompleteProps) {
+function VeganMealAutocomplete({ value, onChange, placeholder, categoryFilter, disabled = false }: MealAutocompleteProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState(value);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -164,11 +174,12 @@ function VeganMealAutocomplete({ value, onChange, placeholder, categoryFilter }:
         <Input
           value={searchTerm}
           onChange={handleInputChange}
-          onFocus={() => setIsOpen(true)}
+          onFocus={() => !disabled && setIsOpen(true)}
           placeholder={placeholder}
-          className="h-8 text-xs text-center uppercase border-0 bg-transparent focus:bg-white dark:focus:bg-gray-800 pr-6"
+          disabled={disabled}
+          className={`h-8 text-xs text-center uppercase border-0 bg-transparent focus:bg-white dark:focus:bg-gray-800 pr-6 ${disabled ? 'cursor-not-allowed opacity-60' : ''}`}
         />
-        {searchTerm && (
+        {searchTerm && !disabled && (
           <button
             onClick={handleClear}
             className="absolute right-1 p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
@@ -178,7 +189,7 @@ function VeganMealAutocomplete({ value, onChange, placeholder, categoryFilter }:
           </button>
         )}
       </div>
-      {isOpen && filteredMeals.length > 0 && (
+      {isOpen && !disabled && filteredMeals.length > 0 && (
         <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg max-h-48 overflow-y-auto">
           {filteredMeals.map((meal, idx) => (
             <button
@@ -203,12 +214,47 @@ const getCategoryByIndex = (index: number): 'soup' | 'main' | 'side' | 'dessert'
   return categories[index];
 };
 
-// Mock cafeterias
-const mockCafeterias: Cafeteria[] = [
-  { id: '1', name: 'Merkez Yemekhane', location: 'Ana Kampüs', has_vegan_menu: true, serves_dinner: true, is_active: true, created_at: '', updated_at: '' },
-  { id: '2', name: 'Mühendislik Yemekhanesi', location: 'Mühendislik Fakültesi', has_vegan_menu: true, serves_dinner: false, is_active: true, created_at: '', updated_at: '' },
-  { id: '3', name: 'Tınaztepe Yemekhanesi', location: 'Tınaztepe Kampüsü', has_vegan_menu: true, serves_dinner: true, is_active: true, created_at: '', updated_at: '' },
-];
+// API functions
+interface SaveMenuPayload {
+  year: number;
+  month: number;
+  menu_data: {
+    normalMenus: WeeklyMenu[];
+    veganMenus: WeeklyMenu[];
+  };
+}
+
+interface MonthlyMenuResponse {
+  id: string;
+  year: number;
+  month: number;
+  menu_data: {
+    normalMenus: WeeklyMenu[];
+    veganMenus: WeeklyMenu[];
+  };
+  created_at: string;
+  updated_at: string;
+}
+
+const saveMonthlyMenu = async (payload: SaveMenuPayload): Promise<void> => {
+  await mealApi.post('menu/monthly', { json: payload });
+};
+
+interface ApiSuccessResponse<T> {
+  success: boolean;
+  data: T;
+}
+
+const fetchMonthlyMenu = async (year: number, month: number): Promise<MonthlyMenuResponse | null> => {
+  try {
+    const response = await mealApi.get('menu/monthly', {
+      searchParams: { year, month }
+    }).json<ApiSuccessResponse<MonthlyMenuResponse>>();
+    return response.data;
+  } catch {
+    return null;
+  }
+};
 
 // Sabit 5 yemek kategorisi
 const mealCategories = ['Çorba', 'Ana Yemek', 'Yan Yemek', 'Tatlı', 'Diğer'];
@@ -532,26 +578,162 @@ const sampleVeganWeeklyMenu: WeeklyMenu = {
   friday: { items: sampleVeganMenuItems.friday, calories: calcVeganCalories(sampleVeganMenuItems.friday) },
 };
 
+// Değişiklik bilgisi tipi
+interface MenuChange {
+  weekIndex: number;
+  day: string;
+  dayLabel: string;
+  dateString: string; // "25 Ocak 2026" formatında tarih
+  itemIndex: number;
+  category: string;
+  oldValue: string;
+  newValue: string;
+  isVegan: boolean;
+  timestamp: Date;
+}
+
 export default function MenusPage() {
   const [activeTab, setActiveTab] = useState<string>('normal');
-  const [selectedCafeteria, setSelectedCafeteria] = useState<string>('1');
-  const [selectedMonth, setSelectedMonth] = useState<string>('01');
-  const [selectedYear, setSelectedYear] = useState<string>('2026');
+
+  // Bilgisayar tarihinden ay ve yılı otomatik belirle
+  const currentDate = new Date();
+  const systemMonth = String(currentDate.getMonth() + 1).padStart(2, '0');
+  const systemYear = String(currentDate.getFullYear());
+
+  // Seçilen ay ve yıl (kullanıcı tarafından değiştirilebilir)
+  const [selectedMonth, setSelectedMonth] = useState(systemMonth);
+  const [selectedYear, setSelectedYear] = useState(systemYear);
+
   const [weeklyMenus, setWeeklyMenus] = useState<WeeklyMenu[]>([
-    sampleWeeklyMenu,
+    getEmptyWeeklyMenu(),
     getEmptyWeeklyMenu(),
     getEmptyWeeklyMenu(),
     getEmptyWeeklyMenu(),
     getEmptyWeeklyMenu(),
   ]);
   const [veganWeeklyMenus, setVeganWeeklyMenus] = useState<WeeklyMenu[]>([
-    sampleVeganWeeklyMenu,
+    getEmptyWeeklyMenu(),
     getEmptyWeeklyMenu(),
     getEmptyWeeklyMenu(),
     getEmptyWeeklyMenu(),
     getEmptyWeeklyMenu(),
   ]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Menü durumu: 'empty' (boş), 'saved' (kaydedildi), 'editing' (düzenleniyor)
+  const [menuStatus, setMenuStatus] = useState<'empty' | 'saved' | 'editing'>('empty');
+
+  // Düzenleme modu aktif mi?
+  const [isEditMode, setIsEditMode] = useState<boolean>(true); // Başlangıçta düzenlenebilir (yeni menü oluşturma)
+
+  // Kaydedilen menünün kopyası (değişiklikleri karşılaştırmak için)
+  const [savedWeeklyMenus, setSavedWeeklyMenus] = useState<WeeklyMenu[] | null>(null);
+  const [savedVeganWeeklyMenus, setSavedVeganWeeklyMenus] = useState<WeeklyMenu[] | null>(null);
+
+  // Yeni menü oluşturma modunda mı? (tablo gösterilsin mi)
+  const [isCreatingNew, setIsCreatingNew] = useState<boolean>(false);
+
+  // Değişiklikler listesi
+  const [pendingChanges, setPendingChanges] = useState<MenuChange[]>([]);
+
+  // Toast state
+  const [toast, setToast] = useState<{ message: string; type: 'error' | 'warning' | 'success' | 'info'; isVisible: boolean }>({
+    message: '',
+    type: 'success',
+    isVisible: false,
+  });
+
+  const showToast = (message: string, type: 'error' | 'warning' | 'success' | 'info') => {
+    setToast({ message, type, isVisible: true });
+  };
+
+  const hideToast = () => {
+    setToast(prev => ({ ...prev, isVisible: false }));
+  };
+
+  // Yıl seçenekleri (mevcut yıl -1'den +3 yıla kadar)
+  const yearOptions = useMemo(() => {
+    const years = [];
+    const currentYear = currentDate.getFullYear();
+    for (let y = currentYear - 1; y <= currentYear + 3; y++) {
+      years.push(String(y));
+    }
+    return years;
+  }, [currentDate]);
+
+  // Seçilen ay/yılın geçmişte olup olmadığını kontrol et
+  const isPastMonth = useMemo(() => {
+    const selectedDate = new Date(parseInt(selectedYear), parseInt(selectedMonth) - 1, 1);
+    const currentFirstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+    return selectedDate < currentFirstDay;
+  }, [selectedYear, selectedMonth, currentDate]);
+
+  // Seçilen ay/yılın çok ileride olup olmadığını kontrol et (sadece mevcut ay ve sonraki ay düzenlenebilir)
+  const isFutureMonth = useMemo(() => {
+    const selectedDate = new Date(parseInt(selectedYear), parseInt(selectedMonth) - 1, 1);
+    // Sonraki ayın 1'i (maksimum düzenlenebilir ay)
+    const maxEditableDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+    return selectedDate > maxEditableDate;
+  }, [selectedYear, selectedMonth, currentDate]);
+
+  // Düzenleme yapılabilir mi? (sadece mevcut ay ve sonraki ay)
+  const canEdit = !isPastMonth && !isFutureMonth;
+
+  // Seçilen ay/yıl için menü sorgulama
+  const { data: existingMenu, isLoading: isLoadingMenu, refetch: refetchMenu } = useQuery({
+    queryKey: ['monthlyMenu', selectedYear, selectedMonth],
+    queryFn: () => fetchMonthlyMenu(parseInt(selectedYear), parseInt(selectedMonth)),
+  });
+
+  // Menü verisi geldiğinde state'leri güncelle
+  useEffect(() => {
+    if (existingMenu) {
+      // Veritabanından gelen menüyü form state'ine yükle
+      setWeeklyMenus(existingMenu.menu_data.normalMenus);
+      setVeganWeeklyMenus(existingMenu.menu_data.veganMenus);
+      setSavedWeeklyMenus(JSON.parse(JSON.stringify(existingMenu.menu_data.normalMenus)));
+      setSavedVeganWeeklyMenus(JSON.parse(JSON.stringify(existingMenu.menu_data.veganMenus)));
+      setMenuStatus('saved');
+      setIsEditMode(false);
+      setIsCreatingNew(false);
+      setPendingChanges([]);
+    } else {
+      // Menü yoksa boş form göster
+      setWeeklyMenus([
+        getEmptyWeeklyMenu(),
+        getEmptyWeeklyMenu(),
+        getEmptyWeeklyMenu(),
+        getEmptyWeeklyMenu(),
+        getEmptyWeeklyMenu(),
+      ]);
+      setVeganWeeklyMenus([
+        getEmptyWeeklyMenu(),
+        getEmptyWeeklyMenu(),
+        getEmptyWeeklyMenu(),
+        getEmptyWeeklyMenu(),
+        getEmptyWeeklyMenu(),
+      ]);
+      setSavedWeeklyMenus(null);
+      setSavedVeganWeeklyMenus(null);
+      setMenuStatus('empty');
+      setIsEditMode(false); // Başlangıçta düzenleme kapalı
+      setIsCreatingNew(false); // Oluştur butonuna basılana kadar tablo gizli
+      setPendingChanges([]);
+    }
+  }, [existingMenu, isPastMonth, selectedYear, selectedMonth]);
+
+  // Save mutation
+  const saveMutation = useMutation({
+    mutationFn: saveMonthlyMenu,
+    onSuccess: () => {
+      showToast('Menü başarıyla kaydedildi!', 'success');
+    },
+    onError: (error: Error) => {
+      console.error('Menü kaydedilirken hata oluştu:', error);
+      showToast('Menü kaydedilirken bir hata oluştu!', 'error');
+    },
+  });
+
+  const isSubmitting = saveMutation.isPending;
 
   // Ay ve yıl seçenekleri
   const months = [
@@ -568,8 +750,6 @@ export default function MenusPage() {
     { value: '11', label: 'Kasım' },
     { value: '12', label: 'Aralık' },
   ];
-
-  const years = ['2025', '2026', '2027'];
 
   // Haftanın tarihlerini hesapla
   const getWeekDates = (weekIndex: number) => {
@@ -596,12 +776,95 @@ export default function MenusPage() {
     }, 0);
   };
 
+  // Gün adını bul
+  const getDayLabel = (dayKey: string): string => {
+    const dayObj = dayNames.find(d => d.key === dayKey);
+    return dayObj?.label || dayKey;
+  };
+
+  // Belirli bir hafta ve gün için tarih string'i hesapla
+  const getDateStringForDay = (weekIndex: number, dayKey: string): string => {
+    const year = parseInt(selectedYear);
+    const month = parseInt(selectedMonth) - 1;
+    const firstDay = new Date(year, month, 1);
+    const dayOfWeek = firstDay.getDay();
+    const startOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const weekStart = new Date(year, month, 1 + startOffset + (weekIndex * 7));
+
+    // Gün index'ini bul (monday=0, tuesday=1, ...)
+    const dayIndex = dayNames.findIndex(d => d.key === dayKey);
+    const targetDate = new Date(weekStart);
+    targetDate.setDate(weekStart.getDate() + dayIndex);
+
+    const dayNum = targetDate.getDate();
+    const monthLabel = months[targetDate.getMonth()]?.label || '';
+    const yearNum = targetDate.getFullYear();
+
+    return `${dayNum} ${monthLabel} ${yearNum}`;
+  };
+
+  // Değişiklik ekle - oldValue her zaman kaydedilmiş (orijinal) değerden alınır
+  const addChange = (
+    weekIndex: number,
+    day: string,
+    itemIndex: number,
+    newValue: string,
+    isVegan: boolean
+  ) => {
+    // Sadece kaydedilmiş menü varsa değişiklik izle
+    if (menuStatus !== 'saved') return;
+
+    const savedMenus = isVegan ? savedVeganWeeklyMenus : savedWeeklyMenus;
+    if (!savedMenus) return;
+
+    // Orijinal (kaydedilmiş) değeri al - bu her zaman sabit kalır
+    const originalValue = savedMenus[weekIndex]?.[day]?.items[itemIndex] || '';
+
+    // Eğer yeni değer orijinal değerle aynıysa, bu hücre için değişiklik kaldır
+    if (newValue === originalValue) {
+      setPendingChanges(prev => 
+        prev.filter(c => !(c.weekIndex === weekIndex && c.day === day && c.itemIndex === itemIndex && c.isVegan === isVegan))
+      );
+      return;
+    }
+
+    // Değişiklik oluştur - oldValue her zaman orijinal değer
+    const change: MenuChange = {
+      weekIndex,
+      day,
+      dayLabel: getDayLabel(day),
+      dateString: getDateStringForDay(weekIndex, day),
+      itemIndex,
+      category: mealCategories[itemIndex],
+      oldValue: originalValue || '(boş)',
+      newValue: newValue || '(boş)',
+      isVegan,
+      timestamp: new Date(),
+    };
+
+    setPendingChanges(prev => {
+      // Aynı hücre için önceki değişikliği kaldır ve yenisini ekle
+      const filtered = prev.filter(
+        c => !(c.weekIndex === weekIndex && c.day === day && c.itemIndex === itemIndex && c.isVegan === isVegan)
+      );
+      return [...filtered, change];
+    });
+  };
+
   // Menü öğesi güncelle ve kaloriyi otomatik hesapla
   const updateMenuItem = (weekIndex: number, day: string, itemIndex: number, value: string) => {
+    // Düzenleme modu kapalıysa güncelleme yapma
+    if (!isEditMode) return;
+
+    const newValue = value.toUpperCase();
+
+    // Değişikliği kaydet (eğer kaydedilmiş menü varsa)
+    addChange(weekIndex, day, itemIndex, newValue, false);
+
     setWeeklyMenus(prev => {
       const updated = [...prev];
       const newItems = [...updated[weekIndex][day].items] as [string, string, string, string, string];
-      newItems[itemIndex] = value.toUpperCase();
+      newItems[itemIndex] = newValue;
 
       // Otomatik kalori hesapla
       const totalCalories = calculateDayCalories(newItems);
@@ -620,10 +883,18 @@ export default function MenusPage() {
 
   // Vegan menü öğesi güncelle
   const updateVeganMenuItem = (weekIndex: number, day: string, itemIndex: number, value: string) => {
+    // Düzenleme modu kapalıysa güncelleme yapma
+    if (!isEditMode) return;
+
+    const newValue = value.toUpperCase();
+
+    // Değişikliği kaydet (eğer kaydedilmiş menü varsa)
+    addChange(weekIndex, day, itemIndex, newValue, true);
+
     setVeganWeeklyMenus(prev => {
       const updated = [...prev];
       const newItems = [...updated[weekIndex][day].items] as [string, string, string, string, string];
-      newItems[itemIndex] = value.toUpperCase();
+      newItems[itemIndex] = newValue;
 
       // Otomatik kalori hesapla
       const totalCalories = calculateDayCalories(newItems, true);
@@ -640,108 +911,457 @@ export default function MenusPage() {
     });
   };
 
-  // Kaydet
-  const handleSave = async () => {
-    setIsSubmitting(true);
-    
-    const payload = {
-      cafeteria_id: selectedCafeteria,
-      month: selectedMonth,
-      year: selectedYear,
-      normalMenus: weeklyMenus,
-      veganMenus: veganWeeklyMenus,
-    };
+  // Değişikliği kaldır
+  const removeChange = (index: number) => {
+    setPendingChanges(prev => prev.filter((_, i) => i !== index));
+  };
 
-    try {
-      // Mock API URL'ye POST isteği
-      await ky.post('https://jsonplaceholder.typicode.com/posts', {
-        json: payload,
-      }).json();
-      
-      console.log('Menü başarıyla gönderildi:', payload);
-      alert('Menü başarıyla kaydedildi!');
-    } catch (error) {
-      console.error('Menü kaydedilirken hata oluştu:', error);
-      alert('Menü kaydedilirken bir hata oluştu!');
-    } finally {
-      setIsSubmitting(false);
-    }
+  // Tüm değişiklikleri temizle
+  const clearAllChanges = () => {
+    setPendingChanges([]);
+  };
+
+  // Düzenleme modunu aç
+  const enableEditMode = () => {
+    setIsEditMode(true);
+  };
+
+  // Düzenleme modunu kapat
+  const disableEditMode = () => {
+    setIsEditMode(false);
+  };
+
+  // Kaydet (ilk kez)
+  const handleSave = async () => {
+    saveMutation.mutate({
+      year: parseInt(selectedYear),
+      month: parseInt(selectedMonth),
+      menu_data: {
+        normalMenus: weeklyMenus,
+        veganMenus: veganWeeklyMenus,
+      },
+    }, {
+      onSuccess: () => {
+        // Kaydedilen menüleri sakla
+        setSavedWeeklyMenus(JSON.parse(JSON.stringify(weeklyMenus)));
+        setSavedVeganWeeklyMenus(JSON.parse(JSON.stringify(veganWeeklyMenus)));
+        setMenuStatus('saved');
+        setIsEditMode(false);
+        setPendingChanges([]);
+        refetchMenu();
+      }
+    });
+  };
+
+  // Güncelle (değişiklikleri kaydet)
+  const handleUpdate = async () => {
+    saveMutation.mutate({
+      year: parseInt(selectedYear),
+      month: parseInt(selectedMonth),
+      menu_data: {
+        normalMenus: weeklyMenus,
+        veganMenus: veganWeeklyMenus,
+      },
+    }, {
+      onSuccess: () => {
+        // Kaydedilen menüleri güncelle
+        setSavedWeeklyMenus(JSON.parse(JSON.stringify(weeklyMenus)));
+        setSavedVeganWeeklyMenus(JSON.parse(JSON.stringify(veganWeeklyMenus)));
+        setPendingChanges([]);
+        setIsEditMode(false);
+        refetchMenu();
+      }
+    });
   };
 
   const selectedMonthLabel = months.find(m => m.value === selectedMonth)?.label || '';
+  const hasUnsavedChanges = pendingChanges.length > 0;
+
+  // Yazdırma fonksiyonu
+  const handlePrint = () => {
+    const currentMenus = activeTab === 'vegan' ? veganWeeklyMenus : weeklyMenus;
+    const menuType = activeTab === 'vegan' ? 'VEGAN MENÜ' : 'YEMEK LİSTESİ';
+    const headerColor = activeTab === 'vegan' ? '#166534' : '#1e3a8a';
+    const subHeaderColor = activeTab === 'vegan' ? '#dcfce7' : '#fef3c7';
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>${selectedYear} ${selectedMonthLabel} - ${menuType}</title>
+        <style>
+          @page {
+            size: A4 landscape;
+            margin: 5mm;
+          }
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          html, body {
+            width: 100%;
+            height: 100%;
+            font-family: Arial, sans-serif;
+          }
+          body {
+            padding: 5px;
+            display: flex;
+            flex-direction: column;
+          }
+          .container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+          }
+          .header {
+            background-color: ${headerColor};
+            color: white;
+            text-align: center;
+            padding: 6px;
+            margin-bottom: 5px;
+            flex-shrink: 0;
+          }
+          .header h1 { font-size: 12px; margin-bottom: 2px; }
+          .header h2 { font-size: 9px; font-weight: normal; margin-bottom: 2px; }
+          .header h3 { font-size: 10px; }
+          .weeks-container {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            gap: 3px;
+          }
+          .week-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+          }
+          table {
+            width: 100%;
+            height: 100%;
+            border-collapse: collapse;
+            font-size: 7px;
+            table-layout: fixed;
+          }
+          th {
+            background-color: ${subHeaderColor};
+            padding: 2px 1px;
+            border: 1px solid #999;
+            text-align: center;
+            height: 20px;
+          }
+          th .date { font-weight: bold; color: ${headerColor}; font-size: 6px; }
+          th .day { font-weight: normal; color: #666; font-size: 5px; }
+          td {
+            border: 1px solid #999;
+            padding: 1px;
+            text-align: center;
+            vertical-align: middle;
+            font-size: 6px;
+            line-height: 1.1;
+            overflow: hidden;
+          }
+          .meal-item { text-transform: uppercase; }
+          .calories-row { background-color: #f0f0f0; }
+          .calories { font-weight: bold; color: ${headerColor}; }
+          .notes {
+            margin-top: 3px;
+            font-size: 6px;
+            color: #666;
+            flex-shrink: 0;
+          }
+          .notes p { margin-bottom: 1px; }
+          @media print {
+            html, body {
+              width: 297mm;
+              height: 210mm;
+              overflow: hidden;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            @page {
+              margin: 0;
+            }
+            /* Tarayıcı header/footer gizle */
+            title { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>DOKUZ EYLÜL ÜNİVERSİTESİ</h1>
+            <h2>SAĞLIK KÜLTÜR VE SPOR DAİRE BAŞKANLIĞI</h2>
+            <h3>${selectedYear} ${selectedMonthLabel.toUpperCase()} AYI - ${menuType}</h3>
+          </div>
+          <div class="weeks-container">
+            ${currentMenus.map((weekMenu, weekIndex) => {
+              const weekDates = getWeekDates(weekIndex);
+              return `
+                <div class="week-container">
+                  <table>
+                    <thead>
+                      <tr>
+                        ${dayNames.map((day, idx) => `
+                          <th>
+                            <div class="date">${weekDates[idx]}</div>
+                            <div class="day">${day.label}</div>
+                          </th>
+                        `).join('')}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${mealCategories.map((_, rowIdx) => `
+                        <tr>
+                          ${dayNames.map(day => `
+                            <td class="meal-item">${weekMenu[day.key]?.items[rowIdx] || '-'}</td>
+                          `).join('')}
+                        </tr>
+                      `).join('')}
+                      <tr class="calories-row">
+                        ${dayNames.map(day => `
+                          <td><span class="calories">${weekMenu[day.key]?.calories || 0}</span> kcal</td>
+                        `).join('')}
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              `;
+            }).join('')}
+          </div>
+          <div class="notes">
+            <p>*Mücbir sebepler haricinde kesinlikle menü değişimi yapılmayacaktır.</p>
+            <p>*Yukarıda belirtilen 1 öğünlük toplam kalori değerlerine, 50 gr ekmeğin değeri olan 136 kalori ilave edilmiştir.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.onload = () => {
+        printWindow.print();
+      };
+    }
+  };
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold dark:text-white">Aylık Menü Oluştur</h1>
-          <p className="text-muted-foreground">Haftalık yemek listesini düzenleyin</p>
+          <h1 className="text-2xl font-bold dark:text-white">Aylık Menü Yönetimi</h1>
+          <p className="text-muted-foreground">
+            {selectedMonthLabel} {selectedYear} - {menuStatus === 'saved' ? (isEditMode ? 'Düzenleme modu' : 'Kaydedildi') : 'Yeni menü'}
+            {isPastMonth && <span className="ml-2 text-amber-600">(Geçmiş ay - salt okunur)</span>}
+            {isFutureMonth && <span className="ml-2 text-purple-600">(İleri tarih - henüz düzenlenemez)</span>}
+          </p>
         </div>
+        
+        {/* Yıl ve Ay Seçimi */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Label htmlFor="year-select" className="text-sm font-medium">Yıl:</Label>
+            <Select value={selectedYear} onValueChange={setSelectedYear}>
+              <SelectTrigger id="year-select" className="w-24">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {yearOptions.map(year => (
+                  <SelectItem key={year} value={year}>{year}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2">
+            <Label htmlFor="month-select" className="text-sm font-medium">Ay:</Label>
+            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+              <SelectTrigger id="month-select" className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {months.map(month => (
+                  <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
         <div className="flex gap-2">
-          <Button variant="outline">
+          <Button variant="outline" onClick={handlePrint}>
             <Printer className="h-4 w-4 mr-2" />
             Yazdır
           </Button>
-          <Button variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            PDF İndir
-          </Button>
-          <Button onClick={handleSave} disabled={isSubmitting}>
-            <Save className="h-4 w-4 mr-2" />
-            {isSubmitting ? 'Kaydediliyor...' : 'Kaydet'}
-          </Button>
+
+          {/* Menü kaydedilmişse ve düzenleme modu kapalıysa ve geçmiş ay değilse Düzenle butonu göster */}
+          {menuStatus === 'saved' && !isEditMode && canEdit && (
+            <Button variant="outline" onClick={enableEditMode}>
+              <Pencil className="h-4 w-4 mr-2" />
+              Düzenle
+            </Button>
+          )}
+
+          {/* Menü kaydedilmişse ve düzenleme modundaysa Kilitle butonu göster */}
+          {menuStatus === 'saved' && isEditMode && !hasUnsavedChanges && (
+            <Button variant="outline" onClick={disableEditMode}>
+              <Lock className="h-4 w-4 mr-2" />
+              Kilitle
+            </Button>
+          )}
+
+          {/* Menü yoksa ve henüz oluşturma başlamadıysa - Oluştur butonu (tabloyu gösterir) */}
+          {menuStatus === 'empty' && !isCreatingNew && canEdit && (
+            <Button onClick={() => { setIsCreatingNew(true); setIsEditMode(true); }}>
+              <Plus className="h-4 w-4 mr-2" />
+              Oluştur
+            </Button>
+          )}
+
+          {/* Menü oluşturma modundaysa - Kaydet butonu */}
+          {menuStatus === 'empty' && isCreatingNew && canEdit && (
+            <Button onClick={handleSave} disabled={isSubmitting}>
+              <Save className="h-4 w-4 mr-2" />
+              {isSubmitting ? 'Kaydediliyor...' : 'Kaydet'}
+            </Button>
+          )}
+
+          {/* Değişiklik varsa Güncelle butonu */}
+          {hasUnsavedChanges && (
+            <Button onClick={handleUpdate} disabled={isSubmitting} className="bg-orange-600 hover:bg-orange-700">
+              <Save className="h-4 w-4 mr-2" />
+              {isSubmitting ? 'Güncelleniyor...' : 'Güncelle'}
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Filtreler */}
-      <Card className="dark:bg-gray-900 dark:border-gray-800">
-        <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label>Yemekhane</Label>
-              <Select value={selectedCafeteria} onValueChange={setSelectedCafeteria}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {mockCafeterias.map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Ay</Label>
-              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {months.map(m => (
-                    <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Yıl</Label>
-              <Select value={selectedYear} onValueChange={setSelectedYear}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {years.map(y => (
-                    <SelectItem key={y} value={y}>{y}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+      {/* Loading durumu */}
+      {isLoadingMenu && (
+        <div className="rounded-lg border border-blue-300 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800 p-4">
+          <div className="flex items-center gap-3">
+            <Loader2 className="h-5 w-5 text-blue-600 dark:text-blue-400 animate-spin" />
+            <p className="text-blue-800 dark:text-blue-300">
+              {selectedMonthLabel} {selectedYear} için menü yükleniyor...
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Geçmiş ay uyarısı */}
+      {isPastMonth && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 p-4">
+          <div className="flex items-center gap-3">
+            <Eye className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+            <p className="text-amber-800 dark:text-amber-300">
+              Bu menü geçmiş bir aya ait olduğu için yalnızca görüntülenebilir. Düzenleme yapılamaz.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Menü yoksa ve henüz oluşturma başlamadıysa ve düzenlenebilir ay ise bilgi */}
+      {!isLoadingMenu && menuStatus === 'empty' && !isCreatingNew && canEdit && (
+        <div className="rounded-lg border border-green-300 bg-green-50 dark:bg-green-900/20 dark:border-green-800 p-4">
+          <div className="flex items-center gap-3">
+            <Plus className="h-5 w-5 text-green-600 dark:text-green-400" />
+            <p className="text-green-800 dark:text-green-300">
+              {selectedMonthLabel} {selectedYear} için henüz menü oluşturulmamış. <strong>Oluştur</strong> butonuna tıklayarak yeni menü oluşturmaya başlayabilirsiniz.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Menü yoksa ve geçmiş ay ise bilgi */}
+      {!isLoadingMenu && menuStatus === 'empty' && isPastMonth && (
+        <div className="rounded-lg border border-gray-300 bg-gray-50 dark:bg-gray-900/20 dark:border-gray-700 p-4">
+          <div className="flex items-center gap-3">
+            <Calendar className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+            <p className="text-gray-800 dark:text-gray-300">
+              {selectedMonthLabel} {selectedYear} için menü oluşturulmamış. Geçmiş aylar için yeni menü oluşturulamaz.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Menü yoksa ve ileri tarih ise bilgi */}
+      {!isLoadingMenu && menuStatus === 'empty' && isFutureMonth && (
+        <div className="rounded-lg border border-purple-300 bg-purple-50 dark:bg-purple-900/20 dark:border-purple-700 p-4">
+          <div className="flex items-center gap-3">
+            <Calendar className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+            <p className="text-purple-800 dark:text-purple-300">
+              {selectedMonthLabel} {selectedYear} için henüz menü oluşturulamaz. Sadece mevcut ay ve sonraki ay için menü düzenleyebilirsiniz.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Değişiklik Uyarısı */}
+      {hasUnsavedChanges && (
+        <div className="rounded-lg border border-orange-300 bg-orange-50 dark:bg-orange-900/20 dark:border-orange-800 p-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <h3 className="font-semibold text-orange-800 dark:text-orange-300 mb-2">
+                Kaydedilmemiş Değişiklikler ({pendingChanges.length})
+              </h3>
+              <div className="space-y-2 max-h-40 overflow-y-auto">
+                {pendingChanges.map((change, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between text-sm bg-white dark:bg-gray-800 rounded p-2 border border-orange-200 dark:border-orange-700"
+                  >
+                    <div className="flex-1">
+                      <span className="font-medium text-orange-700 dark:text-orange-300">
+                        {change.isVegan ? '🥗 Vegan' : '🍖 Normal'} - {change.dateString} ({change.dayLabel})
+                      </span>
+                      <span className="mx-2 text-gray-500">|</span>
+                      <span className="text-gray-600 dark:text-gray-400">{change.category}:</span>
+                      <span className="ml-2">
+                        <span className="line-through text-red-500">{change.oldValue}</span>
+                        <span className="mx-1">→</span>
+                        <span className="text-green-600 font-medium">{change.newValue}</span>
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => removeChange(idx)}
+                      className="ml-2 p-1 hover:bg-orange-100 dark:hover:bg-orange-800 rounded"
+                      title="Değişikliği geri al"
+                    >
+                      <X className="h-4 w-4 text-orange-600" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={clearAllChanges}
+                  className="text-orange-700 border-orange-300 hover:bg-orange-100"
+                >
+                  Tüm Değişiklikleri Geri Al
+                </Button>
+              </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      )}
 
-      {/* Tabs for Normal and Vegan Menu */}
+      {/* Düzenleme modu kapalı uyarısı */}
+      {menuStatus === 'saved' && !isEditMode && (
+        <div className="rounded-lg border border-blue-300 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800 p-4">
+          <div className="flex items-center gap-3">
+            <Lock className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <p className="text-blue-800 dark:text-blue-300">
+              Menü kilitli. Değişiklik yapmak için <strong>Düzenle</strong> butonuna tıklayın.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Tabs for Normal and Vegan Menu - sadece menü varsa veya oluşturma modundaysa göster */}
+      {(menuStatus === 'saved' || isCreatingNew) && (
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2 mb-4">
           <TabsTrigger value="normal" className="text-base">
@@ -802,6 +1422,7 @@ export default function MenusPage() {
                                     onChange={(value) => updateMenuItem(weekIndex, day.key, rowIdx, value)}
                                     placeholder={category}
                                     categoryFilter={getCategoryByIndex(rowIdx)}
+                                    disabled={!isEditMode || isPastMonth}
                                   />
                                 </td>
                               ))}
@@ -882,6 +1503,7 @@ export default function MenusPage() {
                                     onChange={(value) => updateVeganMenuItem(weekIndex, day.key, rowIdx, value)}
                                     placeholder={category}
                                     categoryFilter={getCategoryByIndex(rowIdx)}
+                                    disabled={!isEditMode || isPastMonth}
                                   />
                                 </td>
                               ))}
@@ -912,7 +1534,7 @@ export default function MenusPage() {
           </Card>
         </TabsContent>
       </Tabs>
-
+      )}
       {/* Notlar */}
       <Card className="dark:bg-gray-900 dark:border-gray-800">
         <CardContent className="pt-4">
@@ -924,6 +1546,16 @@ export default function MenusPage() {
           </p>
         </CardContent>
       </Card>
+
+      {/* Toast bildirimi */}
+      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50">
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          isVisible={toast.isVisible}
+          onClose={hideToast}
+        />
+      </div>
     </div>
   );
 }

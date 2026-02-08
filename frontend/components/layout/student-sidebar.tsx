@@ -29,8 +29,11 @@ const navItems: NavItem[] = [
   },
   {
     label: 'Ders Kayıt',
-    href: '/student/enrollment',
     icon: BookOpen,
+    children: [
+      { label: 'Ders Kaydı', href: '/student/enrollment' },
+      { label: 'Reddedilmeler', href: '/student/enrollment/rejections' },
+    ],
   },
   {
     label: 'Yoklama',
@@ -48,6 +51,7 @@ const navItems: NavItem[] = [
     children: [
       { label: 'Randevu Al', href: '/student/cafeteria' },
       { label: 'Geçmiş Randevularım', href: '/student/cafeteria/history' },
+      { label: 'Menü', href: '/student/cafeteria/menu' },
     ],
   },
 ];
@@ -74,13 +78,13 @@ export function StudentSidebar() {
   };
 
   return (
-    <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 transition-colors">
+    <aside className="fixed left-0 top-0 z-40 h-screen w-52 border-r border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 transition-colors">
       {/* Logo */}
-      <div className="flex h-16 items-center gap-2 border-b border-gray-200 px-6 dark:border-gray-800">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white font-bold">
+      <div className="flex h-16 items-center gap-2 border-b border-gray-200 px-4 dark:border-gray-800">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-white text-sm font-bold shrink-0">
           Ö
         </div>
-        <span className="text-lg font-bold text-gray-900 dark:text-white">
+        <span className="text-base font-bold text-gray-900 dark:text-white truncate">
           Öğrenci Portalı
         </span>
       </div>

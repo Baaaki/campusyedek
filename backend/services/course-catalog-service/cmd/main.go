@@ -173,37 +173,48 @@ func setupRouter(catalogHandler *handler.CatalogHandler, semesterHandler *handle
 		})
 	})
 
-	// API routes - All routes are protected via Traefik forward-auth
-	// User info is extracted from X-User-* headers set by Traefik
+	// API routes
 	api := router.Group("/api")
-	api.Use(sharedMiddleware.ExtractUserFromHeaders())
 	{
-		// Catalog routes
+		// ===== PUBLIC ROUTES (No authentication required) =====
+		// These routes are accessible without Traefik forward-auth
 		catalog := api.Group("/catalog")
 		{
-			// Read operations - any authenticated user
+			// Public read operations - no auth required
 			catalog.GET("/courses", catalogHandler.ListCourses)
 			catalog.GET("/courses/:course_code", catalogHandler.GetCourseByCourseCode)
-
-			// Admin only routes
-			catalog.POST("/courses", sharedMiddleware.RequireAdmin(), catalogHandler.CreateCourse)
-			catalog.PUT("/courses/:course_code", sharedMiddleware.RequireAdmin(), catalogHandler.UpdateCourse)
 		}
 
-		// Semester routes
-		semesters := api.Group("/semesters")
+		// ===== PROTECTED ROUTES (Authentication required via Traefik) =====
+		// User info is extracted from X-User-* headers set by Traefik forward-auth
+		protectedApi := api.Group("")
+		protectedApi.Use(sharedMiddleware.ExtractUserFromHeaders())
 		{
-			// Semester course routes
-			semesterCourses := semesters.Group("/:semester_id/courses")
+			// Catalog admin routes
+			catalogAdmin := protectedApi.Group("/catalog")
 			{
-				// Read operations - any authenticated user
-				semesterCourses.GET("", semesterHandler.ListSemesterCourses)
-				semesterCourses.GET("/:course_id", semesterHandler.GetSemesterCourseByID)
+				catalogAdmin.POST("/courses", sharedMiddleware.RequireAdmin(), catalogHandler.CreateCourse)
+				catalogAdmin.PUT("/courses/:course_code", sharedMiddleware.RequireAdmin(), catalogHandler.UpdateCourse)
+			}
 
-				// Admin only routes
-				semesterCourses.POST("", sharedMiddleware.RequireAdmin(), semesterHandler.CreateSemesterCourse)
-				semesterCourses.PUT("/:course_id", sharedMiddleware.RequireAdmin(), semesterHandler.UpdateSemesterCourse)
-				semesterCourses.DELETE("/:course_id", sharedMiddleware.RequireAdmin(), semesterHandler.DeleteSemesterCourse)
+			// Semester routes - all require authentication
+			semesters := protectedApi.Group("/semesters")
+			{
+				// Teacher routes
+				semesters.GET("/teacher/courses", sharedMiddleware.RequireRole("teacher"), semesterHandler.GetTeacherCourses)
+
+				// Semester course routes
+				semesterCourses := semesters.Group("/:semester_id/courses")
+				{
+					// Read operations - any authenticated user
+					semesterCourses.GET("", semesterHandler.ListSemesterCourses)
+					semesterCourses.GET("/:course_id", semesterHandler.GetSemesterCourseByID)
+
+					// Admin only routes
+					semesterCourses.POST("", sharedMiddleware.RequireAdmin(), semesterHandler.CreateSemesterCourse)
+					semesterCourses.PUT("/:course_id", sharedMiddleware.RequireAdmin(), semesterHandler.UpdateSemesterCourse)
+					semesterCourses.DELETE("/:course_id", sharedMiddleware.RequireAdmin(), semesterHandler.DeleteSemesterCourse)
+				}
 			}
 		}
 	}

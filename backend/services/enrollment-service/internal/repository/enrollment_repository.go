@@ -129,14 +129,14 @@ func (r *EnrollmentRepository) GetEnrollmentProgramByStudentAndSemester(ctx cont
 
 func (r *EnrollmentRepository) GetEnrollmentProgramsByStudent(ctx context.Context, studentID uuid.UUID, semester *string, status *string) ([]db.EnrollmentProgram, error) {
 	var semesterParam string
-	var statusParam db.EnrollmentStatusEnum
+	var statusParam string
 
 	if semester != nil {
 		semesterParam = *semester
 	}
 
 	if status != nil {
-		statusParam = db.EnrollmentStatusEnum(*status)
+		statusParam = *status
 	}
 
 	programs, err := r.queries.GetEnrollmentProgramsByStudent(ctx, db.GetEnrollmentProgramsByStudentParams{
@@ -158,7 +158,7 @@ func (r *EnrollmentRepository) GetCoursesByProgramID(ctx context.Context, progra
 	return courses, nil
 }
 
-func (r *EnrollmentRepository) GetPendingProgramsByAdvisor(ctx context.Context, advisorID uuid.UUID) ([]db.EnrollmentProgram, error) {
+func (r *EnrollmentRepository) GetPendingProgramsByAdvisor(ctx context.Context, advisorID uuid.UUID) ([]db.GetPendingProgramsByAdvisorRow, error) {
 	programs, err := r.queries.GetPendingProgramsByAdvisor(ctx, utils.UUIDToPgtypeNullable(advisorID))
 	if err != nil {
 		return nil, fmt.Errorf("%w: failed to get pending programs: %v", sharedErrors.ErrQueryFailed, err)

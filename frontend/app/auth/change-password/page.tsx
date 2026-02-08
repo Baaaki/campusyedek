@@ -30,7 +30,7 @@ export default function ChangePasswordPage() {
 
     try {
       await authApi.post("change-password", {
-        json: { current_password: currentPassword, new_password: newPassword },
+        json: { old_password: currentPassword, new_password: newPassword },
       });
 
       alert("Şifreniz başarıyla değiştirildi. Lütfen tekrar giriş yapın.");

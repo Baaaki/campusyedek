@@ -17,18 +17,26 @@ FROM course_catalog
 WHERE ($1::text IS NULL OR faculty = $1)
   AND ($2::text IS NULL OR department = $2)
   AND ($3::course_type_enum IS NULL OR course_type = $3)
-  AND ($4::course_catalog_status_enum IS NULL OR status = $4)
-  AND ($5::SMALLINT IS NULL OR class_level = $5)
-  AND ($6::text IS NULL OR name ILIKE '%' || $6 || '%' OR course_code ILIKE '%' || $6 || '%')
+  AND ($4::course_category_enum IS NULL OR course_category = $4)
+  AND ($5::education_level_enum IS NULL OR education_level = $5)
+  AND ($6::course_catalog_status_enum IS NULL OR status = $6)
+  AND ($7::SMALLINT IS NULL OR class_level = $7)
+  AND ($8::SMALLINT IS NULL OR semester = $8)
+  AND ($9::text IS NULL OR language = $9)
+  AND ($10::text IS NULL OR name ILIKE '%' || $10 || '%' OR course_code ILIKE '%' || $10 || '%')
 `
 
 type CountCoursesParams struct {
-	Faculty    pgtype.Text                 `json:"faculty"`
-	Department pgtype.Text                 `json:"department"`
-	CourseType NullCourseTypeEnum          `json:"course_type"`
-	Status     NullCourseCatalogStatusEnum `json:"status"`
-	ClassLevel pgtype.Int2                 `json:"class_level"`
-	Search     pgtype.Text                 `json:"search"`
+	Faculty        pgtype.Text                 `json:"faculty"`
+	Department     pgtype.Text                 `json:"department"`
+	CourseType     NullCourseTypeEnum          `json:"course_type"`
+	CourseCategory NullCourseCategoryEnum      `json:"course_category"`
+	EducationLevel NullEducationLevelEnum      `json:"education_level"`
+	Status         NullCourseCatalogStatusEnum `json:"status"`
+	ClassLevel     pgtype.Int2                 `json:"class_level"`
+	Semester       pgtype.Int2                 `json:"semester"`
+	Language       pgtype.Text                 `json:"language"`
+	Search         pgtype.Text                 `json:"search"`
 }
 
 func (q *Queries) CountCourses(ctx context.Context, arg CountCoursesParams) (int64, error) {
@@ -36,8 +44,12 @@ func (q *Queries) CountCourses(ctx context.Context, arg CountCoursesParams) (int
 		arg.Faculty,
 		arg.Department,
 		arg.CourseType,
+		arg.CourseCategory,
+		arg.EducationLevel,
 		arg.Status,
 		arg.ClassLevel,
+		arg.Semester,
+		arg.Language,
 		arg.Search,
 	)
 	var count int64
@@ -47,31 +59,49 @@ func (q *Queries) CountCourses(ctx context.Context, arg CountCoursesParams) (int
 
 const createCourse = `-- name: CreateCourse :one
 INSERT INTO course_catalog (
-    course_code, name, faculty, department, class_level, credits,
-    theoretical_hours, practical_hours, course_type, prerequisites,
-    description, learning_outcomes, syllabus, status
+    course_code, name, faculty, department, offering_unit,
+    class_level, semester, credits, ects, theoretical_hours, practical_hours, lab_hours,
+    course_type, course_category, education_level, teaching_type, language,
+    prerequisites, coordinator, purpose, description, learning_outcomes,
+    learning_outcomes_list, weekly_topics, recommended_sources, syllabus, status
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-RETURNING id, course_code, name, faculty, department, class_level, credits,
-          theoretical_hours, practical_hours, course_type, prerequisites,
-          description, learning_outcomes, syllabus, status, created_at, updated_at
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27)
+RETURNING id, course_code, name, faculty, department, offering_unit,
+          class_level, semester, credits, ects, theoretical_hours, practical_hours, lab_hours,
+          course_type, course_category, education_level, teaching_type, language,
+          prerequisites, coordinator, purpose, description, learning_outcomes,
+          learning_outcomes_list, weekly_topics, recommended_sources, syllabus,
+          status, created_at, updated_at
 `
 
 type CreateCourseParams struct {
-	CourseCode       string                      `json:"course_code"`
-	Name             string                      `json:"name"`
-	Faculty          string                      `json:"faculty"`
-	Department       string                      `json:"department"`
-	ClassLevel       int16                       `json:"class_level"`
-	Credits          int16                       `json:"credits"`
-	TheoreticalHours int16                       `json:"theoretical_hours"`
-	PracticalHours   int16                       `json:"practical_hours"`
-	CourseType       CourseTypeEnum              `json:"course_type"`
-	Prerequisites    []byte                      `json:"prerequisites"`
-	Description      pgtype.Text                 `json:"description"`
-	LearningOutcomes pgtype.Text                 `json:"learning_outcomes"`
-	Syllabus         pgtype.Text                 `json:"syllabus"`
-	Status           NullCourseCatalogStatusEnum `json:"status"`
+	CourseCode           string                  `json:"course_code"`
+	Name                 string                  `json:"name"`
+	Faculty              string                  `json:"faculty"`
+	Department           string                  `json:"department"`
+	OfferingUnit         pgtype.Text             `json:"offering_unit"`
+	ClassLevel           int16                   `json:"class_level"`
+	Semester             pgtype.Int2             `json:"semester"`
+	Credits              int16                   `json:"credits"`
+	Ects                 pgtype.Int2             `json:"ects"`
+	TheoreticalHours     int16                   `json:"theoretical_hours"`
+	PracticalHours       int16                   `json:"practical_hours"`
+	LabHours             int16                   `json:"lab_hours"`
+	CourseType           CourseTypeEnum          `json:"course_type"`
+	CourseCategory       CourseCategoryEnum      `json:"course_category"`
+	EducationLevel       EducationLevelEnum      `json:"education_level"`
+	TeachingType         TeachingTypeEnum        `json:"teaching_type"`
+	Language             string                  `json:"language"`
+	Prerequisites        []byte                  `json:"prerequisites"`
+	Coordinator          []byte                  `json:"coordinator"`
+	Purpose              pgtype.Text             `json:"purpose"`
+	Description          pgtype.Text             `json:"description"`
+	LearningOutcomes     pgtype.Text             `json:"learning_outcomes"`
+	LearningOutcomesList []byte                  `json:"learning_outcomes_list"`
+	WeeklyTopics         []byte                  `json:"weekly_topics"`
+	RecommendedSources   []byte                  `json:"recommended_sources"`
+	Syllabus             pgtype.Text             `json:"syllabus"`
+	Status               CourseCatalogStatusEnum `json:"status"`
 }
 
 func (q *Queries) CreateCourse(ctx context.Context, arg CreateCourseParams) (CourseCatalog, error) {
@@ -80,14 +110,27 @@ func (q *Queries) CreateCourse(ctx context.Context, arg CreateCourseParams) (Cou
 		arg.Name,
 		arg.Faculty,
 		arg.Department,
+		arg.OfferingUnit,
 		arg.ClassLevel,
+		arg.Semester,
 		arg.Credits,
+		arg.Ects,
 		arg.TheoreticalHours,
 		arg.PracticalHours,
+		arg.LabHours,
 		arg.CourseType,
+		arg.CourseCategory,
+		arg.EducationLevel,
+		arg.TeachingType,
+		arg.Language,
 		arg.Prerequisites,
+		arg.Coordinator,
+		arg.Purpose,
 		arg.Description,
 		arg.LearningOutcomes,
+		arg.LearningOutcomesList,
+		arg.WeeklyTopics,
+		arg.RecommendedSources,
 		arg.Syllabus,
 		arg.Status,
 	)
@@ -98,14 +141,27 @@ func (q *Queries) CreateCourse(ctx context.Context, arg CreateCourseParams) (Cou
 		&i.Name,
 		&i.Faculty,
 		&i.Department,
+		&i.OfferingUnit,
 		&i.ClassLevel,
+		&i.Semester,
 		&i.Credits,
+		&i.Ects,
 		&i.TheoreticalHours,
 		&i.PracticalHours,
+		&i.LabHours,
 		&i.CourseType,
+		&i.CourseCategory,
+		&i.EducationLevel,
+		&i.TeachingType,
+		&i.Language,
 		&i.Prerequisites,
+		&i.Coordinator,
+		&i.Purpose,
 		&i.Description,
 		&i.LearningOutcomes,
+		&i.LearningOutcomesList,
+		&i.WeeklyTopics,
+		&i.RecommendedSources,
 		&i.Syllabus,
 		&i.Status,
 		&i.CreatedAt,
@@ -115,9 +171,12 @@ func (q *Queries) CreateCourse(ctx context.Context, arg CreateCourseParams) (Cou
 }
 
 const getCourseByCourseCode = `-- name: GetCourseByCourseCode :one
-SELECT id, course_code, name, faculty, department, class_level, credits,
-       theoretical_hours, practical_hours, course_type, prerequisites,
-       description, learning_outcomes, syllabus, status, created_at, updated_at
+SELECT id, course_code, name, faculty, department, offering_unit,
+       class_level, semester, credits, ects, theoretical_hours, practical_hours, lab_hours,
+       course_type, course_category, education_level, teaching_type, language,
+       prerequisites, coordinator, purpose, description, learning_outcomes,
+       learning_outcomes_list, weekly_topics, recommended_sources, syllabus,
+       status, created_at, updated_at
 FROM course_catalog
 WHERE course_code = $1
 LIMIT 1
@@ -132,14 +191,27 @@ func (q *Queries) GetCourseByCourseCode(ctx context.Context, courseCode string) 
 		&i.Name,
 		&i.Faculty,
 		&i.Department,
+		&i.OfferingUnit,
 		&i.ClassLevel,
+		&i.Semester,
 		&i.Credits,
+		&i.Ects,
 		&i.TheoreticalHours,
 		&i.PracticalHours,
+		&i.LabHours,
 		&i.CourseType,
+		&i.CourseCategory,
+		&i.EducationLevel,
+		&i.TeachingType,
+		&i.Language,
 		&i.Prerequisites,
+		&i.Coordinator,
+		&i.Purpose,
 		&i.Description,
 		&i.LearningOutcomes,
+		&i.LearningOutcomesList,
+		&i.WeeklyTopics,
+		&i.RecommendedSources,
 		&i.Syllabus,
 		&i.Status,
 		&i.CreatedAt,
@@ -149,9 +221,12 @@ func (q *Queries) GetCourseByCourseCode(ctx context.Context, courseCode string) 
 }
 
 const getCourseByID = `-- name: GetCourseByID :one
-SELECT id, course_code, name, faculty, department, class_level, credits,
-       theoretical_hours, practical_hours, course_type, prerequisites,
-       description, learning_outcomes, syllabus, status, created_at, updated_at
+SELECT id, course_code, name, faculty, department, offering_unit,
+       class_level, semester, credits, ects, theoretical_hours, practical_hours, lab_hours,
+       course_type, course_category, education_level, teaching_type, language,
+       prerequisites, coordinator, purpose, description, learning_outcomes,
+       learning_outcomes_list, weekly_topics, recommended_sources, syllabus,
+       status, created_at, updated_at
 FROM course_catalog
 WHERE id = $1
 LIMIT 1
@@ -166,14 +241,27 @@ func (q *Queries) GetCourseByID(ctx context.Context, id pgtype.UUID) (CourseCata
 		&i.Name,
 		&i.Faculty,
 		&i.Department,
+		&i.OfferingUnit,
 		&i.ClassLevel,
+		&i.Semester,
 		&i.Credits,
+		&i.Ects,
 		&i.TheoreticalHours,
 		&i.PracticalHours,
+		&i.LabHours,
 		&i.CourseType,
+		&i.CourseCategory,
+		&i.EducationLevel,
+		&i.TeachingType,
+		&i.Language,
 		&i.Prerequisites,
+		&i.Coordinator,
+		&i.Purpose,
 		&i.Description,
 		&i.LearningOutcomes,
+		&i.LearningOutcomesList,
+		&i.WeeklyTopics,
+		&i.RecommendedSources,
 		&i.Syllabus,
 		&i.Status,
 		&i.CreatedAt,
@@ -221,43 +309,61 @@ func (q *Queries) GetCoursesByIDs(ctx context.Context, dollar_1 []pgtype.UUID) (
 }
 
 const listCourses = `-- name: ListCourses :many
-SELECT id, course_code, name, faculty, department, class_level, credits,
-       theoretical_hours, practical_hours, course_type, prerequisites, status
+SELECT id, course_code, name, faculty, department, offering_unit,
+       class_level, semester, credits, ects, theoretical_hours, practical_hours, lab_hours,
+       course_type, course_category, education_level, teaching_type, language,
+       prerequisites, status
 FROM course_catalog
 WHERE ($1::text IS NULL OR faculty = $1)
   AND ($2::text IS NULL OR department = $2)
   AND ($3::course_type_enum IS NULL OR course_type = $3)
-  AND ($4::course_catalog_status_enum IS NULL OR status = $4)
-  AND ($5::SMALLINT IS NULL OR class_level = $5)
-  AND ($6::text IS NULL OR name ILIKE '%' || $6 || '%' OR course_code ILIKE '%' || $6 || '%')
+  AND ($4::course_category_enum IS NULL OR course_category = $4)
+  AND ($5::education_level_enum IS NULL OR education_level = $5)
+  AND ($6::course_catalog_status_enum IS NULL OR status = $6)
+  AND ($7::SMALLINT IS NULL OR class_level = $7)
+  AND ($8::SMALLINT IS NULL OR semester = $8)
+  AND ($9::text IS NULL OR language = $9)
+  AND ($10::text IS NULL OR name ILIKE '%' || $10 || '%' OR course_code ILIKE '%' || $10 || '%')
 ORDER BY course_code
-LIMIT $8 OFFSET $7
+LIMIT $12 OFFSET $11
 `
 
 type ListCoursesParams struct {
-	Faculty    pgtype.Text                 `json:"faculty"`
-	Department pgtype.Text                 `json:"department"`
-	CourseType NullCourseTypeEnum          `json:"course_type"`
-	Status     NullCourseCatalogStatusEnum `json:"status"`
-	ClassLevel pgtype.Int2                 `json:"class_level"`
-	Search     pgtype.Text                 `json:"search"`
-	Offset     int32                       `json:"offset"`
-	Limit      int32                       `json:"limit"`
+	Faculty        pgtype.Text                 `json:"faculty"`
+	Department     pgtype.Text                 `json:"department"`
+	CourseType     NullCourseTypeEnum          `json:"course_type"`
+	CourseCategory NullCourseCategoryEnum      `json:"course_category"`
+	EducationLevel NullEducationLevelEnum      `json:"education_level"`
+	Status         NullCourseCatalogStatusEnum `json:"status"`
+	ClassLevel     pgtype.Int2                 `json:"class_level"`
+	Semester       pgtype.Int2                 `json:"semester"`
+	Language       pgtype.Text                 `json:"language"`
+	Search         pgtype.Text                 `json:"search"`
+	Offset         int32                       `json:"offset"`
+	Limit          int32                       `json:"limit"`
 }
 
 type ListCoursesRow struct {
-	ID               pgtype.UUID                 `json:"id"`
-	CourseCode       string                      `json:"course_code"`
-	Name             string                      `json:"name"`
-	Faculty          string                      `json:"faculty"`
-	Department       string                      `json:"department"`
-	ClassLevel       int16                       `json:"class_level"`
-	Credits          int16                       `json:"credits"`
-	TheoreticalHours int16                       `json:"theoretical_hours"`
-	PracticalHours   int16                       `json:"practical_hours"`
-	CourseType       CourseTypeEnum              `json:"course_type"`
-	Prerequisites    []byte                      `json:"prerequisites"`
-	Status           NullCourseCatalogStatusEnum `json:"status"`
+	ID               pgtype.UUID             `json:"id"`
+	CourseCode       string                  `json:"course_code"`
+	Name             string                  `json:"name"`
+	Faculty          string                  `json:"faculty"`
+	Department       string                  `json:"department"`
+	OfferingUnit     pgtype.Text             `json:"offering_unit"`
+	ClassLevel       int16                   `json:"class_level"`
+	Semester         pgtype.Int2             `json:"semester"`
+	Credits          int16                   `json:"credits"`
+	Ects             pgtype.Int2             `json:"ects"`
+	TheoreticalHours int16                   `json:"theoretical_hours"`
+	PracticalHours   int16                   `json:"practical_hours"`
+	LabHours         int16                   `json:"lab_hours"`
+	CourseType       CourseTypeEnum          `json:"course_type"`
+	CourseCategory   CourseCategoryEnum      `json:"course_category"`
+	EducationLevel   EducationLevelEnum      `json:"education_level"`
+	TeachingType     TeachingTypeEnum        `json:"teaching_type"`
+	Language         string                  `json:"language"`
+	Prerequisites    []byte                  `json:"prerequisites"`
+	Status           CourseCatalogStatusEnum `json:"status"`
 }
 
 func (q *Queries) ListCourses(ctx context.Context, arg ListCoursesParams) ([]ListCoursesRow, error) {
@@ -265,8 +371,12 @@ func (q *Queries) ListCourses(ctx context.Context, arg ListCoursesParams) ([]Lis
 		arg.Faculty,
 		arg.Department,
 		arg.CourseType,
+		arg.CourseCategory,
+		arg.EducationLevel,
 		arg.Status,
 		arg.ClassLevel,
+		arg.Semester,
+		arg.Language,
 		arg.Search,
 		arg.Offset,
 		arg.Limit,
@@ -284,11 +394,19 @@ func (q *Queries) ListCourses(ctx context.Context, arg ListCoursesParams) ([]Lis
 			&i.Name,
 			&i.Faculty,
 			&i.Department,
+			&i.OfferingUnit,
 			&i.ClassLevel,
+			&i.Semester,
 			&i.Credits,
+			&i.Ects,
 			&i.TheoreticalHours,
 			&i.PracticalHours,
+			&i.LabHours,
 			&i.CourseType,
+			&i.CourseCategory,
+			&i.EducationLevel,
+			&i.TeachingType,
+			&i.Language,
 			&i.Prerequisites,
 			&i.Status,
 		); err != nil {
@@ -307,38 +425,67 @@ UPDATE course_catalog
 SET name = COALESCE($2, name),
     faculty = COALESCE($3, faculty),
     department = COALESCE($4, department),
-    class_level = COALESCE($5, class_level),
-    credits = COALESCE($6, credits),
-    theoretical_hours = COALESCE($7, theoretical_hours),
-    practical_hours = COALESCE($8, practical_hours),
-    course_type = COALESCE($9, course_type),
-    prerequisites = COALESCE($10, prerequisites),
-    description = COALESCE($11, description),
-    learning_outcomes = COALESCE($12, learning_outcomes),
-    syllabus = COALESCE($13, syllabus),
-    status = COALESCE($14, status),
+    offering_unit = COALESCE($5, offering_unit),
+    class_level = COALESCE($6, class_level),
+    semester = COALESCE($7, semester),
+    credits = COALESCE($8, credits),
+    ects = COALESCE($9, ects),
+    theoretical_hours = COALESCE($10, theoretical_hours),
+    practical_hours = COALESCE($11, practical_hours),
+    lab_hours = COALESCE($12, lab_hours),
+    course_type = COALESCE($13, course_type),
+    course_category = COALESCE($14, course_category),
+    education_level = COALESCE($15, education_level),
+    teaching_type = COALESCE($16, teaching_type),
+    language = COALESCE($17, language),
+    prerequisites = COALESCE($18, prerequisites),
+    coordinator = COALESCE($19, coordinator),
+    purpose = COALESCE($20, purpose),
+    description = COALESCE($21, description),
+    learning_outcomes = COALESCE($22, learning_outcomes),
+    learning_outcomes_list = COALESCE($23, learning_outcomes_list),
+    weekly_topics = COALESCE($24, weekly_topics),
+    recommended_sources = COALESCE($25, recommended_sources),
+    syllabus = COALESCE($26, syllabus),
+    status = COALESCE($27, status),
     updated_at = NOW()
 WHERE course_code = $1
-RETURNING id, course_code, name, faculty, department, class_level, credits,
-          theoretical_hours, practical_hours, course_type, prerequisites,
-          description, learning_outcomes, syllabus, status, created_at, updated_at
+RETURNING id, course_code, name, faculty, department, offering_unit,
+          class_level, semester, credits, ects, theoretical_hours, practical_hours, lab_hours,
+          course_type, course_category, education_level, teaching_type, language,
+          prerequisites, coordinator, purpose, description, learning_outcomes,
+          learning_outcomes_list, weekly_topics, recommended_sources, syllabus,
+          status, created_at, updated_at
 `
 
 type UpdateCourseParams struct {
-	CourseCode       string                      `json:"course_code"`
-	Name             pgtype.Text                 `json:"name"`
-	Faculty          pgtype.Text                 `json:"faculty"`
-	Department       pgtype.Text                 `json:"department"`
-	ClassLevel       pgtype.Int2                 `json:"class_level"`
-	Credits          pgtype.Int2                 `json:"credits"`
-	TheoreticalHours pgtype.Int2                 `json:"theoretical_hours"`
-	PracticalHours   pgtype.Int2                 `json:"practical_hours"`
-	CourseType       NullCourseTypeEnum          `json:"course_type"`
-	Prerequisites    []byte                      `json:"prerequisites"`
-	Description      pgtype.Text                 `json:"description"`
-	LearningOutcomes pgtype.Text                 `json:"learning_outcomes"`
-	Syllabus         pgtype.Text                 `json:"syllabus"`
-	Status           NullCourseCatalogStatusEnum `json:"status"`
+	CourseCode           string                      `json:"course_code"`
+	Name                 pgtype.Text                 `json:"name"`
+	Faculty              pgtype.Text                 `json:"faculty"`
+	Department           pgtype.Text                 `json:"department"`
+	OfferingUnit         pgtype.Text                 `json:"offering_unit"`
+	ClassLevel           pgtype.Int2                 `json:"class_level"`
+	Semester             pgtype.Int2                 `json:"semester"`
+	Credits              pgtype.Int2                 `json:"credits"`
+	Ects                 pgtype.Int2                 `json:"ects"`
+	TheoreticalHours     pgtype.Int2                 `json:"theoretical_hours"`
+	PracticalHours       pgtype.Int2                 `json:"practical_hours"`
+	LabHours             pgtype.Int2                 `json:"lab_hours"`
+	CourseType           NullCourseTypeEnum          `json:"course_type"`
+	CourseCategory       NullCourseCategoryEnum      `json:"course_category"`
+	EducationLevel       NullEducationLevelEnum      `json:"education_level"`
+	TeachingType         NullTeachingTypeEnum        `json:"teaching_type"`
+	Language             pgtype.Text                 `json:"language"`
+	Prerequisites        []byte                      `json:"prerequisites"`
+	Coordinator          []byte                      `json:"coordinator"`
+	Purpose              pgtype.Text                 `json:"purpose"`
+	Description          pgtype.Text                 `json:"description"`
+	LearningOutcomes     pgtype.Text                 `json:"learning_outcomes"`
+	LearningOutcomesList []byte                      `json:"learning_outcomes_list"`
+	WeeklyTopics         []byte                      `json:"weekly_topics"`
+	RecommendedSources   []byte                      `json:"recommended_sources"`
+	Syllabus             pgtype.Text                 `json:"syllabus"`
+	Status               NullCourseCatalogStatusEnum `json:"status"`
 }
 
 func (q *Queries) UpdateCourse(ctx context.Context, arg UpdateCourseParams) (CourseCatalog, error) {
@@ -347,14 +494,27 @@ func (q *Queries) UpdateCourse(ctx context.Context, arg UpdateCourseParams) (Cou
 		arg.Name,
 		arg.Faculty,
 		arg.Department,
+		arg.OfferingUnit,
 		arg.ClassLevel,
+		arg.Semester,
 		arg.Credits,
+		arg.Ects,
 		arg.TheoreticalHours,
 		arg.PracticalHours,
+		arg.LabHours,
 		arg.CourseType,
+		arg.CourseCategory,
+		arg.EducationLevel,
+		arg.TeachingType,
+		arg.Language,
 		arg.Prerequisites,
+		arg.Coordinator,
+		arg.Purpose,
 		arg.Description,
 		arg.LearningOutcomes,
+		arg.LearningOutcomesList,
+		arg.WeeklyTopics,
+		arg.RecommendedSources,
 		arg.Syllabus,
 		arg.Status,
 	)
@@ -365,14 +525,27 @@ func (q *Queries) UpdateCourse(ctx context.Context, arg UpdateCourseParams) (Cou
 		&i.Name,
 		&i.Faculty,
 		&i.Department,
+		&i.OfferingUnit,
 		&i.ClassLevel,
+		&i.Semester,
 		&i.Credits,
+		&i.Ects,
 		&i.TheoreticalHours,
 		&i.PracticalHours,
+		&i.LabHours,
 		&i.CourseType,
+		&i.CourseCategory,
+		&i.EducationLevel,
+		&i.TeachingType,
+		&i.Language,
 		&i.Prerequisites,
+		&i.Coordinator,
+		&i.Purpose,
 		&i.Description,
 		&i.LearningOutcomes,
+		&i.LearningOutcomesList,
+		&i.WeeklyTopics,
+		&i.RecommendedSources,
 		&i.Syllabus,
 		&i.Status,
 		&i.CreatedAt,

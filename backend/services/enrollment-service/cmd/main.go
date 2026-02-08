@@ -214,6 +214,7 @@ func setupRouter(enrollmentHandler *handler.EnrollmentHandler, env string) *gin.
 		{
 			student.GET("/available-courses", enrollmentHandler.GetAvailableCourses)
 			student.POST("/programs", enrollmentHandler.CreateEnrollmentProgram)
+			student.DELETE("/programs", enrollmentHandler.CancelMyEnrollment)
 			student.GET("/my-enrollments", enrollmentHandler.GetMyEnrollments)
 			student.GET("/latest-rejection", enrollmentHandler.GetLatestRejection)
 			student.GET("/my-rejections", enrollmentHandler.GetMyRejections)
@@ -268,9 +269,9 @@ func setupRabbitMQ(conn *rabbitmq.Connection) error {
 
 	// Bind to course-catalog exchange
 	if err := channel.QueueBind(
-		queueName,             // queue name
-		"course.*",            // routing key pattern
-		"course-catalog.events", // exchange
+		queueName,       // queue name
+		"course.#",      // routing key pattern (# matches multiple words like course.semester.created)
+		"course.events", // exchange
 		false,
 		nil,
 	); err != nil {
@@ -290,7 +291,7 @@ func setupRabbitMQ(conn *rabbitmq.Connection) error {
 
 	logger.Info("RabbitMQ queue bindings created",
 		zap.String("queue", queueName),
-		zap.Strings("bindings", []string{"course-catalog.events", "student.events"}),
+		zap.Strings("bindings", []string{"course.events", "student.events"}),
 	)
 
 	return nil

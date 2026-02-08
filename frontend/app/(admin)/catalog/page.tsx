@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { mockFaculties, mockCourseCatalog } from "@/mock_data/catalog";
+import { mockFaculties } from "@/mock_data/catalog";
 import type { CourseCatalog, Department, Faculty } from "@/lib/types";
+import { catalogService } from "@/lib/services/catalog-service";
 import {
   Dialog,
   DialogContent,
@@ -43,6 +44,12 @@ export default function CourseCatalogPage() {
   const [selectedCourse, setSelectedCourse] = useState<CourseCatalog | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
+  // API state
+  const [departmentCourses, setDepartmentCourses] = useState<CourseCatalog[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [courseCounts, setCourseCounts] = useState<Record<string, number>>({});
+
   // Toggle faculty accordion
   const toggleFaculty = (facultyId: string) => {
     setExpandedFaculties(prev =>
@@ -52,10 +59,47 @@ export default function CourseCatalogPage() {
     );
   };
 
-  // Get courses for selected department
-  const getDepartmentCourses = (departmentName: string) => {
-    return mockCourseCatalog.filter(course => course.department === departmentName);
-  };
+  // Fetch courses when department is selected
+  const fetchDepartmentCourses = useCallback(async (departmentName: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const courses = await catalogService.getCoursesByDepartment(departmentName);
+      setDepartmentCourses(courses);
+    } catch (err) {
+      console.error('Failed to fetch courses:', err);
+      setError('Dersler yüklenirken bir hata oluştu.');
+      setDepartmentCourses([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Fetch course count for a department (for display in accordion)
+  const fetchCourseCounts = useCallback(async () => {
+    try {
+      const { courses } = await catalogService.listCourses({ limit: 100 }); // Backend max is 100
+      const counts: Record<string, number> = {};
+      courses.forEach(course => {
+        counts[course.department] = (counts[course.department] || 0) + 1;
+      });
+      setCourseCounts(counts);
+    } catch (err) {
+      console.error('Failed to fetch course counts:', err);
+    }
+  }, []);
+
+  // Load course counts on mount
+  useEffect(() => {
+    fetchCourseCounts();
+  }, [fetchCourseCounts]);
+
+  // Load courses when department changes
+  useEffect(() => {
+    if (selectedDepartment) {
+      fetchDepartmentCourses(selectedDepartment.dept.name);
+    }
+  }, [selectedDepartment, fetchDepartmentCourses]);
 
   // Group courses by semester
   const groupCoursesBySemester = (courses: CourseCatalog[]) => {
@@ -77,9 +121,18 @@ export default function CourseCatalogPage() {
     return grouped;
   };
 
-  const handleCourseClick = (course: CourseCatalog) => {
-    setSelectedCourse(course);
+  const handleCourseClick = async (course: CourseCatalog) => {
+    setSelectedCourse(course); // Show basic info immediately
     setIsDetailOpen(true);
+
+    // Fetch full course details for complete information
+    try {
+      const fullCourse = await catalogService.getCourseByCode(course.course_code);
+      setSelectedCourse(fullCourse);
+    } catch (err) {
+      console.error('Failed to fetch course details:', err);
+      // Keep showing basic info if detailed fetch fails
+    }
   };
 
   const handleDepartmentClick = (dept: Department, faculty: Faculty) => {
@@ -135,7 +188,7 @@ export default function CourseCatalogPage() {
                     {isExpanded && (
                       <div className="border-t bg-white">
                         {faculty.departments.map((dept, index) => {
-                          const courseCount = getDepartmentCourses(dept.name).length;
+                          const courseCount = courseCounts[dept.name] || 0;
                           return (
                             <button
                               key={dept.id}
@@ -184,8 +237,62 @@ export default function CourseCatalogPage() {
   }
 
   // Department Detail View (Semester-based course listing)
-  const departmentCourses = getDepartmentCourses(selectedDepartment.dept.name);
   const groupedCourses = groupCoursesBySemester(departmentCourses);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <button
+              onClick={() => setSelectedDepartment(null)}
+              className="flex items-center gap-2 text-indigo-600 hover:text-indigo-800 mb-4 transition-colors"
+            >
+              <ArrowLeft className="h-5 w-5" />
+              <span>Tüm Fakülteler</span>
+            </button>
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+              <span className="ml-4 text-gray-600">Dersler yükleniyor...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <button
+              onClick={() => setSelectedDepartment(null)}
+              className="flex items-center gap-2 text-indigo-600 hover:text-indigo-800 mb-4 transition-colors"
+            >
+              <ArrowLeft className="h-5 w-5" />
+              <span>Tüm Fakülteler</span>
+            </button>
+            <div className="text-center py-12">
+              <div className="text-red-500 mb-4">
+                <BookOpen className="h-16 w-16 mx-auto text-red-300" />
+              </div>
+              <h2 className="text-xl font-semibold text-gray-700 mb-2">Hata Oluştu</h2>
+              <p className="text-gray-500 mb-4">{error}</p>
+              <Button
+                onClick={() => fetchDepartmentCourses(selectedDepartment.dept.name)}
+                variant="outline"
+              >
+                Tekrar Dene
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">

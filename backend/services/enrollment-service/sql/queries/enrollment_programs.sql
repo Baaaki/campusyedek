@@ -16,8 +16,8 @@ LIMIT 1;
 SELECT id, student_id, semester, status, created_at
 FROM enrollment_programs
 WHERE student_id = $1
-  AND ($2::VARCHAR IS NULL OR semester = $2)
-  AND ($3::enrollment_status_enum IS NULL OR status = $3)
+  AND ($2::VARCHAR IS NULL OR $2 = '' OR semester = $2)
+  AND ($3::VARCHAR IS NULL OR $3 = '' OR status = $3::enrollment_status_enum)
 ORDER BY created_at DESC;
 
 -- name: GetEnrollmentProgramByStudentAndSemester :one
@@ -27,7 +27,17 @@ WHERE student_id = $1 AND semester = $2
 LIMIT 1;
 
 -- name: GetPendingProgramsByAdvisor :many
-SELECT ep.id, ep.student_id, ep.semester, ep.status, ep.created_at
+SELECT 
+    ep.id, 
+    ep.student_id, 
+    ep.semester, 
+    ep.status, 
+    ep.created_at,
+    sc.first_name,
+    sc.last_name,
+    sc.student_number,
+    sc.department,
+    sc.class_level
 FROM enrollment_programs ep
 JOIN students_cache sc ON ep.student_id = sc.id
 WHERE sc.advisor_id = $1 AND ep.status = 'pending'

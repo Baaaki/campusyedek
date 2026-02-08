@@ -421,7 +421,7 @@ export default function AdvisorManagementPage() {
       setLoadingInstructors(true)
       fetchInstructorsByDepartment(assigningStudent.department)
         .then((instructors) => {
-          setDepartmentInstructors(instructors.length > 0 ? instructors : staffList)
+          setDepartmentInstructors(instructors) // Bölümde hoca yoksa boş kalacak
         })
         .finally(() => {
           setLoadingInstructors(false)

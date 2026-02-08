@@ -10,13 +10,13 @@ import (
 // Inbound Events (Consumed from RabbitMQ)
 // ============================================
 
-// Student Events
+// Student Events (nested structure - matches student-service event payload)
 type StudentCreatedEvent struct {
-	EventID   uuid.UUID `json:"event_id"`
+	EventID   string    `json:"event_id"`
 	EventType string    `json:"event_type"`
 	Timestamp time.Time `json:"timestamp"`
 	Data      struct {
-		StudentID     uuid.UUID `json:"student_id"`
+		ID            uuid.UUID `json:"id"`
 		StudentNumber string    `json:"student_number"`
 		FirstName     string    `json:"first_name"`
 		LastName      string    `json:"last_name"`
@@ -27,11 +27,11 @@ type StudentCreatedEvent struct {
 }
 
 type StudentUpdatedEvent struct {
-	EventID   uuid.UUID `json:"event_id"`
+	EventID   string    `json:"event_id"`
 	EventType string    `json:"event_type"`
 	Timestamp time.Time `json:"timestamp"`
 	Data      struct {
-		StudentID     uuid.UUID `json:"student_id"`
+		ID            uuid.UUID `json:"id"`
 		StudentNumber string    `json:"student_number"`
 		FirstName     string    `json:"first_name"`
 		LastName      string    `json:"last_name"`
@@ -42,81 +42,71 @@ type StudentUpdatedEvent struct {
 }
 
 type StudentDeactivatedEvent struct {
-	EventID   uuid.UUID `json:"event_id"`
+	EventID   string    `json:"event_id"`
 	EventType string    `json:"event_type"`
 	Timestamp time.Time `json:"timestamp"`
 	Data      struct {
-		StudentID uuid.UUID `json:"student_id"`
+		ID uuid.UUID `json:"id"`
 	} `json:"data"`
 }
 
-// Course Events
+// Course Events (flat structure - matches course-catalog-service event payload)
 type CourseSemesterCreatedEvent struct {
-	EventID   uuid.UUID `json:"event_id"`
-	EventType string    `json:"event_type"`
-	Timestamp time.Time `json:"timestamp"`
-	Data      struct {
-		SemesterCourseID   uuid.UUID              `json:"semester_course_id"`
-		CourseCode         string                 `json:"course_code"`
-		CourseName         string                 `json:"course_name"`
-		Credits            int16                  `json:"credits"`
-		Semester           string                 `json:"semester"`
-		Department         string                 `json:"department"`
-		InstructorID       uuid.UUID              `json:"instructor_id"`
-		InstructorFullname string                 `json:"instructor_fullname"`
-		AssessmentSchema   []AssessmentSchemaItem `json:"assessment_schema"`
-	} `json:"data"`
+	EventID            string                 `json:"event_id"`
+	EventType          string                 `json:"event_type"`
+	Timestamp          string                 `json:"timestamp"`
+	SemesterCourseID   uuid.UUID              `json:"semester_course_id"`
+	CourseCode         string                 `json:"course_code"`
+	CourseName         string                 `json:"course_name"`
+	Credits            int16                  `json:"credits"`
+	Semester           string                 `json:"semester"`
+	Department         string                 `json:"department"`
+	InstructorID       uuid.UUID              `json:"instructor_id"`
+	InstructorFullname string                 `json:"instructor_fullname"`
+	AssessmentSchema   []AssessmentSchemaItem `json:"assessment_schema"`
 }
 
 type CourseSemesterUpdatedEvent struct {
-	EventID   uuid.UUID `json:"event_id"`
-	EventType string    `json:"event_type"`
-	Timestamp time.Time `json:"timestamp"`
-	Data      struct {
-		SemesterCourseID   uuid.UUID              `json:"semester_course_id"`
-		CourseCode         string                 `json:"course_code"`
-		CourseName         string                 `json:"course_name"`
-		Credits            int16                  `json:"credits"`
-		Semester           string                 `json:"semester"`
-		Department         string                 `json:"department"`
-		InstructorID       uuid.UUID              `json:"instructor_id"`
-		InstructorFullname string                 `json:"instructor_fullname"`
-		AssessmentSchema   []AssessmentSchemaItem `json:"assessment_schema"`
-	} `json:"data"`
+	EventID            string                 `json:"event_id"`
+	EventType          string                 `json:"event_type"`
+	Timestamp          string                 `json:"timestamp"`
+	SemesterCourseID   uuid.UUID              `json:"semester_course_id"`
+	CourseCode         string                 `json:"course_code"`
+	CourseName         string                 `json:"course_name"`
+	Credits            int16                  `json:"credits"`
+	Semester           string                 `json:"semester"`
+	Department         string                 `json:"department"`
+	InstructorID       uuid.UUID              `json:"instructor_id"`
+	InstructorFullname string                 `json:"instructor_fullname"`
+	AssessmentSchema   []AssessmentSchemaItem `json:"assessment_schema"`
 }
 
 type CourseSemesterDeletedEvent struct {
-	EventID   uuid.UUID `json:"event_id"`
-	EventType string    `json:"event_type"`
-	Timestamp time.Time `json:"timestamp"`
-	Data      struct {
-		SemesterCourseID uuid.UUID `json:"semester_course_id"`
-		Semester         string    `json:"semester"`
-		CourseCode       string    `json:"course_code"`
-		CourseName       string    `json:"course_name"`
-		Department       string    `json:"department"`
-	} `json:"data"`
+	EventID          string    `json:"event_id"`
+	EventType        string    `json:"event_type"`
+	Timestamp        string    `json:"timestamp"`
+	SemesterCourseID uuid.UUID `json:"semester_course_id"`
+	Semester         string    `json:"semester"`
+	CourseCode       string    `json:"course_code"`
+	CourseName       string    `json:"course_name"`
+	Department       string    `json:"department"`
 }
 
 type CourseInstructorChangedEvent struct {
-	EventID   uuid.UUID `json:"event_id"`
-	EventType string    `json:"event_type"`
-	Timestamp time.Time `json:"timestamp"`
-	Data      struct {
-		SemesterCourseID   uuid.UUID `json:"semester_course_id"`
-		InstructorID       uuid.UUID `json:"instructor_id"`
-		InstructorFullname string    `json:"instructor_fullname"`
-	} `json:"data"`
+	EventID            string    `json:"event_id"`
+	EventType          string    `json:"event_type"`
+	Timestamp          string    `json:"timestamp"`
+	SemesterCourseID   uuid.UUID `json:"semester_course_id"`
+	InstructorID       uuid.UUID `json:"instructor_id"`
+	InstructorFullname string    `json:"instructor_fullname"`
 }
 
 type CoursePrerequisitesUpdatedEvent struct {
-	EventID   uuid.UUID `json:"event_id"`
-	EventType string    `json:"event_type"`
-	Timestamp time.Time `json:"timestamp"`
-	Data      struct {
-		PrerequisiteCourses []PrerequisiteCourse `json:"prerequisite_courses"`
-		UpdatedAt           time.Time            `json:"updated_at"`
-	} `json:"data"`
+	EventID             string               `json:"event_id"`
+	EventType           string               `json:"event_type"`
+	Timestamp           string               `json:"timestamp"`
+	PrerequisiteCourses []PrerequisiteCourse `json:"prerequisite_courses"`
+	UpdatedAt           time.Time            `json:"updated_at"`
 }
 
 type PrerequisiteCourse struct {

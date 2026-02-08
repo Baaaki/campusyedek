@@ -20,6 +20,24 @@ func NewAttendanceHandler(service *service.AttendanceService) *AttendanceHandler
 	return &AttendanceHandler{service: service}
 }
 
+// parseUserID extracts user_id from context and parses it as UUID
+// Handles both string and uuid.UUID types from middleware
+func parseUserID(c *gin.Context) (uuid.UUID, error) {
+	userIDRaw, exists := c.Get("user_id")
+	if !exists {
+		return uuid.Nil, sharedErrors.ErrUnauthorized
+	}
+
+	switch v := userIDRaw.(type) {
+	case string:
+		return uuid.Parse(v)
+	case uuid.UUID:
+		return v, nil
+	default:
+		return uuid.Nil, sharedErrors.ErrUnauthorized
+	}
+}
+
 // CreateSession godoc
 // @Summary Create attendance session
 // @Tags attendance
@@ -45,14 +63,22 @@ func (h *AttendanceHandler) CreateSession(c *gin.Context) {
 	}
 
 	// Get instructor ID from JWT
-	instructorID, _ := c.Get("user_id")
+	instructorID, err := parseUserID(c)
+	if err != nil {
+		handlerLogger.Error("failed to parse user_id", zap.Error(err))
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
+			Error: "unauthorized",
+			Code:  "UNAUTHORIZED",
+		})
+		return
+	}
 
 	handlerLogger.Info("creating attendance session",
-		zap.String("instructor_id", instructorID.(uuid.UUID).String()),
+		zap.String("instructor_id", instructorID.String()),
 		zap.String("course_id", req.CourseID.String()),
 	)
 
-	resp, err := h.service.CreateSession(c.Request.Context(), instructorID.(uuid.UUID), req)
+	resp, err := h.service.CreateSession(c.Request.Context(), instructorID, req)
 	if err != nil {
 		handlerLogger.Error("failed to create session", zap.Error(err))
 		h.handleError(c, err)
@@ -90,13 +116,21 @@ func (h *AttendanceHandler) ScanQR(c *gin.Context) {
 	}
 
 	// Get student ID from JWT
-	studentID, _ := c.Get("user_id")
+	studentID, err := parseUserID(c)
+	if err != nil {
+		handlerLogger.Error("failed to parse user_id", zap.Error(err))
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
+			Error: "unauthorized",
+			Code:  "UNAUTHORIZED",
+		})
+		return
+	}
 
 	handlerLogger.Info("scanning QR code",
-		zap.String("student_id", studentID.(uuid.UUID).String()),
+		zap.String("student_id", studentID.String()),
 	)
 
-	resp, err := h.service.ScanQR(c.Request.Context(), studentID.(uuid.UUID), req)
+	resp, err := h.service.ScanQR(c.Request.Context(), studentID, req)
 	if err != nil {
 		handlerLogger.Error("failed to scan QR", zap.Error(err))
 		h.handleError(c, err)
@@ -130,14 +164,22 @@ func (h *AttendanceHandler) GetQRCode(c *gin.Context) {
 		return
 	}
 
-	instructorID, _ := c.Get("user_id")
+	instructorID, err := parseUserID(c)
+	if err != nil {
+		handlerLogger.Error("failed to parse user_id", zap.Error(err))
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
+			Error: "unauthorized",
+			Code:  "UNAUTHORIZED",
+		})
+		return
+	}
 
 	handlerLogger.Info("getting QR code",
 		zap.String("session_id", sessionID.String()),
-		zap.String("instructor_id", instructorID.(uuid.UUID).String()),
+		zap.String("instructor_id", instructorID.String()),
 	)
 
-	resp, err := h.service.GetQRCode(c.Request.Context(), sessionID, instructorID.(uuid.UUID))
+	resp, err := h.service.GetQRCode(c.Request.Context(), sessionID, instructorID)
 	if err != nil {
 		handlerLogger.Error("failed to get QR code", zap.Error(err))
 		h.handleError(c, err)
@@ -182,14 +224,22 @@ func (h *AttendanceHandler) CreateManualAttendance(c *gin.Context) {
 		return
 	}
 
-	instructorID, _ := c.Get("user_id")
+	instructorID, err := parseUserID(c)
+	if err != nil {
+		handlerLogger.Error("failed to parse user_id", zap.Error(err))
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
+			Error: "unauthorized",
+			Code:  "UNAUTHORIZED",
+		})
+		return
+	}
 
 	handlerLogger.Info("creating manual attendance",
 		zap.String("session_id", sessionID.String()),
-		zap.String("instructor_id", instructorID.(uuid.UUID).String()),
+		zap.String("instructor_id", instructorID.String()),
 	)
 
-	resp, err := h.service.CreateManualAttendance(c.Request.Context(), sessionID, instructorID.(uuid.UUID), req)
+	resp, err := h.service.CreateManualAttendance(c.Request.Context(), sessionID, instructorID, req)
 	if err != nil {
 		handlerLogger.Error("failed to create manual attendance", zap.Error(err))
 		h.handleError(c, err)
@@ -223,14 +273,22 @@ func (h *AttendanceHandler) CloseSession(c *gin.Context) {
 		return
 	}
 
-	instructorID, _ := c.Get("user_id")
+	instructorID, err := parseUserID(c)
+	if err != nil {
+		handlerLogger.Error("failed to parse user_id", zap.Error(err))
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
+			Error: "unauthorized",
+			Code:  "UNAUTHORIZED",
+		})
+		return
+	}
 
 	handlerLogger.Info("closing session",
 		zap.String("session_id", sessionID.String()),
-		zap.String("instructor_id", instructorID.(uuid.UUID).String()),
+		zap.String("instructor_id", instructorID.String()),
 	)
 
-	resp, err := h.service.CloseSession(c.Request.Context(), sessionID, instructorID.(uuid.UUID))
+	resp, err := h.service.CloseSession(c.Request.Context(), sessionID, instructorID)
 	if err != nil {
 		handlerLogger.Error("failed to close session", zap.Error(err))
 		h.handleError(c, err)
@@ -258,14 +316,22 @@ func (h *AttendanceHandler) GetMyAttendance(c *gin.Context) {
 	)
 
 	semester := c.Query("semester")
-	studentID, _ := c.Get("user_id")
+	studentID, err := parseUserID(c)
+	if err != nil {
+		handlerLogger.Error("failed to parse user_id", zap.Error(err))
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
+			Error: "unauthorized",
+			Code:  "UNAUTHORIZED",
+		})
+		return
+	}
 
 	handlerLogger.Info("getting attendance records",
-		zap.String("student_id", studentID.(uuid.UUID).String()),
+		zap.String("student_id", studentID.String()),
 		zap.String("semester", semester),
 	)
 
-	resp, err := h.service.GetMyAttendance(c.Request.Context(), studentID.(uuid.UUID), semester)
+	resp, err := h.service.GetMyAttendance(c.Request.Context(), studentID, semester)
 	if err != nil {
 		handlerLogger.Error("failed to get attendance", zap.Error(err))
 		h.handleError(c, err)
@@ -309,15 +375,23 @@ func (h *AttendanceHandler) FinalizeAttendance(c *gin.Context) {
 		return
 	}
 
-	instructorID, _ := c.Get("user_id")
+	instructorID, err := parseUserID(c)
+	if err != nil {
+		handlerLogger.Error("failed to parse user_id", zap.Error(err))
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
+			Error: "unauthorized",
+			Code:  "UNAUTHORIZED",
+		})
+		return
+	}
 
 	handlerLogger.Info("finalizing attendance",
 		zap.String("course_id", courseID.String()),
 		zap.String("semester", semester),
-		zap.String("instructor_id", instructorID.(uuid.UUID).String()),
+		zap.String("instructor_id", instructorID.String()),
 	)
 
-	resp, err := h.service.FinalizeAttendance(c.Request.Context(), courseID, instructorID.(uuid.UUID), semester)
+	resp, err := h.service.FinalizeAttendance(c.Request.Context(), courseID, instructorID, semester)
 	if err != nil {
 		handlerLogger.Error("failed to finalize attendance", zap.Error(err))
 		h.handleError(c, err)
@@ -328,6 +402,150 @@ func (h *AttendanceHandler) FinalizeAttendance(c *gin.Context) {
 		zap.Int("total_students", resp.TotalStudents),
 		zap.Int("failed_students", len(resp.FailedStudents)),
 	)
+	c.JSON(http.StatusOK, resp)
+}
+
+// GetSessionDetails godoc
+// @Summary Get session details
+// @Tags attendance
+// @Produce json
+// @Param sessionId path string true "Session ID"
+// @Success 200 {object} dto.GetSessionDetailsResponse
+// @Router /api/v1/attendance/sessions/{sessionId} [get]
+func (h *AttendanceHandler) GetSessionDetails(c *gin.Context) {
+	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+		zap.String("handler", "AttendanceHandler"),
+		zap.String("method", "GetSessionDetails"),
+	)
+
+	sessionID, err := uuid.Parse(c.Param("sessionId"))
+	if err != nil {
+		handlerLogger.Error("invalid session ID format", zap.Error(err))
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error: "invalid session ID",
+			Code:  "INVALID_ID",
+		})
+		return
+	}
+
+	instructorID, err := parseUserID(c)
+	if err != nil {
+		handlerLogger.Error("failed to parse user_id", zap.Error(err))
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
+			Error: "unauthorized",
+			Code:  "UNAUTHORIZED",
+		})
+		return
+	}
+
+	handlerLogger.Info("getting session details",
+		zap.String("session_id", sessionID.String()),
+	)
+
+	resp, err := h.service.GetSessionDetails(c.Request.Context(), sessionID, instructorID)
+	if err != nil {
+		handlerLogger.Error("failed to get session details", zap.Error(err))
+		h.handleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, resp)
+}
+
+// GetSessionRecords godoc
+// @Summary Get session attendance records
+// @Tags attendance
+// @Produce json
+// @Param sessionId path string true "Session ID"
+// @Success 200 {object} dto.GetSessionRecordsResponse
+// @Router /api/v1/attendance/sessions/{sessionId}/records [get]
+func (h *AttendanceHandler) GetSessionRecords(c *gin.Context) {
+	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+		zap.String("handler", "AttendanceHandler"),
+		zap.String("method", "GetSessionRecords"),
+	)
+
+	sessionID, err := uuid.Parse(c.Param("sessionId"))
+	if err != nil {
+		handlerLogger.Error("invalid session ID format", zap.Error(err))
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error: "invalid session ID",
+			Code:  "INVALID_ID",
+		})
+		return
+	}
+
+	instructorID, err := parseUserID(c)
+	if err != nil {
+		handlerLogger.Error("failed to parse user_id", zap.Error(err))
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
+			Error: "unauthorized",
+			Code:  "UNAUTHORIZED",
+		})
+		return
+	}
+
+	handlerLogger.Info("getting session records",
+		zap.String("session_id", sessionID.String()),
+	)
+
+	resp, err := h.service.GetSessionRecords(c.Request.Context(), sessionID, instructorID)
+	if err != nil {
+		handlerLogger.Error("failed to get session records", zap.Error(err))
+		h.handleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, resp)
+}
+
+// GetSessionStudents godoc
+// @Summary Get enrolled students for a session
+// @Tags attendance
+// @Produce json
+// @Param sessionId path string true "Session ID"
+// @Param search query string false "Search query"
+// @Success 200 {object} dto.GetSessionStudentsResponse
+// @Router /api/v1/attendance/sessions/{sessionId}/students [get]
+func (h *AttendanceHandler) GetSessionStudents(c *gin.Context) {
+	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+		zap.String("handler", "AttendanceHandler"),
+		zap.String("method", "GetSessionStudents"),
+	)
+
+	sessionID, err := uuid.Parse(c.Param("sessionId"))
+	if err != nil {
+		handlerLogger.Error("invalid session ID format", zap.Error(err))
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error: "invalid session ID",
+			Code:  "INVALID_ID",
+		})
+		return
+	}
+
+	search := c.Query("search")
+	instructorID, err := parseUserID(c)
+	if err != nil {
+		handlerLogger.Error("failed to parse user_id", zap.Error(err))
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
+			Error: "unauthorized",
+			Code:  "UNAUTHORIZED",
+		})
+		return
+	}
+
+	handlerLogger.Info("getting session students",
+		zap.String("session_id", sessionID.String()),
+		zap.String("search", search),
+	)
+
+	resp, err := h.service.GetSessionStudents(c.Request.Context(), sessionID, instructorID, search)
+	if err != nil {
+		handlerLogger.Error("failed to get session students", zap.Error(err))
+		h.handleError(c, err)
+		return
+	}
+
 	c.JSON(http.StatusOK, resp)
 }
 

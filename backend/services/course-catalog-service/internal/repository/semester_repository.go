@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -202,4 +203,16 @@ func isPgUniqueViolation(err error) bool {
 		return pgErr.Code == "23505" // unique_violation
 	}
 	return false
+}
+
+// GetTeacherCourses retrieves all courses for a specific instructor
+func (r *SemesterRepository) GetTeacherCourses(ctx context.Context, instructorID uuid.UUID, semester pgtype.Text) ([]db.GetTeacherCoursesRow, error) {
+	courses, err := r.queries.GetTeacherCourses(ctx, db.GetTeacherCoursesParams{
+		InstructorID: utils.UUIDToPgtype(instructorID),
+		Semester:     semester,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("%w: failed to get teacher courses: %v", sharedErrors.ErrQueryFailed, err)
+	}
+	return courses, nil
 }

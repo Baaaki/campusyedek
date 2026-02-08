@@ -23,21 +23,21 @@ watching tests
 !exclude tmp
 building...
 running...
-08:26:21.182	[34mINFO[0m	cmd/main.go:39	starting auth-service	{"environment": "development", "port": "8001"}
-08:26:21.212	[34mINFO[0m	cmd/main.go:53	database connection established
-08:26:21.212	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
-08:26:21.215	[34mINFO[0m	redis/redis.go:41	redis connection established
-08:26:21.215	[34mINFO[0m	cmd/main.go:64	Redis connection established
-08:26:21.215	[34mINFO[0m	cmd/main.go:68	JWT blacklist checker configured
-08:26:21.215	[34mINFO[0m	rabbitmq/connection.go:37	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
-08:26:21.220	[34mINFO[0m	rabbitmq/connection.go:69	rabbitmq connection established
-08:26:21.220	[34mINFO[0m	cmd/main.go:79	RabbitMQ connection established
-08:26:21.223	[34mINFO[0m	cmd/main.go:297	RabbitMQ setup completed	{"queue": "auth_events_queue", "student_routing_keys": ["student.created", "student.updated", "student.deactivated"], "staff_routing_keys": ["staff.created", "staff.updated", "staff.deactivated"]}
-08:26:21.228	[34mINFO[0m	service/auth_service.go:598	admin user already exists, skipping seed
-08:26:21.228	[34mINFO[0m	service/auth_service.go:666	cleanup scheduler started
-08:26:21.228	[34mINFO[0m	worker/event_consumer.go:33	starting event consumer
-08:26:21.228	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "auth.staff_events"}
-08:26:21.228	[34mINFO[0m	worker/event_consumer.go:78	event consumer started successfully
+15:59:38.462	[34mINFO[0m	cmd/main.go:39	starting auth-service	{"environment": "development", "port": "8001"}
+15:59:38.468	[34mINFO[0m	cmd/main.go:53	database connection established
+15:59:38.468	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+15:59:38.469	[34mINFO[0m	redis/redis.go:41	redis connection established
+15:59:38.469	[34mINFO[0m	cmd/main.go:64	Redis connection established
+15:59:38.469	[34mINFO[0m	cmd/main.go:68	JWT blacklist checker configured
+15:59:38.469	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+15:59:38.470	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+15:59:38.470	[34mINFO[0m	cmd/main.go:79	RabbitMQ connection established
+15:59:38.472	[34mINFO[0m	cmd/main.go:297	RabbitMQ setup completed	{"queue": "auth_events_queue", "student_routing_keys": ["student.created", "student.updated", "student.deactivated"], "staff_routing_keys": ["staff.created", "staff.updated", "staff.deactivated"]}
+15:59:38.482	[34mINFO[0m	service/auth_service.go:598	admin user already exists, skipping seed
+15:59:38.482	[34mINFO[0m	service/auth_service.go:666	cleanup scheduler started
+15:59:38.482	[34mINFO[0m	worker/event_consumer.go:33	starting event consumer
+15:59:38.482	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "auth_events_queue"}
+15:59:38.482	[34mINFO[0m	worker/event_consumer.go:78	event consumer started successfully
 [GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
  - using env:	export GIN_MODE=release
  - using code:	gin.SetMode(gin.ReleaseMode)
@@ -51,28 +51,157 @@ running...
 [GIN-debug] GET    /api/auth/sessions        --> github.com/baaaki/mydreamcampus/auth-service/internal/handler.(*AuthHandler).GetSessions-fm (5 handlers)
 [GIN-debug] DELETE /api/auth/sessions/:id    --> github.com/baaaki/mydreamcampus/auth-service/internal/handler.(*AuthHandler).DeleteSession-fm (5 handlers)
 [GIN-debug] GET    /api/auth/verify          --> github.com/baaaki/mydreamcampus/auth-service/internal/handler.(*AuthHandler).Verify-fm (5 handlers)
-08:26:21.228	[34mINFO[0m	cmd/main.go:141	server starting	{"port": "8001"}
-08:26:34.336	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-08:26:34.336	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "fec2af69-69f8-45c9-8bfc-375e358d9b67", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "484.026µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-08:26:34.336	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-08:26:34.336	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "7a2055f2-623a-466f-97a6-b91f3cc48389", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "519.687µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-08:26:34.340	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-08:26:34.340	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "ab911623-41a0-4649-85f4-1a2f791b9fab", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "227.688µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-08:26:34.343	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-08:26:34.343	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "eb233208-6f46-4355-9f8d-0f92e197d440", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "231.427µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-08:26:46.486	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-08:26:46.486	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "b55500be-9088-4821-ad94-d2abea1533ee", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "343.251µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-08:26:46.486	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-08:26:46.486	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "2e994bc5-18dd-4489-b629-8e467c94e08c", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "203.707µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-08:26:55.150	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-08:26:55.150	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "c67cbc2f-90dc-4f6a-b324-bc391522819b", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "482.815µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-08:27:46.705	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-08:27:46.705	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "7654beea-ecdf-4a30-bf3f-2d1c3fd37e74", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "567.488µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-08:31:18.443	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-08:31:18.443	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "e3253b63-a2c2-4556-a2f5-fb423c84e1f8", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "491.445µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-08:31:59.372	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-08:31:59.372	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "26ccea6b-90f2-4296-afb7-5a50c409d375", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "1.155714ms", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-08:32:26.710	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-08:32:26.710	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "a2df4e82-8ad8-45e9-978f-ae8f5b8fb271", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "520.325µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-08:32:54.052	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-08:32:54.052	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "0d94d06e-dfbd-4dc7-9a21-214ecb76a2eb", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "527.255µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+15:59:38.483	[34mINFO[0m	cmd/main.go:141	server starting	{"port": "8001"}
+15:59:45.386	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+15:59:45.386	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "bbcda713-ed5b-4390-aceb-4adc44c15d09", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "784.952µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+16:00:24.473	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+16:00:24.473	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "77705965-a4b0-4b39-b945-c63ffbd4c6bf", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "409µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+16:00:24.480	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+16:00:24.480	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "48721c65-deb7-4ac4-9f92-9d3177bfae6a", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "332.176µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+16:00:45.843	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+16:00:45.843	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "26c21382-9469-4673-918f-6c5ed7f838fb", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "574.043µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+16:00:45.850	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+16:00:45.850	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "e081fb5d-7961-4a42-babf-9e6f0e5994ed", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "310.062µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+16:59:38.493	[34mINFO[0m	service/auth_service.go:647	expired sessions cleaned up
+16:59:38.496	[34mINFO[0m	service/auth_service.go:657	old processed events cleaned up
+17:59:38.485	[34mINFO[0m	service/auth_service.go:647	expired sessions cleaned up
+17:59:38.486	[34mINFO[0m	service/auth_service.go:657	old processed events cleaned up
+18:59:38.486	[34mINFO[0m	service/auth_service.go:647	expired sessions cleaned up
+18:59:38.487	[34mINFO[0m	service/auth_service.go:657	old processed events cleaned up
+19:24:52.247	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:24:52.247	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "6f5d3e80-67b7-4f11-807f-220a5012d919", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "927.455µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:27:55.330	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:27:55.331	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "a5e7cb30-b077-4af4-be5b-0e35d3663728", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "387.4µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:27:55.335	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:27:55.335	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "ed947b1a-ffff-48fa-8489-f171ae32596f", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "284.067µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:27:56.827	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:27:56.827	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "55dc6177-7ce1-4d9b-bdbb-a3c3b7c89c73", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "529.044µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:27:56.839	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:27:56.839	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "f05bf280-6d61-4550-9efd-436cd561dd69", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "585.955µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:29:39.443	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:29:39.443	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "49335ef5-0a26-4162-981f-9b9bb83080be", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "357.639µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:29:43.976	[31mERROR[0m	gin@v1.11.0/context.go:192	invalid request body	{"request_id": "436c4139-ee90-41ea-b30a-a770ddd6bb70", "endpoint": "Login", "handler": "AuthHandler", "error": "invalid character '!' in string escape code"}
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.RequestLogger.func4
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/logger.go:25
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.CORS.func3
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/cors.go:24
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.Recovery.func2
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/recovery.go:40
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+github.com/gin-gonic/gin.(*Engine).handleHTTPRequest
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:689
+github.com/gin-gonic/gin.(*Engine).ServeHTTP
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:643
+net/http.serverHandler.ServeHTTP
+	/usr/local/go/src/net/http/server.go:3340
+net/http.(*conn).serve
+	/usr/local/go/src/net/http/server.go:2109
+19:29:43.976	[33mWARN[0m	middleware/logger.go:58	http request - client error	{"request_id": "436c4139-ee90-41ea-b30a-a770ddd6bb70", "method": "POST", "path": "/api/auth/login", "query": "", "status": 400, "duration": "232.876µs", "ip": "172.18.0.1", "user_agent": "curl/8.5.0"}
+19:29:47.407	[31mERROR[0m	gin@v1.11.0/context.go:192	invalid request body	{"request_id": "acbe7d0a-35c5-437e-9318-66d47b9f48a0", "endpoint": "Login", "handler": "AuthHandler", "error": "invalid character '!' in string escape code"}
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.RequestLogger.func4
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/logger.go:25
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.CORS.func3
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/cors.go:24
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.Recovery.func2
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/recovery.go:40
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+github.com/gin-gonic/gin.(*Engine).handleHTTPRequest
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:689
+github.com/gin-gonic/gin.(*Engine).ServeHTTP
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:643
+net/http.serverHandler.ServeHTTP
+	/usr/local/go/src/net/http/server.go:3340
+net/http.(*conn).serve
+	/usr/local/go/src/net/http/server.go:2109
+19:29:47.407	[33mWARN[0m	middleware/logger.go:58	http request - client error	{"request_id": "acbe7d0a-35c5-437e-9318-66d47b9f48a0", "method": "POST", "path": "/api/auth/login", "query": "", "status": 400, "duration": "147.564µs", "ip": "172.18.0.1", "user_agent": "curl/8.5.0"}
+19:29:50.173	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:29:50.173	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "2bc05c34-a70c-4834-879c-ffe14ee33d77", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "506.733µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:29:50.178	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:29:50.178	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "72d3db6f-8558-4df0-aed8-d083774198ae", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "537.985µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:29:50.578	[31mERROR[0m	gin@v1.11.0/context.go:192	invalid request body	{"request_id": "e91f386d-6ca0-4883-a6d7-ae7896f90e21", "endpoint": "Login", "handler": "AuthHandler", "error": "invalid character '!' in string escape code"}
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.RequestLogger.func4
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/logger.go:25
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.CORS.func3
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/cors.go:24
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.Recovery.func2
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/recovery.go:40
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+github.com/gin-gonic/gin.(*Engine).handleHTTPRequest
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:689
+github.com/gin-gonic/gin.(*Engine).ServeHTTP
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:643
+net/http.serverHandler.ServeHTTP
+	/usr/local/go/src/net/http/server.go:3340
+net/http.(*conn).serve
+	/usr/local/go/src/net/http/server.go:2109
+19:29:50.578	[33mWARN[0m	middleware/logger.go:58	http request - client error	{"request_id": "e91f386d-6ca0-4883-a6d7-ae7896f90e21", "method": "POST", "path": "/api/auth/login", "query": "", "status": 400, "duration": "128.453µs", "ip": "172.18.0.1", "user_agent": "curl/8.5.0"}
+19:30:13.592	[34mINFO[0m	gin@v1.11.0/context.go:192	login attempt	{"request_id": "e7fdb15a-3a17-4770-8e0e-69fa91a16d26", "endpoint": "Login", "handler": "AuthHandler", "email": "deniz.yilmaz@university.edu.tr", "ip": "172.18.0.1"}
+19:30:13.700	[34mINFO[0m	handler/auth_handler.go:68	login successful in database	{"request_id": "e7fdb15a-3a17-4770-8e0e-69fa91a16d26", "service": "AuthService", "method": "Login", "email": "deniz.yilmaz@university.edu.tr", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:30:13.701	[34mINFO[0m	service/auth_service.go:184	user logged in successfully	{"email": "deniz.yilmaz@university.edu.tr", "role": "student"}
+19:30:13.701	[34mINFO[0m	gin@v1.11.0/context.go:192	login successful	{"request_id": "e7fdb15a-3a17-4770-8e0e-69fa91a16d26", "endpoint": "Login", "handler": "AuthHandler", "email": "deniz.yilmaz@university.edu.tr", "role": "student"}
+19:30:13.701	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "e7fdb15a-3a17-4770-8e0e-69fa91a16d26", "method": "POST", "path": "/api/auth/login", "query": "", "status": 200, "duration": "108.562612ms", "ip": "172.18.0.1", "user_agent": "curl/8.5.0"}
+19:30:42.105	[33mWARN[0m	middleware/auth.go:48	invalid authorization header format	{"auth_header": "Bearer", "parts_count": 1}
+19:30:42.106	[33mWARN[0m	middleware/logger.go:58	http request - client error	{"request_id": "01083a4c-6322-4631-a29a-c365bc6ef46c", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 401, "duration": "66.621µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1"}
+19:31:21.793	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:31:21.793	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "20ac04bd-fbe5-4688-b3c7-3e4509bd4638", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "379.24µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:32:01.419	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:32:01.419	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "0af898ef-5ee7-4b31-a3e4-d1375a47cd47", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "378.59µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:32:01.430	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:32:01.430	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "7ee67775-fb62-40e1-aaf7-33865d31433f", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "261.167µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:32:01.432	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:32:01.432	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "1f53e5e3-12a4-4948-87c4-2b50a4b5f086", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "239.986µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:32:01.440	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:32:01.440	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "f8c5cda1-7ecf-4ae7-a63d-ba2e86c71ace", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "379.26µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:32:03.258	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:32:03.258	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "83a4eb57-88f0-4c9d-8c11-6e6813e97e2c", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "477.933µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:32:03.266	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:32:03.266	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "4b9f37e8-4e22-428a-9dcd-a1f257d97384", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "456.772µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:32:05.384	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:32:05.385	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "6ba86831-277b-4fee-baef-028bb5673f16", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "511.164µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:32:05.391	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:32:05.391	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "3e4f6a41-3a56-48fd-8dc9-f6cf7675b536", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "468.993µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:34:23.697	[34mINFO[0m	gin@v1.11.0/context.go:192	login attempt	{"request_id": "e16fec86-3336-4422-b236-a721a3503608", "endpoint": "Login", "handler": "AuthHandler", "email": "deniz.yilmaz@university.edu.tr", "ip": "172.18.0.1"}
+19:34:23.759	[34mINFO[0m	handler/auth_handler.go:68	login successful in database	{"request_id": "e16fec86-3336-4422-b236-a721a3503608", "service": "AuthService", "method": "Login", "email": "deniz.yilmaz@university.edu.tr", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:34:23.759	[34mINFO[0m	service/auth_service.go:184	user logged in successfully	{"email": "deniz.yilmaz@university.edu.tr", "role": "student"}
+19:34:23.759	[34mINFO[0m	gin@v1.11.0/context.go:192	login successful	{"request_id": "e16fec86-3336-4422-b236-a721a3503608", "endpoint": "Login", "handler": "AuthHandler", "email": "deniz.yilmaz@university.edu.tr", "role": "student"}
+19:34:23.759	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "e16fec86-3336-4422-b236-a721a3503608", "method": "POST", "path": "/api/auth/login", "query": "", "status": 200, "duration": "61.598519ms", "ip": "172.18.0.1", "user_agent": "curl/8.5.0"}
+19:35:11.306	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:35:11.306	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "e9ff7a4e-1547-49c7-9f46-d9174b2897bc", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "376.491µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:35:11.611	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:35:11.611	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "761a9a42-fa98-4b5c-b94d-987debac3abc", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "515.404µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:35:12.215	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:35:12.215	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "74a82253-59f5-47e5-af00-022065236f05", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "469.442µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:36:16.816	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:36:16.816	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "418a2726-504f-4152-bb3e-bd8f05d99533", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "387.93µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:36:20.959	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:36:20.959	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "600b8781-0f22-4358-bcec-598a9cdcf3e0", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "401.291µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:38:27.814	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:38:27.815	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "2d9cec37-4450-46c2-8cb2-0e3798862d52", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "372.761µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:41:18.362	[35mDEBUG[0m	middleware/auth.go:142	jwt authentication successful	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:41:18.362	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "56a3c423-3e3d-4b70-a338-162eb71b9f7b", "method": "GET", "path": "/api/auth/verify", "query": "", "status": 200, "duration": "430.762µs", "ip": "172.18.0.1", "user_agent": "Go-http-client/1.1", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
+19:44:32.599	[31mERROR[0m	rabbitmq/connection.go:94	rabbitmq connection lost	{"error": "Exception (320) Reason: \"CONNECTION_FORCED - broker forced connection closure with reason 'shutdown'\""}
+github.com/baaaki/mydreamcampus/shared/rabbitmq.(*Connection).handleReconnect
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/rabbitmq/connection.go:94
+19:44:32.599	[34mINFO[0m	rabbitmq/connection.go:99	attempting to reconnect to rabbitmq...
+cleaning...

@@ -43,7 +43,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { mockFaculties } from "@/mock_data/catalog";
-import { cn } from "@/lib/utils";
 
 interface Staff {
   id: string;
@@ -100,6 +99,11 @@ export default function StaffPage() {
   const [facultyOpen, setFacultyOpen] = useState(false);
   const [departmentOpen, setDepartmentOpen] = useState(false);
 
+  // UI state for edit form faculty/department selection
+  const [editSelectedFaculty, setEditSelectedFaculty] = useState("");
+  const [editFacultyOpen, setEditFacultyOpen] = useState(false);
+  const [editDepartmentOpen, setEditDepartmentOpen] = useState(false);
+
   // Form states - Backend DTO'ya uygun alanlar
   const [formData, setFormData] = useState({
     email: "",
@@ -111,12 +115,19 @@ export default function StaffPage() {
     office_location: "",
   });
 
-  // Filtered departments based on selected faculty
+  // Filtered departments based on selected faculty (for create form)
   const filteredDepartments = useMemo(() => {
     if (!selectedFaculty) return [];
     const faculty = mockFaculties.find(f => f.name === selectedFaculty);
     return faculty?.departments || [];
   }, [selectedFaculty]);
+
+  // Filtered departments based on selected faculty (for edit form)
+  const editFilteredDepartments = useMemo(() => {
+    if (!editSelectedFaculty) return [];
+    const faculty = mockFaculties.find(f => f.name === editSelectedFaculty);
+    return faculty?.departments || [];
+  }, [editSelectedFaculty]);
 
   // Update form for edit - tüm alanlar düzenlenebilir
   const [updateFormData, setUpdateFormData] = useState({
@@ -269,6 +280,7 @@ export default function StaffPage() {
         office_location: "",
         status: "active",
       });
+      setEditSelectedFaculty("");
       fetchStaff(page);
     } catch (err: any) {
       console.error("[Staff] Update error:", err);
@@ -321,6 +333,17 @@ export default function StaffPage() {
       office_location: staff.office_location || "",
       status: staff.status,
     });
+
+    // Find the faculty that contains this department
+    if (staff.department) {
+      const facultyWithDept = mockFaculties.find(f =>
+        f.departments.some(d => d.name === staff.department)
+      );
+      setEditSelectedFaculty(facultyWithDept?.name || "");
+    } else {
+      setEditSelectedFaculty("");
+    }
+
     setEditDialogOpen(true);
   };
 
@@ -747,17 +770,91 @@ export default function StaffPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit_department">Department</Label>
-                <Input
-                  id="edit_department"
-                  value={updateFormData.department}
-                  onChange={(e) =>
-                    setUpdateFormData({
-                      ...updateFormData,
-                      department: e.target.value,
-                    })
-                  }
-                />
+                <Label htmlFor="edit_faculty">Fakülte (filtreleme için)</Label>
+                <Popover open={editFacultyOpen} onOpenChange={setEditFacultyOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={editFacultyOpen}
+                      className="w-full justify-between"
+                    >
+                      {editSelectedFaculty || "Fakülte seçin..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Fakülte ara..." />
+                      <CommandList>
+                        <CommandEmpty>Fakülte bulunamadı.</CommandEmpty>
+                        <CommandGroup>
+                          {mockFaculties.map((faculty) => (
+                            <CommandItem
+                              key={faculty.id}
+                              value={faculty.name}
+                              onSelect={() => {
+                                setEditSelectedFaculty(editSelectedFaculty === faculty.name ? "" : faculty.name);
+                                setUpdateFormData({ ...updateFormData, department: "" });
+                                setEditFacultyOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={`mr-2 h-4 w-4 ${editSelectedFaculty === faculty.name ? "opacity-100" : "opacity-0"}`}
+                              />
+                              {faculty.name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit_department">Bölüm</Label>
+                <Popover open={editDepartmentOpen} onOpenChange={setEditDepartmentOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={editDepartmentOpen}
+                      className="w-full justify-between"
+                      disabled={!editSelectedFaculty}
+                    >
+                      {updateFormData.department || (editSelectedFaculty ? "Bölüm seçin..." : "Önce fakülte seçin")}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Bölüm ara..." />
+                      <CommandList>
+                        <CommandEmpty>Bölüm bulunamadı.</CommandEmpty>
+                        <CommandGroup>
+                          {editFilteredDepartments.map((dept) => (
+                            <CommandItem
+                              key={dept.id}
+                              value={dept.name}
+                              onSelect={() => {
+                                setUpdateFormData({
+                                  ...updateFormData,
+                                  department: updateFormData.department === dept.name ? "" : dept.name,
+                                });
+                                setEditDepartmentOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={`mr-2 h-4 w-4 ${updateFormData.department === dept.name ? "opacity-100" : "opacity-0"}`}
+                              />
+                              {dept.name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit_phone">Phone</Label>

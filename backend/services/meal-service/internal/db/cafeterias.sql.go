@@ -12,8 +12,8 @@ import (
 )
 
 const createCafeteria = `-- name: CreateCafeteria :one
-INSERT INTO cafeterias (name, location, has_vegan_menu, serves_dinner)
-VALUES ($1, $2, $3, $4)
+INSERT INTO cafeterias (name, location, has_vegan_menu, serves_dinner, is_active)
+VALUES ($1, $2, $3, $4, $5)
 RETURNING id, name, location, has_vegan_menu, serves_dinner, is_active, created_at, updated_at
 `
 
@@ -22,6 +22,7 @@ type CreateCafeteriaParams struct {
 	Location     string `json:"location"`
 	HasVeganMenu bool   `json:"has_vegan_menu"`
 	ServesDinner bool   `json:"serves_dinner"`
+	IsActive     bool   `json:"is_active"`
 }
 
 func (q *Queries) CreateCafeteria(ctx context.Context, arg CreateCafeteriaParams) (Cafeteria, error) {
@@ -30,6 +31,7 @@ func (q *Queries) CreateCafeteria(ctx context.Context, arg CreateCafeteriaParams
 		arg.Location,
 		arg.HasVeganMenu,
 		arg.ServesDinner,
+		arg.IsActive,
 	)
 	var i Cafeteria
 	err := row.Scan(
@@ -94,6 +96,41 @@ func (q *Queries) GetActiveCafeterias(ctx context.Context) ([]Cafeteria, error) 
 	return items, nil
 }
 
+const getAllCafeterias = `-- name: GetAllCafeterias :many
+SELECT id, name, location, has_vegan_menu, serves_dinner, is_active, created_at, updated_at
+FROM cafeterias
+ORDER BY name ASC
+`
+
+func (q *Queries) GetAllCafeterias(ctx context.Context) ([]Cafeteria, error) {
+	rows, err := q.db.Query(ctx, getAllCafeterias)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Cafeteria{}
+	for rows.Next() {
+		var i Cafeteria
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Location,
+			&i.HasVeganMenu,
+			&i.ServesDinner,
+			&i.IsActive,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getCafeteriaByID = `-- name: GetCafeteriaByID :one
 SELECT id, name, location, has_vegan_menu, serves_dinner, is_active, created_at, updated_at
 FROM cafeterias
@@ -118,7 +155,7 @@ func (q *Queries) GetCafeteriaByID(ctx context.Context, id pgtype.UUID) (Cafeter
 
 const updateCafeteria = `-- name: UpdateCafeteria :one
 UPDATE cafeterias
-SET name = $2, location = $3, has_vegan_menu = $4, serves_dinner = $5, updated_at = NOW()
+SET name = $2, location = $3, has_vegan_menu = $4, serves_dinner = $5, is_active = $6, updated_at = NOW()
 WHERE id = $1
 RETURNING id, name, location, has_vegan_menu, serves_dinner, is_active, created_at, updated_at
 `
@@ -129,6 +166,7 @@ type UpdateCafeteriaParams struct {
 	Location     string      `json:"location"`
 	HasVeganMenu bool        `json:"has_vegan_menu"`
 	ServesDinner bool        `json:"serves_dinner"`
+	IsActive     bool        `json:"is_active"`
 }
 
 func (q *Queries) UpdateCafeteria(ctx context.Context, arg UpdateCafeteriaParams) (Cafeteria, error) {
@@ -138,6 +176,7 @@ func (q *Queries) UpdateCafeteria(ctx context.Context, arg UpdateCafeteriaParams
 		arg.Location,
 		arg.HasVeganMenu,
 		arg.ServesDinner,
+		arg.IsActive,
 	)
 	var i Cafeteria
 	err := row.Scan(

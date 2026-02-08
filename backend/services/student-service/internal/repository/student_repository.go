@@ -286,6 +286,9 @@ func (r *StudentRepository) CreateStudentWithEvent(ctx context.Context, params d
 		return db.Student{}, fmt.Errorf("%w: failed to create student: %v", sharedErrors.ErrQueryFailed, err)
 	}
 
+	// Set the student ID in event payload (was nil before creation)
+	eventPayload["id"] = utils.PgtypeToUUIDString(student.ID)
+
 	// Create outbox event
 	payload, _ := json.Marshal(eventPayload)
 	_, err = qtx.CreateOutboxEvent(ctx, db.CreateOutboxEventParams{

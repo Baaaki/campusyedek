@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -22,20 +22,18 @@ import {
 } from '@/components/ui/dialog';
 import {
   UtensilsCrossed,
-  Leaf,
   CreditCard,
   Check,
   X,
   MapPin,
-  CalendarDays,
+  Loader2,
 } from 'lucide-react';
+import {
+  getCafeterias,
+  createBatchReservation,
+  type CreateReservationRequest,
+} from '@/lib/services/meal-service';
 
-// Mock cafeterias
-const cafeterias = [
-  { id: 'merkez', name: 'Merkez Yemekhane', location: 'Ana Kampüs' },
-  { id: 'muhendislik', name: 'Mühendislik Yemekhane', location: 'Mühendislik Fakültesi' },
-  { id: 'tip', name: 'Tıp Fakültesi Yemekhane', location: 'Tıp Kampüsü' },
-];
 
 // Days of the week
 const weekDays = [
@@ -81,6 +79,7 @@ interface MealSelection {
 const MEAL_PRICE = 25; // TL
 
 export default function StudentCafeteriaPage() {
+  const queryClient = useQueryClient();
   const [selectedCafeteria, setSelectedCafeteria] = useState<string>('');
   const [mealSelections, setMealSelections] = useState<MealSelection>({
     monday: 'none',
@@ -91,6 +90,16 @@ export default function StudentCafeteriaPage() {
   });
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
+
+  // Fetch cafeterias from API
+  const { data: cafeteriaData, isLoading: isLoadingCafeterias } = useQuery({
+    queryKey: ['cafeterias'],
+    queryFn: getCafeterias,
+  });
+
+  const cafeterias = cafeteriaData?.cafeterias || [];
 
   // Get current week dates
   const getWeekDates = () => {
@@ -133,12 +142,40 @@ export default function StudentCafeteriaPage() {
   const selectedMealsCount = Object.values(mealSelections).filter(m => m !== 'none').length;
   const totalPrice = selectedMealsCount * MEAL_PRICE;
 
+  // Get cafeteria name by id
+  const getCafeteriaName = (id: string) => {
+    const cafe = cafeterias.find(c => c.id === id);
+    return cafe ? cafe.name : 'Bilinmeyen Yemekhane';
+  };
+
   // Handle payment
-  const handlePayment = () => {
-    // Simulate payment
-    setTimeout(() => {
+  const handlePayment = async () => {
+    setIsSubmitting(true);
+    try {
+      // Create reservations for selected meals
+      const reservations: CreateReservationRequest[] = weekDates
+        .filter(day => mealSelections[day.key] !== 'none')
+        .map(day => ({
+          cafeteria_id: selectedCafeteria,
+          date: day.fullDate.toISOString().split('T')[0],
+          meal_time: 'lunch' as const, // Default to lunch, could be made selectable
+          menu_type: mealSelections[day.key] as 'normal' | 'vegan',
+        }));
+
+      const response = await createBatchReservation({ reservations });
+
+      // Store payment URL for redirect
+      setPaymentUrl(response.payment_url);
       setPaymentSuccess(true);
-    }, 1500);
+
+      // Invalidate reservations cache so history page refreshes
+      queryClient.invalidateQueries({ queryKey: ['my-reservations'] });
+    } catch (error) {
+      console.error('Rezervasyon oluşturulurken hata:', error);
+      // Could add error handling UI here
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const resetSelections = () => {
@@ -151,6 +188,7 @@ export default function StudentCafeteriaPage() {
     });
     setPaymentSuccess(false);
     setPaymentDialogOpen(false);
+    setPaymentUrl(null);
   };
 
   return (
@@ -177,21 +215,28 @@ export default function StudentCafeteriaPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Select value={selectedCafeteria} onValueChange={setSelectedCafeteria}>
-            <SelectTrigger className="w-full md:w-96">
-              <SelectValue placeholder="Yemekhane seçin..." />
-            </SelectTrigger>
-            <SelectContent>
-              {cafeterias.map((cafe) => (
-                <SelectItem key={cafe.id} value={cafe.id}>
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{cafe.name}</span>
-                    <span className="text-gray-500 text-sm">({cafe.location})</span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {isLoadingCafeterias ? (
+            <div className="flex items-center gap-2 text-gray-500">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Yemekhaneler yükleniyor...
+            </div>
+          ) : (
+            <Select value={selectedCafeteria} onValueChange={setSelectedCafeteria}>
+              <SelectTrigger className="w-full md:w-96">
+                <SelectValue placeholder="Yemekhane seçin..." />
+              </SelectTrigger>
+              <SelectContent>
+                {cafeterias.map((cafe) => (
+                  <SelectItem key={cafe.id} value={cafe.id}>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{cafe.name}</span>
+                      <span className="text-gray-500 text-sm">({cafe.location})</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </CardContent>
       </Card>
 
@@ -403,12 +448,21 @@ export default function StudentCafeteriaPage() {
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setPaymentDialogOpen(false)}>
+                <Button variant="outline" onClick={() => setPaymentDialogOpen(false)} disabled={isSubmitting}>
                   İptal
                 </Button>
-                <Button onClick={handlePayment} className="bg-emerald-600 hover:bg-emerald-700">
-                  <CreditCard className="h-4 w-4 mr-2" />
-                  Ödemeyi Onayla
+                <Button onClick={handlePayment} className="bg-emerald-600 hover:bg-emerald-700" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      İşleniyor...
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      Ödemeyi Onayla
+                    </>
+                  )}
                 </Button>
               </DialogFooter>
             </>
@@ -419,14 +473,28 @@ export default function StudentCafeteriaPage() {
                   <Check className="h-8 w-8 text-emerald-600" />
                 </div>
                 <p className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                  Ödemeniz alındı!
+                  Rezervasyon oluşturuldu!
                 </p>
                 <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
                   {selectedMealsCount} öğünlük yemek seçiminiz kaydedildi.
                 </p>
+                {paymentUrl && (
+                  <p className="text-xs text-gray-400 mt-2">
+                    Ödeme işlemi için yönlendirileceksiniz.
+                  </p>
+                )}
               </div>
-              <DialogFooter>
-                <Button onClick={resetSelections} className="w-full">
+              <DialogFooter className="flex flex-col gap-2 sm:flex-col">
+                {paymentUrl && (
+                  <Button
+                    onClick={() => window.open(paymentUrl, '_blank')}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700"
+                  >
+                    <CreditCard className="h-4 w-4 mr-2" />
+                    Ödeme Sayfasına Git
+                  </Button>
+                )}
+                <Button onClick={resetSelections} variant={paymentUrl ? 'outline' : 'default'} className="w-full">
                   Tamam
                 </Button>
               </DialogFooter>

@@ -99,3 +99,33 @@ type DeleteSemesterCourseResponse struct {
 	CourseCode       string `json:"course_code"`
 	Semester         string `json:"semester"`
 }
+
+// TeacherScheduleSession represents a schedule session for teacher's course
+type TeacherScheduleSession struct {
+	Day  string `json:"day"`
+	Time string `json:"time"`
+	Room string `json:"room"`
+}
+
+// TeacherCourseItem represents a course item for teacher
+type TeacherCourseItem struct {
+	ID                uuid.UUID                `json:"id"`
+	CourseCode        string                   `json:"course_code"`
+	CourseName        string                   `json:"course_name"`
+	Faculty           string                   `json:"faculty"`
+	Department        string                   `json:"department"`
+	Semester          string                   `json:"semester"`
+	Credits           int16                    `json:"credits"`
+	TheoreticalHours  int16                    `json:"theoretical_hours"`
+	PracticalHours    int16                    `json:"practical_hours"`
+	ClassroomLocation string                   `json:"classroom_location"`
+	MaxCapacity       int16                    `json:"max_capacity"`
+	Schedule          []TeacherScheduleSession `json:"schedule"`
+}
+
+// TeacherCoursesResponse represents the response for teacher's courses
+type TeacherCoursesResponse struct {
+	InstructorID uuid.UUID           `json:"instructor_id"`
+	TotalCourses int                 `json:"total_courses"`
+	Courses      []TeacherCourseItem `json:"courses"`
+}

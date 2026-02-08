@@ -48,6 +48,6 @@ CREATE TRIGGER trg_instructor_schedule_conflict
 COMMENT ON FUNCTION check_instructor_schedule_conflict() IS
 'Prevents instructor from being assigned to multiple courses at the same time slot in the same semester';
 
--- +goose Downcoale
+-- +goose Down
 DROP TRIGGER IF EXISTS trg_instructor_schedule_conflict ON course_schedule_sessions;
 DROP FUNCTION IF EXISTS check_instructor_schedule_conflict();

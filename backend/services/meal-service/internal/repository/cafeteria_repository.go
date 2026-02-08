@@ -34,6 +34,15 @@ func (r *CafeteriaRepository) GetActiveCafeterias(ctx context.Context) ([]db.Caf
 	return cafeterias, nil
 }
 
+// GetAllCafeterias returns all cafeterias including inactive ones
+func (r *CafeteriaRepository) GetAllCafeterias(ctx context.Context) ([]db.Cafeteria, error) {
+	cafeterias, err := r.queries.GetAllCafeterias(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("%w: failed to get all cafeterias: %v", sharedErrors.ErrQueryFailed, err)
+	}
+	return cafeterias, nil
+}
+
 // GetCafeteriaByID returns cafeteria by ID
 func (r *CafeteriaRepository) GetCafeteriaByID(ctx context.Context, id uuid.UUID) (db.Cafeteria, error) {
 	cafeteria, err := r.queries.GetCafeteriaByID(ctx, utils.UUIDToPgtype(id))

@@ -358,6 +358,73 @@ func (s *EnrollmentService) createProgramWithCapacityCheck(ctx context.Context, 
 	return program, nil
 }
 
+// CancelMyEnrollment cancels the student's enrollment program for a semester (only if not approved)
+func (s *EnrollmentService) CancelMyEnrollment(ctx context.Context, studentID uuid.UUID, semester string) error {
+	serviceLogger := logger.WithContextAndFields(ctx,
+		zap.String("service", "EnrollmentService"),
+		zap.String("method", "CancelMyEnrollment"),
+		zap.String("student_id", studentID.String()),
+		zap.String("semester", semester),
+	)
+
+	// Get existing enrollment program
+	existingProgram, err := s.enrollmentRepo.GetEnrollmentProgramByStudentAndSemester(ctx, studentID, semester)
+	if err != nil {
+		if sharedErrors.Is(err, sharedErrors.ErrNotFound) {
+			serviceLogger.Warn("enrollment program not found")
+			return sharedErrors.WrapWithMessage(sharedErrors.ErrNotFound, err, "enrollment program not found for this semester")
+		}
+		return sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+	}
+
+	// Check if program exists
+	if !existingProgram.ID.Valid {
+		serviceLogger.Warn("no enrollment program found")
+		return sharedErrors.WrapWithMessage(sharedErrors.ErrNotFound, nil, "enrollment program not found for this semester")
+	}
+
+	// Check if already approved - cannot cancel approved enrollments
+	if existingProgram.Status.EnrollmentStatusEnum == db.EnrollmentStatusEnumApproved {
+		serviceLogger.Warn("cannot cancel approved enrollment")
+		return sharedErrors.WrapWithMessage(sharedErrors.ErrForbidden, serviceErrors.ErrCannotModifyApproved, "cannot cancel approved enrollment")
+	}
+
+	// Get courses to decrement enrollments
+	coursesRows, err := s.enrollmentRepo.GetCoursesByProgramID(ctx, utils.PgtypeToUUID(existingProgram.ID))
+	if err != nil {
+		return sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+	}
+
+	courseIDs := make([]uuid.UUID, len(coursesRows))
+	for i, row := range coursesRows {
+		courseIDs[i] = utils.PgtypeToUUID(row.CourseID)
+	}
+
+	// Create cancel event payload
+	cancelEventPayload := map[string]interface{}{
+		"program_id":   utils.PgtypeToUUID(existingProgram.ID).String(),
+		"student_id":   studentID.String(),
+		"semester":     semester,
+		"course_ids":   courseIDs,
+		"cancelled_by": "student",
+		"cancel_type":  "manual",
+		"cancelled_at": time.Now(),
+	}
+
+	// Cancel program (decrement enrollments, delete program, create event)
+	err = s.enrollmentRepo.CancelProgramWithEvent(ctx, utils.PgtypeToUUID(existingProgram.ID), courseIDs, cancelEventPayload)
+	if err != nil {
+		serviceLogger.Error("failed to cancel program", zap.Error(err))
+		return sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+	}
+
+	serviceLogger.Info("enrollment program cancelled successfully",
+		zap.String("program_id", utils.PgtypeToUUID(existingProgram.ID).String()),
+	)
+
+	return nil
+}
+
 // Helper: Build program response with course details
 func (s *EnrollmentService) buildProgramResponse(ctx context.Context, program db.EnrollmentProgram, courses []db.SemesterCoursesCache) dto.EnrollmentProgramResponse {
 	coursesDTO := make([]dto.CourseBasic, 0, len(courses))

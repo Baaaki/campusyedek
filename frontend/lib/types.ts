@@ -145,7 +145,7 @@ export interface AvailableCourse {
   course_code: string;
   course_name: string;
   credits: number;
-  schedule_sessions: ScheduleSession[];
+  schedule_sessions: ScheduleSessionDTO[];
   max_capacity: number;
   current_enrollment: number;
   available_seats: number;
@@ -157,16 +157,31 @@ export interface CourseBasic {
   course_code: string;
   course_name: string;
   credits: number;
+  instructor?: string;
+  schedule_sessions?: ScheduleSessionDTO[];
 }
 
 // Enrollment types
-export interface EnrollmentProgram {
+export interface EnrollmentProgramResponse {
   id: string;
   student_id: string;
+  student_number?: string;
+  student_name?: string;
+  department?: string;
+  class_level?: number;
   semester: string;
   status: string;
   courses: CourseBasic[];
   created_at: string;
+}
+
+export interface MyEnrollmentsResponse {
+  programs: EnrollmentProgramResponse[];
+}
+
+export interface AdvisorPendingProgramsResponse {
+  advisor_id: string;
+  programs: EnrollmentProgramResponse[];
 }
 
 export interface RejectedCourseDetail {
@@ -190,6 +205,19 @@ export interface RejectionDetail {
   rejection_reason: string;
   rejected_courses: RejectedCoursesData;
   rejected_at: string;
+}
+
+export interface LatestRejectionResponse {
+  student_id: string;
+  semester: string;
+  has_rejection: boolean;
+  latest_rejection: RejectionDetail | null;
+  total_rejections: number;
+}
+
+export interface MyRejectionsResponse {
+  student_id: string;
+  rejections: RejectionDetail[];
 }
 
 // Attendance types
@@ -241,6 +269,7 @@ export interface MyAttendanceResponse {
 export interface ScoreDetail {
   score: number | null;
   is_absent: boolean;
+  is_locked: boolean;
 }
 
 export interface ActiveCourse {
@@ -258,6 +287,7 @@ export interface CompletedCourse {
   credits: number;
   weighted_average: number;
   grade_point: string;
+  assessment_scores?: Record<string, number>;
 }
 
 export interface MyGradesResponse {
@@ -302,6 +332,100 @@ export interface TranscriptResponse {
   semesters: SemesterGrades[];
   summary: TranscriptSummary;
   generated_at: string;
+}
+
+// Teacher Grade Entry types
+export interface AssessmentStatus {
+  slug: string;
+  name: string;
+  weight: number;
+  graded_count: number;
+  pending_count: number;
+  is_complete: boolean;
+}
+
+export interface ClassStatistics {
+  mean: number;
+  stddev: number;
+  passing_count: number;
+  failing_count: number;
+  attendance_failed_count?: number;
+}
+
+export interface CourseStatusResponse {
+  course_id: string;
+  course_code: string;
+  course_name: string;
+  semester: string;
+  total_students: number;
+  assessments: AssessmentStatus[];
+  is_finalized: boolean;
+  pending_message?: string;
+  finalized_at?: string;
+  grading_type?: string;
+  class_statistics?: ClassStatistics;
+}
+
+export interface StudentGrades {
+  registration_id: string;
+  student_id: string;
+  student_number: string;
+  first_name: string;
+  last_name: string;
+  scores: Record<string, ScoreDetail>;
+  current_average: number | null;
+  is_attendance_failed?: boolean;
+}
+
+export interface CourseStudentsResponse {
+  course_id: string;
+  course_code: string;
+  students: StudentGrades[];
+}
+
+export interface SubmitScoreRequest {
+  registration_id: string;
+  slug: string;
+  score: number | null;
+  is_absent: boolean;
+}
+
+export interface SubmitScoreResponse {
+  id: string;
+  student_number: string;
+  slug: string;
+  score: number | null;
+  is_absent: boolean;
+  graded_at: string;
+  auto_finalized?: boolean;
+  finalize_result?: FinalizeResult;
+}
+
+export interface BulkScoreEntry {
+  registration_id: string;
+  score: number | null;
+  is_absent: boolean;
+}
+
+export interface BulkSubmitScoresRequest {
+  slug: string;
+  scores: BulkScoreEntry[];
+}
+
+export interface BulkSubmitScoresResponse {
+  slug: string;
+  success_count: number;
+  auto_finalized?: boolean;
+  finalize_result?: FinalizeResult;
+}
+
+export interface FinalizeResult {
+  grading_type: string;
+  class_mean: number;
+  total_students: number;
+  passing_count: number;
+  failing_count: number;
+  attendance_failed_count?: number;
 }
 
 // Meal service types
@@ -427,4 +551,145 @@ export interface SemesterCourse {
   prerequisites?: Prerequisite[];
   created_at: string;
   updated_at: string;
+}
+
+// Teacher types
+export interface TeacherScheduleSession {
+  day: string;
+  time: string;
+  room: string;
+}
+
+export interface TeacherCourse {
+  id: string;
+  course_code: string;
+  course_name: string;
+  faculty: string;
+  department: string;
+  semester: string;
+  credits: number;
+  theoretical_hours: number;
+  practical_hours: number;
+  classroom_location: string;
+  max_capacity: number;
+  schedule: TeacherScheduleSession[];
+}
+
+export interface TeacherCoursesResponse {
+  instructor_id: string;
+  total_courses: number;
+  courses: TeacherCourse[];
+}
+
+// Attendance Session types
+export interface CreateSessionRequest {
+  course_id: string;
+  week_number: number;
+  duration_minutes: number;
+}
+
+export interface CreateSessionResponse {
+  session_id: string;
+  course_id: string;
+  course_code: string;
+  course_name: string;
+  week_number: number;
+  session_date: string;
+  qr_rotation_interval: number;
+  started_at: string;
+  expires_at: string;
+  enrolled_student_count: number;
+}
+
+export interface SessionDetailsResponse {
+  session_id: string;
+  course_id: string;
+  course_code: string;
+  course_name: string;
+  week_number: number;
+  session_date: string;
+  semester: string;
+  is_active: boolean;
+  qr_rotation_interval: number;
+  started_at: string;
+  expires_at: string;
+  enrolled_student_count: number;
+  present_count: number;
+  absent_count: number;
+}
+
+export interface QRCodeResponse {
+  session_id: string;
+  qr_payload: QRPayload;
+  valid_until: string;
+  rotation_interval: number;
+}
+
+export interface AttendanceRecordItem {
+  id: string;
+  student_id: string;
+  student_number: string;
+  student_name: string;
+  is_present: boolean;
+  marked_via: string;
+  marked_at?: string;
+  note?: string;
+}
+
+export interface SessionRecordsResponse {
+  session_id: string;
+  week_number: number;
+  total_count: number;
+  present_count: number;
+  records: AttendanceRecordItem[];
+}
+
+export interface EnrolledStudentItem {
+  student_id: string;
+  student_number: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  is_marked: boolean;
+}
+
+export interface SessionStudentsResponse {
+  session_id: string;
+  course_id: string;
+  total_enrolled: number;
+  marked_count: number;
+  students: EnrolledStudentItem[];
+}
+
+export interface ManualAttendanceRequest {
+  student_id: string;
+  is_present: boolean;
+  note?: string;
+}
+
+export interface ManualAttendanceResponse {
+  id: string;
+  session_id: string;
+  student_id: string;
+  student_number: string;
+  student_name: string;
+  is_present: boolean;
+  marked_via: string;
+  note?: string;
+  marked_at?: string;
+}
+
+export interface CloseSessionResponse {
+  session_id: string;
+  closed_at: string;
+  summary: {
+    total_enrolled: number;
+    present_count: number;
+    absent_count: number;
+  };
+  newly_marked_absent: {
+    student_id: string;
+    student_number: string;
+    student_name: string;
+  }[];
 }

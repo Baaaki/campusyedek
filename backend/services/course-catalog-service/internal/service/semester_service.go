@@ -70,9 +70,9 @@ func (s *SemesterService) CreateSemesterCourse(ctx context.Context, semester str
 	}
 
 	// Check if course is active
-	if !catalogCourse.Status.Valid || catalogCourse.Status.CourseCatalogStatusEnum != db.CourseCatalogStatusEnumActive {
+	if catalogCourse.Status != db.CourseCatalogStatusEnumActive {
 		serviceLogger.Warn("course is not active",
-			zap.String("status", string(catalogCourse.Status.CourseCatalogStatusEnum)),
+			zap.String("status", string(catalogCourse.Status)),
 		)
 		return dto.SemesterCourseResponse{}, catalogErrors.ErrCourseNotActive
 	}
@@ -234,12 +234,7 @@ func (s *SemesterService) CreateSemesterCourse(ctx context.Context, semester str
 		"schedule_sessions":  req.ScheduleSessions,
 	}
 
-	eventPayloadJSON, err := json.Marshal(map[string]interface{}{
-		"event_id":   eventPayload["event_id"],
-		"event_type": eventPayload["event_type"],
-		"timestamp":  eventPayload["timestamp"],
-		"data":       eventPayload,
-	})
+	eventPayloadJSON, err := json.Marshal(eventPayload)
 	if err != nil {
 		serviceLogger.Error("failed to marshal event payload",
 			zap.Error(err),
@@ -698,12 +693,7 @@ func (s *SemesterService) UpdateSemesterCourse(ctx context.Context, semester, co
 		"schedule_sessions":  scheduleSessionsDTO,
 	}
 
-	eventPayloadJSON, err := json.Marshal(map[string]interface{}{
-		"event_id":   eventPayload["event_id"],
-		"event_type": eventPayload["event_type"],
-		"timestamp":  eventPayload["timestamp"],
-		"data":       eventPayload,
-	})
+	eventPayloadJSON, err := json.Marshal(eventPayload)
 	if err != nil {
 		serviceLogger.Error("failed to marshal event payload",
 			zap.Error(err),
@@ -741,12 +731,7 @@ func (s *SemesterService) UpdateSemesterCourse(ctx context.Context, semester, co
 			"new_instructor_fullname": instructorFullname,
 		}
 
-		instructorEventJSON, err := json.Marshal(map[string]interface{}{
-			"event_id":   instructorChangePayload["event_id"],
-			"event_type": instructorChangePayload["event_type"],
-			"timestamp":  instructorChangePayload["timestamp"],
-			"data":       instructorChangePayload,
-		})
+		instructorEventJSON, err := json.Marshal(instructorChangePayload)
 		if err != nil {
 			serviceLogger.Error("failed to marshal instructor change event",
 				zap.Error(err),
@@ -865,12 +850,7 @@ func (s *SemesterService) DeleteSemesterCourse(ctx context.Context, semester, co
 		"schedule_sessions":  scheduleSessionsDTO,
 	}
 
-	eventPayloadJSON, err := json.Marshal(map[string]interface{}{
-		"event_id":   eventPayload["event_id"],
-		"event_type": eventPayload["event_type"],
-		"timestamp":  eventPayload["timestamp"],
-		"data":       eventPayload,
-	})
+	eventPayloadJSON, err := json.Marshal(eventPayload)
 	if err != nil {
 		serviceLogger.Error("failed to marshal event payload",
 			zap.Error(err),
@@ -1013,4 +993,77 @@ func (s *SemesterService) toSemesterCourseResponse(course db.SemesterCourse, cou
 // toSemesterCourseResponseWithPrerequisites is alias for toSemesterCourseResponse
 func (s *SemesterService) toSemesterCourseResponseWithPrerequisites(course db.SemesterCourse, courseName string, sessions []dto.ScheduleSession, prerequisites []dto.Prerequisite) (dto.SemesterCourseResponse, error) {
 	return s.toSemesterCourseResponse(course, courseName, sessions, prerequisites)
+}
+
+// GetTeacherCourses returns all courses for a specific instructor
+func (s *SemesterService) GetTeacherCourses(ctx context.Context, instructorID uuid.UUID, semester *string) (dto.TeacherCoursesResponse, error) {
+	serviceLogger := logger.WithContextAndFields(ctx,
+		zap.String("service", "SemesterService"),
+		zap.String("method", "GetTeacherCourses"),
+		zap.String("instructor_id", instructorID.String()),
+	)
+
+	serviceLogger.Info("getting teacher courses")
+
+	var semesterArg pgtype.Text
+	if semester != nil && *semester != "" {
+		semesterArg = pgtype.Text{String: *semester, Valid: true}
+	}
+
+	courses, err := s.semesterRepo.GetTeacherCourses(ctx, instructorID, semesterArg)
+	if err != nil {
+		serviceLogger.Error("failed to get teacher courses", zap.Error(err))
+		return dto.TeacherCoursesResponse{}, sharedErrors.ErrInternal
+	}
+
+	// Build course items with schedule sessions
+	var courseItems []dto.TeacherCourseItem
+	for _, course := range courses {
+		// Get schedule sessions for this course
+		sessions, _ := s.scheduleRepo.GetScheduleSessionsByCourseID(ctx, utils.PgUUIDToUUID(course.ID))
+
+		var scheduleSessions []dto.TeacherScheduleSession
+		for _, session := range sessions {
+			// Convert slot number to time (each slot is typically 50 min, starting from 08:00)
+			startHour := 8 + (int(session.SlotNumber)-1)/2
+			startMin := ((int(session.SlotNumber) - 1) % 2) * 50
+			endHour := startHour
+			endMin := startMin + 50
+			if endMin >= 60 {
+				endHour++
+				endMin -= 60
+			}
+
+			scheduleSessions = append(scheduleSessions, dto.TeacherScheduleSession{
+				Day:  string(session.DayOfWeek),
+				Time: fmt.Sprintf("%02d:%02d-%02d:%02d", startHour, startMin, endHour, endMin),
+				Room: course.ClassroomLocation,
+			})
+		}
+
+		courseItems = append(courseItems, dto.TeacherCourseItem{
+			ID:                utils.PgUUIDToUUID(course.ID),
+			CourseCode:        course.CourseCode,
+			CourseName:        course.CourseName,
+			Faculty:           course.Faculty,
+			Department:        course.Department,
+			Semester:          course.Semester,
+			Credits:           course.Credits,
+			TheoreticalHours:  course.TheoreticalHours,
+			PracticalHours:    course.PracticalHours,
+			ClassroomLocation: course.ClassroomLocation,
+			MaxCapacity:       course.MaxCapacity,
+			Schedule:          scheduleSessions,
+		})
+	}
+
+	serviceLogger.Info("teacher courses retrieved",
+		zap.Int("count", len(courseItems)),
+	)
+
+	return dto.TeacherCoursesResponse{
+		InstructorID: instructorID,
+		TotalCourses: len(courseItems),
+		Courses:      courseItems,
+	}, nil
 }

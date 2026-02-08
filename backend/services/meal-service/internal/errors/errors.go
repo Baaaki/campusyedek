@@ -53,6 +53,7 @@ var (
 
 	// Payment service errors
 	ErrPaymentServiceError = sharedErrors.New("PAYMENT_SERVICE_ERROR", "Payment service is unavailable or returned an error", http.StatusFailedDependency)
+	ErrPaymentFailed       = sharedErrors.New("PAYMENT_FAILED", "Payment initiation failed", http.StatusFailedDependency)
 	ErrRefundFailed        = sharedErrors.New("REFUND_FAILED", "Refund operation failed. Please try again later", http.StatusFailedDependency)
 
 	// Repository-specific sentinel errors (for internal use)

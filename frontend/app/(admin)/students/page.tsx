@@ -33,7 +33,7 @@ import { studentApi } from '@/lib/api-client'
 import { mockFaculties } from '@/mock_data/catalog'
 import { staffApi } from '@/lib/api-client'
 import type { Department, Staff } from '@/lib/types'
-import { ArrowUp, ArrowDown, ArrowUpDown, Plus, Upload, Users } from 'lucide-react'
+import { ArrowUp, ArrowDown, ArrowUpDown, Plus, Upload, Users, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 
 type Student = {
@@ -88,6 +88,10 @@ export default function StudentsPage() {
   // Advisors from staff API
   const [advisors, setAdvisors] = useState<Staff[]>([])
 
+  // Department-specific advisors for create form
+  const [departmentAdvisors, setDepartmentAdvisors] = useState<Staff[]>([])
+  const [loadingAdvisors, setLoadingAdvisors] = useState(false)
+
   // Create form state
   const [createFormData, setCreateFormData] = useState({
     student_number: '',
@@ -112,13 +116,18 @@ export default function StudentsPage() {
     enrollment_year: new Date().getFullYear(),
     class_level: 1,
     status: 'active',
+    advisor_id: '',
   })
+
+  // Department-specific advisors for edit form
+  const [editDepartmentAdvisors, setEditDepartmentAdvisors] = useState<Staff[]>([])
+  const [loadingEditAdvisors, setLoadingEditAdvisors] = useState(false)
 
   useEffect(() => {
     fetchStudents()
   }, [currentPage, limit])
 
-  // Fetch advisors (teachers) from staff API
+  // Fetch all advisors (teachers) from staff API
   useEffect(() => {
     const fetchAdvisors = async () => {
       try {
@@ -130,6 +139,47 @@ export default function StudentsPage() {
     }
     fetchAdvisors()
   }, [])
+
+  // Fetch department-specific advisors when department changes in create form
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost'
+
+  const fetchAdvisorsByDepartment = async (department: string): Promise<Staff[]> => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}:8002/internal/staff/instructors?department=${encodeURIComponent(department)}`
+      )
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+      const instructors = data.data || []
+      console.log(`[Students] Fetched ${instructors.length} advisors for department: ${department}`)
+      return instructors
+    } catch (err) {
+      console.error('Error fetching advisors by department:', err)
+      // Hata durumunda boş dön - fallback yok
+      return []
+    }
+  }
+
+  // Effect to load advisors when department is selected in create form
+  useEffect(() => {
+    if (createFormData.department) {
+      setLoadingAdvisors(true)
+      setCreateFormData(prev => ({ ...prev, advisor_id: '' })) // Reset advisor when department changes
+      fetchAdvisorsByDepartment(createFormData.department)
+        .then((instructors) => {
+          setDepartmentAdvisors(instructors) // Bölümde hoca yoksa boş kalacak
+        })
+        .finally(() => {
+          setLoadingAdvisors(false)
+        })
+    } else {
+      setDepartmentAdvisors([])
+    }
+  }, [createFormData.department])
 
   const fetchStudents = async () => {
     setLoading(true)
@@ -175,6 +225,7 @@ export default function StudentsPage() {
         advisor_id: '',
       })
       setCreateDepartments([])
+      setDepartmentAdvisors([])
       fetchStudents()
     } catch (error) {
       console.error('[Students Page] Failed to create student:', error)
@@ -187,14 +238,20 @@ export default function StudentsPage() {
 
     try {
       // Backend only accepts class_level, advisor_id, status for updates
-      const payload = {
+      const payload: { class_level: number; status: string; advisor_id?: string } = {
         class_level: updateFormData.class_level,
         status: updateFormData.status,
+      }
+
+      // Only include advisor_id if it's set
+      if (updateFormData.advisor_id) {
+        payload.advisor_id = updateFormData.advisor_id
       }
 
       await studentApi.put(`${editingStudent.id}`, { json: payload })
       setIsEditOpen(false)
       setEditingStudent(null)
+      setEditDepartmentAdvisors([])
       fetchStudents()
     } catch (error) {
       console.error('Failed to update student:', error)
@@ -224,7 +281,19 @@ export default function StudentsPage() {
       enrollment_year: student.enrollment_year,
       class_level: student.class_level,
       status: student.status,
+      advisor_id: student.advisor_id || '',
     })
+    // Fetch advisors for student's department
+    if (student.department) {
+      setLoadingEditAdvisors(true)
+      fetchAdvisorsByDepartment(student.department)
+        .then((instructors) => {
+          setEditDepartmentAdvisors(instructors)
+        })
+        .finally(() => {
+          setLoadingEditAdvisors(false)
+        })
+    }
     setIsEditOpen(true)
   }
 
@@ -458,30 +527,47 @@ export default function StudentsPage() {
                 </Select>
               </div>
               <div>
-                <Label htmlFor="advisor">Danışman</Label>
-                <Select
-                  value={createFormData.advisor_id}
-                  onValueChange={(value) =>
-                    setCreateFormData({ ...createFormData, advisor_id: value })
-                  }
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Danışman seçin..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {advisors.length === 0 ? (
-                      <SelectItem value="no-advisors" disabled>
-                        Danışman bulunamadı
-                      </SelectItem>
-                    ) : (
-                      advisors.map((staff) => (
-                        <SelectItem key={staff.id} value={staff.id}>
-                          {staff.first_name} {staff.last_name} - {staff.department}
+                <Label htmlFor="advisor">
+                  Danışman
+                  {loadingAdvisors && (
+                    <Loader2 className="ml-2 h-4 w-4 animate-spin inline" />
+                  )}
+                </Label>
+                {loadingAdvisors ? (
+                  <div className="mt-1.5 p-2 border rounded-md text-sm text-muted-foreground">
+                    Danışmanlar yükleniyor...
+                  </div>
+                ) : (
+                  <Select
+                    value={createFormData.advisor_id}
+                    onValueChange={(value) =>
+                      setCreateFormData({ ...createFormData, advisor_id: value })
+                    }
+                    disabled={!createFormData.department}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder={createFormData.department ? "Danışman seçin..." : "Önce bölüm seçin"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {departmentAdvisors.length === 0 ? (
+                        <SelectItem value="no-advisors" disabled>
+                          Bu bölümde danışman bulunamadı
                         </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
+                      ) : (
+                        departmentAdvisors.map((staff) => (
+                          <SelectItem key={staff.id} value={staff.id}>
+                            {staff.first_name} {staff.last_name}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                )}
+                {createFormData.department && !loadingAdvisors && departmentAdvisors.length > 0 && (
+                  <p className="mt-1 text-xs text-green-600">
+                    {departmentAdvisors.length} danışman bulundu
+                  </p>
+                )}
               </div>
               <div>
                 <Label htmlFor="enrollment_year">Enrollment Year</Label>
@@ -786,6 +872,48 @@ export default function StudentsPage() {
                 <option value="suspended">Suspended</option>
                 <option value="withdrawn">Withdrawn</option>
               </select>
+            </div>
+            <div>
+              <Label htmlFor="edit_advisor">
+                Danışman
+                {loadingEditAdvisors && (
+                  <Loader2 className="ml-2 h-4 w-4 animate-spin inline" />
+                )}
+              </Label>
+              {loadingEditAdvisors ? (
+                <div className="mt-1.5 p-2 border rounded-md text-sm text-muted-foreground">
+                  Danışmanlar yükleniyor...
+                </div>
+              ) : (
+                <Select
+                  value={updateFormData.advisor_id}
+                  onValueChange={(value) =>
+                    setUpdateFormData({ ...updateFormData, advisor_id: value })
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Danışman seçin..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {editDepartmentAdvisors.length === 0 ? (
+                      <SelectItem value="no-advisors" disabled>
+                        Bu bölümde danışman bulunamadı
+                      </SelectItem>
+                    ) : (
+                      editDepartmentAdvisors.map((staff) => (
+                        <SelectItem key={staff.id} value={staff.id}>
+                          {staff.first_name} {staff.last_name}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              )}
+              {!loadingEditAdvisors && editDepartmentAdvisors.length > 0 && (
+                <p className="mt-1 text-xs text-green-600">
+                  {editDepartmentAdvisors.length} danışman bulundu ({updateFormData.department})
+                </p>
+              )}
             </div>
             <div className="flex justify-end space-x-2">
               <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>
