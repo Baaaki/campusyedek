@@ -12,14 +12,17 @@ import (
 )
 
 const checkInstructorScheduleConflict = `-- name: CheckInstructorScheduleConflict :many
-SELECT sc.course_code, sc.id
+SELECT sc.course_code, sc.id, cc.department, css.day_of_week, css.slot_number
 FROM course_schedule_sessions css
 JOIN semester_courses sc ON css.semester_course_id = sc.id
-WHERE css.day_of_week = ANY($1::day_of_week_enum[])
-  AND css.slot_number = ANY($2::SMALLINT[])
+JOIN course_catalog cc ON cc.course_code = sc.course_code
+WHERE (css.day_of_week, css.slot_number) IN (
+    SELECT unnest($1::day_of_week_enum[]), unnest($2::SMALLINT[])
+)
   AND sc.semester = $3
   AND sc.instructor_id = $4
   AND sc.id != $5
+ORDER BY css.day_of_week, css.slot_number
 `
 
 type CheckInstructorScheduleConflictParams struct {
@@ -31,8 +34,11 @@ type CheckInstructorScheduleConflictParams struct {
 }
 
 type CheckInstructorScheduleConflictRow struct {
-	CourseCode string      `json:"course_code"`
-	ID         pgtype.UUID `json:"id"`
+	CourseCode string        `json:"course_code"`
+	ID         pgtype.UUID   `json:"id"`
+	Department string        `json:"department"`
+	DayOfWeek  DayOfWeekEnum `json:"day_of_week"`
+	SlotNumber int16         `json:"slot_number"`
 }
 
 func (q *Queries) CheckInstructorScheduleConflict(ctx context.Context, arg CheckInstructorScheduleConflictParams) ([]CheckInstructorScheduleConflictRow, error) {
@@ -50,7 +56,13 @@ func (q *Queries) CheckInstructorScheduleConflict(ctx context.Context, arg Check
 	items := []CheckInstructorScheduleConflictRow{}
 	for rows.Next() {
 		var i CheckInstructorScheduleConflictRow
-		if err := rows.Scan(&i.CourseCode, &i.ID); err != nil {
+		if err := rows.Scan(
+			&i.CourseCode,
+			&i.ID,
+			&i.Department,
+			&i.DayOfWeek,
+			&i.SlotNumber,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -62,25 +74,41 @@ func (q *Queries) CheckInstructorScheduleConflict(ctx context.Context, arg Check
 }
 
 const createScheduleSession = `-- name: CreateScheduleSession :one
-INSERT INTO course_schedule_sessions (semester_course_id, day_of_week, slot_number)
-VALUES ($1, $2, $3)
-RETURNING id, semester_course_id, day_of_week, slot_number, created_at
+INSERT INTO course_schedule_sessions (semester_course_id, day_of_week, slot_number, session_type)
+VALUES ($1, $2, $3, $4)
+RETURNING id, semester_course_id, day_of_week, slot_number, session_type, created_at
 `
 
 type CreateScheduleSessionParams struct {
-	SemesterCourseID pgtype.UUID   `json:"semester_course_id"`
-	DayOfWeek        DayOfWeekEnum `json:"day_of_week"`
-	SlotNumber       int16         `json:"slot_number"`
+	SemesterCourseID pgtype.UUID             `json:"semester_course_id"`
+	DayOfWeek        DayOfWeekEnum           `json:"day_of_week"`
+	SlotNumber       int16                   `json:"slot_number"`
+	SessionType      ScheduleSessionTypeEnum `json:"session_type"`
 }
 
-func (q *Queries) CreateScheduleSession(ctx context.Context, arg CreateScheduleSessionParams) (CourseScheduleSession, error) {
-	row := q.db.QueryRow(ctx, createScheduleSession, arg.SemesterCourseID, arg.DayOfWeek, arg.SlotNumber)
-	var i CourseScheduleSession
+type CreateScheduleSessionRow struct {
+	ID               pgtype.UUID             `json:"id"`
+	SemesterCourseID pgtype.UUID             `json:"semester_course_id"`
+	DayOfWeek        DayOfWeekEnum           `json:"day_of_week"`
+	SlotNumber       int16                   `json:"slot_number"`
+	SessionType      ScheduleSessionTypeEnum `json:"session_type"`
+	CreatedAt        pgtype.Timestamp        `json:"created_at"`
+}
+
+func (q *Queries) CreateScheduleSession(ctx context.Context, arg CreateScheduleSessionParams) (CreateScheduleSessionRow, error) {
+	row := q.db.QueryRow(ctx, createScheduleSession,
+		arg.SemesterCourseID,
+		arg.DayOfWeek,
+		arg.SlotNumber,
+		arg.SessionType,
+	)
+	var i CreateScheduleSessionRow
 	err := row.Scan(
 		&i.ID,
 		&i.SemesterCourseID,
 		&i.DayOfWeek,
 		&i.SlotNumber,
+		&i.SessionType,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -97,26 +125,36 @@ func (q *Queries) DeleteScheduleSessionsByCourseID(ctx context.Context, semester
 }
 
 const getScheduleSessionsByCourseID = `-- name: GetScheduleSessionsByCourseID :many
-SELECT id, semester_course_id, day_of_week, slot_number, created_at
+SELECT id, semester_course_id, day_of_week, slot_number, session_type, created_at
 FROM course_schedule_sessions
 WHERE semester_course_id = $1
-ORDER BY day_of_week, slot_number
+ORDER BY session_type, day_of_week, slot_number
 `
 
-func (q *Queries) GetScheduleSessionsByCourseID(ctx context.Context, semesterCourseID pgtype.UUID) ([]CourseScheduleSession, error) {
+type GetScheduleSessionsByCourseIDRow struct {
+	ID               pgtype.UUID             `json:"id"`
+	SemesterCourseID pgtype.UUID             `json:"semester_course_id"`
+	DayOfWeek        DayOfWeekEnum           `json:"day_of_week"`
+	SlotNumber       int16                   `json:"slot_number"`
+	SessionType      ScheduleSessionTypeEnum `json:"session_type"`
+	CreatedAt        pgtype.Timestamp        `json:"created_at"`
+}
+
+func (q *Queries) GetScheduleSessionsByCourseID(ctx context.Context, semesterCourseID pgtype.UUID) ([]GetScheduleSessionsByCourseIDRow, error) {
 	rows, err := q.db.Query(ctx, getScheduleSessionsByCourseID, semesterCourseID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []CourseScheduleSession{}
+	items := []GetScheduleSessionsByCourseIDRow{}
 	for rows.Next() {
-		var i CourseScheduleSession
+		var i GetScheduleSessionsByCourseIDRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.SemesterCourseID,
 			&i.DayOfWeek,
 			&i.SlotNumber,
+			&i.SessionType,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -130,26 +168,36 @@ func (q *Queries) GetScheduleSessionsByCourseID(ctx context.Context, semesterCou
 }
 
 const getScheduleSessionsByMultipleCourseIDs = `-- name: GetScheduleSessionsByMultipleCourseIDs :many
-SELECT id, semester_course_id, day_of_week, slot_number, created_at
+SELECT id, semester_course_id, day_of_week, slot_number, session_type, created_at
 FROM course_schedule_sessions
 WHERE semester_course_id = ANY($1::UUID[])
-ORDER BY semester_course_id, day_of_week, slot_number
+ORDER BY semester_course_id, session_type, day_of_week, slot_number
 `
 
-func (q *Queries) GetScheduleSessionsByMultipleCourseIDs(ctx context.Context, courseIds []pgtype.UUID) ([]CourseScheduleSession, error) {
+type GetScheduleSessionsByMultipleCourseIDsRow struct {
+	ID               pgtype.UUID             `json:"id"`
+	SemesterCourseID pgtype.UUID             `json:"semester_course_id"`
+	DayOfWeek        DayOfWeekEnum           `json:"day_of_week"`
+	SlotNumber       int16                   `json:"slot_number"`
+	SessionType      ScheduleSessionTypeEnum `json:"session_type"`
+	CreatedAt        pgtype.Timestamp        `json:"created_at"`
+}
+
+func (q *Queries) GetScheduleSessionsByMultipleCourseIDs(ctx context.Context, courseIds []pgtype.UUID) ([]GetScheduleSessionsByMultipleCourseIDsRow, error) {
 	rows, err := q.db.Query(ctx, getScheduleSessionsByMultipleCourseIDs, courseIds)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []CourseScheduleSession{}
+	items := []GetScheduleSessionsByMultipleCourseIDsRow{}
 	for rows.Next() {
-		var i CourseScheduleSession
+		var i GetScheduleSessionsByMultipleCourseIDsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.SemesterCourseID,
 			&i.DayOfWeek,
 			&i.SlotNumber,
+			&i.SessionType,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err

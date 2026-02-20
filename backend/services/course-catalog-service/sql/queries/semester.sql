@@ -24,19 +24,6 @@ FROM semester_courses
 WHERE semester = $1 AND course_code = $2
 LIMIT 1;
 
--- name: UpdateSemesterCourse :one
-UPDATE semester_courses
-SET instructor_id = COALESCE(sqlc.narg('instructor_id'), instructor_id),
-    instructor_fullname = COALESCE(sqlc.narg('instructor_fullname'), instructor_fullname),
-    classroom_location = COALESCE(sqlc.narg('classroom_location'), classroom_location),
-    max_capacity = COALESCE(sqlc.narg('max_capacity'), max_capacity),
-    assessment_schema = COALESCE(sqlc.narg('assessment_schema'), assessment_schema),
-    updated_at = NOW()
-WHERE id = $1
-RETURNING id, semester, course_code, credits, class_level, instructor_id,
-          instructor_fullname, classroom_location, max_capacity, assessment_schema, prerequisites,
-          created_at, updated_at;
-
 -- name: DeleteSemesterCourse :exec
 DELETE FROM semester_courses
 WHERE id = $1;
@@ -82,7 +69,7 @@ SELECT
     sc.classroom_location,
     sc.max_capacity,
     cc.theoretical_hours,
-    cc.practical_hours,
+    cc.lab_hours,
     sc.created_at
 FROM semester_courses sc
 JOIN course_catalog cc ON sc.course_code = cc.course_code

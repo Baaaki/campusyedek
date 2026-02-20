@@ -1,10 +1,38 @@
 package errors
 
 import (
+	"fmt"
 	"net/http"
 
 	sharedErrors "github.com/baaaki/mydreamcampus/shared/errors"
 )
+
+// ScheduleConflictError wraps the sentinel error and carries conflict details
+type ScheduleConflictError struct {
+	AppErr     *sharedErrors.AppError
+	CourseCode string
+	Department string
+	DayOfWeek  string
+	SlotNumber int16
+}
+
+func (e *ScheduleConflictError) Error() string {
+	return fmt.Sprintf("[%s] %s", e.AppErr.Code, e.AppErr.Message)
+}
+
+func (e *ScheduleConflictError) Unwrap() error {
+	return e.AppErr
+}
+
+func NewScheduleConflictError(courseCode, department, dayOfWeek string, slotNumber int16) *ScheduleConflictError {
+	return &ScheduleConflictError{
+		AppErr:     ErrInstructorScheduleConflict,
+		CourseCode: courseCode,
+		Department: department,
+		DayOfWeek:  dayOfWeek,
+		SlotNumber: slotNumber,
+	}
+}
 
 // ============================================================================
 // COURSE CATALOG SERVICE SPECIFIC ERRORS
@@ -21,6 +49,7 @@ var (
 	ErrCourseNotActive           = sharedErrors.New("COURSE_NOT_ACTIVE", "Course is not active", http.StatusBadRequest)
 
 	// Semester course errors (AppError for HTTP responses)
+	ErrInvalidSemesterFormat     = sharedErrors.New("INVALID_SEMESTER_FORMAT", "Invalid semester format. Expected: YYYY-YYYY-Fall or YYYY-YYYY-Spring", http.StatusBadRequest)
 	ErrSemesterCourseNotFound    = sharedErrors.New("SEMESTER_COURSE_NOT_FOUND", "Semester course not found", http.StatusNotFound)
 	ErrCourseAlreadyOpened       = sharedErrors.New("COURSE_ALREADY_OPENED", "Course already opened for this semester", http.StatusConflict)
 	ErrClassLevelMismatch        = sharedErrors.New("CLASS_LEVEL_MISMATCH", "Class level mismatch between request and catalog", http.StatusBadRequest)
@@ -37,11 +66,21 @@ var (
 	// Schedule errors (AppError for HTTP responses)
 	ErrInvalidSlotNumber         = sharedErrors.New("INVALID_SLOT_NUMBER", "Invalid slot number (must be 1-9)", http.StatusBadRequest)
 	ErrInvalidDayOfWeek          = sharedErrors.New("INVALID_DAY_OF_WEEK", "Invalid day of week", http.StatusBadRequest)
+	ErrInvalidSessionType        = sharedErrors.New("INVALID_SESSION_TYPE", "Invalid session type (must be 'theory' or 'lab')", http.StatusBadRequest)
+	ErrTheoryHoursZero           = sharedErrors.New("THEORY_HOURS_ZERO", "Cannot create theory schedule: course has 0 theoretical hours in catalog", http.StatusBadRequest)
+	ErrLabHoursZero              = sharedErrors.New("LAB_HOURS_ZERO", "Cannot create lab schedule: course has 0 lab hours in catalog", http.StatusBadRequest)
+	ErrTheorySlotCountMismatch   = sharedErrors.New("THEORY_SLOT_COUNT_MISMATCH", "Theory slot count must match catalog theoretical_hours", http.StatusBadRequest)
+	ErrLabSlotCountMismatch      = sharedErrors.New("LAB_SLOT_COUNT_MISMATCH", "Lab slot count must match catalog lab_hours", http.StatusBadRequest)
+	ErrCourseCreditsZero         = sharedErrors.New("COURSE_CREDITS_ZERO", "Course has 0 credits in catalog, cannot open semester course", http.StatusBadRequest)
 
 	// Assessment errors (AppError for HTTP responses)
 	ErrInvalidAssessmentSchema   = sharedErrors.New("INVALID_ASSESSMENT_SCHEMA", "Invalid assessment schema", http.StatusBadRequest)
 	ErrAssessmentWeightNotHundred = sharedErrors.New("ASSESSMENT_WEIGHT_NOT_HUNDRED", "Assessment weights must sum to 100", http.StatusBadRequest)
 	ErrDuplicateAssessmentSlug   = sharedErrors.New("DUPLICATE_ASSESSMENT_SLUG", "Duplicate assessment slug", http.StatusBadRequest)
+
+	// Deadline errors (AppError for HTTP responses)
+	ErrCourseCreationPeriodEnded   = sharedErrors.New("COURSE_CREATION_PERIOD_ENDED", "course creation period has ended for this semester", http.StatusForbidden)
+	ErrCourseCreationPeriodNotOpen = sharedErrors.New("COURSE_CREATION_PERIOD_NOT_OPEN", "course creation period has not started yet", http.StatusForbidden)
 
 	// Transaction errors (AppError for HTTP responses)
 	ErrTransactionFailed = sharedErrors.New("TRANSACTION_FAILED", "Failed to start database transaction", http.StatusInternalServerError)

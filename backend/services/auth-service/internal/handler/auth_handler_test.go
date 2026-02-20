@@ -18,7 +18,7 @@ func TestLoginValidation(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		requestBody    interface{}
+		requestBody    any
 		expectedStatus int
 	}{
 		{

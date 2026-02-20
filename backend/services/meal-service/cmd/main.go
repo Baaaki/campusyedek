@@ -15,6 +15,7 @@ import (
 	"github.com/baaaki/mydreamcampus/meal-service/internal/service"
 	"github.com/baaaki/mydreamcampus/meal-service/internal/worker"
 	sharedDB "github.com/baaaki/mydreamcampus/shared/database"
+	sharedHandler "github.com/baaaki/mydreamcampus/shared/handler"
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	"github.com/baaaki/mydreamcampus/shared/middleware"
 	"github.com/baaaki/mydreamcampus/shared/rabbitmq"
@@ -76,12 +77,20 @@ func main() {
 	}
 	defer paymentClient.Close()
 
+	// Initialize closed days repository
+	closedDaysRepo := repository.NewClosedDaysRepository(dbPool)
+
+	// Initialize shared handlers
+	timeHandler := sharedHandler.NewTimeHandler()
+	closedDaysHandler := handler.NewClosedDaysHandler(closedDaysRepo, log)
+
 	// Initialize services
 	cafeteriaService := service.NewCafeteriaService(cafeteriaRepo, log)
 	reservationService := service.NewReservationService(
 		reservationRepo,
 		cafeteriaRepo,
 		studentCacheRepo,
+		closedDaysRepo,
 		paymentClient,
 		cfg,
 		log,
@@ -114,7 +123,7 @@ func main() {
 	setupConsumers(rabbitConn, studentConsumer, paymentConsumer, log)
 
 	// Setup HTTP server
-	router := setupRouter(cfg, mealHandler, log)
+	router := setupRouter(cfg, mealHandler, timeHandler, closedDaysHandler, log)
 
 	srv := &http.Server{
 		Addr:    ":" + cfg.Server.Port,
@@ -151,7 +160,7 @@ func main() {
 	log.Info("server exited")
 }
 
-func setupRouter(cfg *config.Config, handler *handler.MealHandler, log *zap.Logger) *gin.Engine {
+func setupRouter(cfg *config.Config, handler *handler.MealHandler, timeHandler *sharedHandler.TimeHandler, closedDaysHandler *handler.ClosedDaysHandler, log *zap.Logger) *gin.Engine {
 	if cfg.Server.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -189,6 +198,10 @@ func setupRouter(cfg *config.Config, handler *handler.MealHandler, log *zap.Logg
 				admin.DELETE("/cafeterias/:cafeteria_id", handler.DeleteCafeteria)
 				admin.GET("/cafeterias/:cafeteria_id/qr", handler.GenerateQR)
 				admin.POST("/menu/monthly", handler.CreateMonthlyMenu)
+
+				// Time Machine & Closed Days
+				timeHandler.RegisterRoutes(admin)
+				closedDaysHandler.RegisterRoutes(admin)
 			}
 
 			// Student only routes

@@ -8,8 +8,8 @@ type ErrorResponse struct {
 }
 
 type SuccessResponse struct {
-	Message string      `json:"message"`
-	Data    interface{} `json:"data,omitempty"`
+	Message string `json:"message"`
+	Data    any    `json:"data,omitempty"`
 }
 
 type PaginationParams struct {
@@ -18,8 +18,8 @@ type PaginationParams struct {
 }
 
 type PaginatedResponse struct {
-	Data       interface{} `json:"data"`
-	Pagination Pagination  `json:"pagination"`
+	Data       any        `json:"data"`
+	Pagination Pagination `json:"pagination"`
 }
 
 type Pagination struct {

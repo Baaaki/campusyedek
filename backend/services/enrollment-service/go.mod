@@ -1,6 +1,6 @@
 module github.com/baaaki/mydreamcampus/enrollment-service
 
-go 1.25.1
+go 1.26
 
 replace github.com/baaaki/mydreamcampus/shared => ../../shared
 

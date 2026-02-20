@@ -18,8 +18,8 @@ var (
 )
 
 const batchCreateScheduleSessions = `-- name: BatchCreateScheduleSessions :batchexec
-INSERT INTO course_schedule_sessions (semester_course_id, day_of_week, slot_number)
-VALUES ($1, $2, $3)
+INSERT INTO course_schedule_sessions (semester_course_id, day_of_week, slot_number, session_type)
+VALUES ($1, $2, $3, $4)
 `
 
 type BatchCreateScheduleSessionsBatchResults struct {
@@ -29,9 +29,10 @@ type BatchCreateScheduleSessionsBatchResults struct {
 }
 
 type BatchCreateScheduleSessionsParams struct {
-	SemesterCourseID pgtype.UUID   `json:"semester_course_id"`
-	DayOfWeek        DayOfWeekEnum `json:"day_of_week"`
-	SlotNumber       int16         `json:"slot_number"`
+	SemesterCourseID pgtype.UUID             `json:"semester_course_id"`
+	DayOfWeek        DayOfWeekEnum           `json:"day_of_week"`
+	SlotNumber       int16                   `json:"slot_number"`
+	SessionType      ScheduleSessionTypeEnum `json:"session_type"`
 }
 
 func (q *Queries) BatchCreateScheduleSessions(ctx context.Context, arg []BatchCreateScheduleSessionsParams) *BatchCreateScheduleSessionsBatchResults {
@@ -41,6 +42,7 @@ func (q *Queries) BatchCreateScheduleSessions(ctx context.Context, arg []BatchCr
 			a.SemesterCourseID,
 			a.DayOfWeek,
 			a.SlotNumber,
+			a.SessionType,
 		}
 		batch.Queue(batchCreateScheduleSessions, vals...)
 	}

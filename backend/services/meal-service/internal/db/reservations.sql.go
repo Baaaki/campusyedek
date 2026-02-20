@@ -94,7 +94,7 @@ type CountStudentReservationsFilteredParams struct {
 	StudentID pgtype.UUID               `json:"student_id"`
 	Column2   pgtype.Date               `json:"column_2"`
 	Column3   pgtype.Date               `json:"column_3"`
-	Column4   NullReservationStatusEnum `json:"column_4"`
+	Status    NullReservationStatusEnum `json:"status"`
 }
 
 func (q *Queries) CountStudentReservationsFiltered(ctx context.Context, arg CountStudentReservationsFilteredParams) (int64, error) {
@@ -102,7 +102,7 @@ func (q *Queries) CountStudentReservationsFiltered(ctx context.Context, arg Coun
 		arg.StudentID,
 		arg.Column2,
 		arg.Column3,
-		arg.Column4,
+		arg.Status,
 	)
 	var total int64
 	err := row.Scan(&total)
@@ -360,18 +360,18 @@ JOIN cafeterias c ON r.cafeteria_id = c.id
 WHERE r.student_id = $1
   AND ($2::date IS NULL OR r.reservation_date >= $2)
   AND ($3::date IS NULL OR r.reservation_date <= $3)
-  AND ($4::reservation_status_enum IS NULL OR r.status = $4)
+  AND ($6::reservation_status_enum IS NULL OR r.status = $6)
 ORDER BY r.reservation_date DESC, r.meal_time ASC
-LIMIT NULLIF($5, 0) OFFSET $6
+LIMIT NULLIF($4, 0) OFFSET $5
 `
 
 type GetStudentReservationsFilteredParams struct {
 	StudentID pgtype.UUID               `json:"student_id"`
 	Column2   pgtype.Date               `json:"column_2"`
 	Column3   pgtype.Date               `json:"column_3"`
-	Column4   NullReservationStatusEnum `json:"column_4"`
-	Column5   interface{}               `json:"column_5"`
+	Column4   interface{}               `json:"column_4"`
 	Offset    int32                     `json:"offset"`
+	Status    NullReservationStatusEnum `json:"status"`
 }
 
 type GetStudentReservationsFilteredRow struct {
@@ -398,8 +398,8 @@ func (q *Queries) GetStudentReservationsFiltered(ctx context.Context, arg GetStu
 		arg.Column2,
 		arg.Column3,
 		arg.Column4,
-		arg.Column5,
 		arg.Offset,
+		arg.Status,
 	)
 	if err != nil {
 		return nil, err

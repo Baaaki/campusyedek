@@ -188,6 +188,15 @@ type TranscriptSummary struct {
 }
 
 // ============================================
+// Score Lock/Unlock DTOs
+// ============================================
+
+type ScoreLockRequest struct {
+	RegistrationID uuid.UUID `json:"registration_id" binding:"required"`
+	Slug           string    `json:"slug" binding:"required"`
+}
+
+// ============================================
 // Appeal (İtiraz) DTOs
 // ============================================
 

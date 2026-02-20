@@ -6,7 +6,7 @@ interface WeeklyScheduleGridProps {
   selectedCourseIds: string[];
   courseColorMap: Record<string, number>;
   onRemoveCourse: (courseId: string) => void;
-  onEnroll: () => void;
+  onEnroll?: () => void;
   readOnly?: boolean;
   submitButtonText?: string;
   showSubmitButton?: boolean;

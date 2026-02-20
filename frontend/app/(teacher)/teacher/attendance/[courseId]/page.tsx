@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Play, Users, Calendar, Clock, MapPin, Loader2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Play, Users, Calendar, Clock, MapPin, Loader2, AlertCircle, BookOpen, FlaskConical } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -29,6 +29,7 @@ export default function AttendanceStartPage() {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
+  const [sessionType, setSessionType] = useState<'theory' | 'lab'>('theory');
   const [duration, setDuration] = useState(30);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -66,6 +67,7 @@ export default function AttendanceStartPage() {
           course_id: courseId,
           week_number: selectedWeek,
           duration_minutes: duration,
+          session_type: sessionType,
         },
       }).json<{ session_id: string }>();
 
@@ -195,7 +197,9 @@ export default function AttendanceStartPage() {
           <DialogHeader>
             <DialogTitle>Yoklama Oturumu Başlat</DialogTitle>
             <DialogDescription>
-              Yoklama alınacak haftayı ve süreyi seçin.
+              {course.lab_hours > 0
+                ? 'Yoklama alınacak haftayı, ders türünü ve süreyi seçin.'
+                : 'Yoklama alınacak haftayı ve süreyi seçin.'}
             </DialogDescription>
           </DialogHeader>
 
@@ -221,6 +225,41 @@ export default function AttendanceStartPage() {
                 ))}
               </div>
             </div>
+
+            {/* Session Type Selection - only show if course has lab hours */}
+            {course.lab_hours > 0 && (
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Ders Türü
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setSessionType('theory')}
+                    className={`flex items-center justify-center gap-2 rounded-lg border-2 px-4 py-3 text-sm font-medium transition-all ${
+                      sessionType === 'theory'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-400 dark:bg-blue-900/30 dark:text-blue-300'
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:border-gray-600'
+                    }`}
+                  >
+                    <BookOpen className="h-4 w-4" />
+                    Teorik
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSessionType('lab')}
+                    className={`flex items-center justify-center gap-2 rounded-lg border-2 px-4 py-3 text-sm font-medium transition-all ${
+                      sessionType === 'lab'
+                        ? 'border-purple-500 bg-purple-50 text-purple-700 dark:border-purple-400 dark:bg-purple-900/30 dark:text-purple-300'
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:border-gray-600'
+                    }`}
+                  >
+                    <FlaskConical className="h-4 w-4" />
+                    Uygulama
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Duration Selection */}
             <div>

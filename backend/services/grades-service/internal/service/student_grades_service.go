@@ -18,10 +18,10 @@ import (
 )
 
 type StudentGradesService struct {
-	cacheRepo         *repository.CacheRepository
-	registrationRepo  *repository.RegistrationRepository
-	scoreRepo         *repository.ScoreRepository
-	completedRepo     *repository.CompletedRepository
+	cacheRepo        *repository.CacheRepository
+	registrationRepo *repository.RegistrationRepository
+	scoreRepo        *repository.ScoreRepository
+	completedRepo    *repository.CompletedRepository
 }
 
 func NewStudentGradesService(
@@ -253,7 +253,7 @@ func gradePointToFloat(gp string) float64 {
 
 // parseInterfaceToFloat64 safely converts interface{} (from pgx scan) to float64.
 // PostgreSQL numeric/decimal types may arrive as pgtype.Numeric, string, or float64.
-func parseInterfaceToFloat64(v interface{}) float64 {
+func parseInterfaceToFloat64(v any) float64 {
 	if v == nil {
 		return 0
 	}
@@ -283,7 +283,7 @@ func parseInterfaceToFloat64(v interface{}) float64 {
 }
 
 // parseInterfaceToInt64 safely converts interface{} (from pgx scan) to int64.
-func parseInterfaceToInt64(v interface{}) int64 {
+func parseInterfaceToInt64(v any) int64 {
 	if v == nil {
 		return 0
 	}

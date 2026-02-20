@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/baaaki/mydreamcampus/shared/clock"
 	pb "github.com/baaaki/mydreamcampus/payment-service/proto"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -42,7 +43,7 @@ func (s *PaymentServer) InitiatePayment(ctx context.Context, req *pb.InitiatePay
 	paymentURL := fmt.Sprintf("https://mock-payment.mydreamcampus.com/pay/%s", paymentID)
 
 	// Set expiration time (30 minutes from now)
-	expiresAt := time.Now().Add(30 * time.Minute).Format(time.RFC3339)
+	expiresAt := clock.Now().Add(30 * time.Minute).Format(time.RFC3339)
 
 	s.logger.Info("MOCK: Payment initiated successfully",
 		zap.String("payment_id", paymentID),

@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"time"
 
 	"github.com/baaaki/mydreamcampus/meal-service/internal/db"
+	"github.com/baaaki/mydreamcampus/shared/clock"
 	"github.com/baaaki/mydreamcampus/meal-service/internal/dto"
 	"github.com/baaaki/mydreamcampus/meal-service/internal/repository"
 	sharedErrors "github.com/baaaki/mydreamcampus/shared/errors"
@@ -45,7 +45,7 @@ func (s *MenuService) CreateOrUpdateMonthlyMenu(ctx context.Context, req dto.Cre
 	}
 
 	// Unmarshal menu data for response
-	var menuData map[string]interface{}
+	var menuData map[string]any
 	if err := json.Unmarshal(menu.MenuData, &menuData); err != nil {
 		s.logger.Error("failed to unmarshal menu data", zap.Error(err))
 		return nil, sharedErrors.ErrQueryFailed
@@ -66,7 +66,7 @@ func (s *MenuService) CreateOrUpdateMonthlyMenu(ctx context.Context, req dto.Cre
 func (s *MenuService) GetMonthlyMenu(ctx context.Context, year, month int) (*dto.MonthlyMenuResponse, error) {
 	// If year/month not provided, use current date
 	if year == 0 || month == 0 {
-		now := time.Now()
+		now := clock.Now()
 		if year == 0 {
 			year = now.Year()
 		}
@@ -88,7 +88,7 @@ func (s *MenuService) GetMonthlyMenu(ctx context.Context, year, month int) (*dto
 	}
 
 	// Unmarshal menu data for response
-	var menuData map[string]interface{}
+	var menuData map[string]any
 	if err := json.Unmarshal(menu.MenuData, &menuData); err != nil {
 		s.logger.Error("failed to unmarshal menu data", zap.Error(err))
 		return nil, sharedErrors.ErrQueryFailed

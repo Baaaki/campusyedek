@@ -7,8 +7,8 @@ import (
 
 	sharedErrors "github.com/baaaki/mydreamcampus/shared/errors"
 	"github.com/baaaki/mydreamcampus/shared/utils"
-	serviceErrors "github.com/baaaki/mydreamcampus/staff-service/internal/errors"
 	"github.com/baaaki/mydreamcampus/staff-service/internal/db"
+	serviceErrors "github.com/baaaki/mydreamcampus/staff-service/internal/errors"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -29,7 +29,7 @@ func NewStaffRepository(pool *pgxpool.Pool) *StaffRepository {
 
 // CreateStaffWithEvent creates staff and outbox event atomically
 // If role is "teacher", also creates an empty teacher_profile record
-func (r *StaffRepository) CreateStaffWithEvent(ctx context.Context, params db.CreateStaffParams, eventPayload map[string]interface{}) (db.Staff, error) {
+func (r *StaffRepository) CreateStaffWithEvent(ctx context.Context, params db.CreateStaffParams, eventPayload map[string]any) (db.Staff, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return db.Staff{}, fmt.Errorf("%w: failed to begin transaction: %v", sharedErrors.ErrTransactionFailed, err)
@@ -109,7 +109,7 @@ func (r *StaffRepository) GetStaffByEmail(ctx context.Context, email string) (db
 }
 
 // UpdateStaffWithEvent updates staff information with event
-func (r *StaffRepository) UpdateStaffWithEvent(ctx context.Context, id uuid.UUID, params db.UpdateStaffParams, eventPayload map[string]interface{}) (db.Staff, error) {
+func (r *StaffRepository) UpdateStaffWithEvent(ctx context.Context, id uuid.UUID, params db.UpdateStaffParams, eventPayload map[string]any) (db.Staff, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return db.Staff{}, fmt.Errorf("%w: failed to begin transaction: %v", sharedErrors.ErrTransactionFailed, err)
@@ -146,7 +146,7 @@ func (r *StaffRepository) UpdateStaffWithEvent(ctx context.Context, id uuid.UUID
 }
 
 // SoftDeleteStaffWithEvent soft deletes a staff member with event
-func (r *StaffRepository) SoftDeleteStaffWithEvent(ctx context.Context, id uuid.UUID, eventPayload map[string]interface{}) error {
+func (r *StaffRepository) SoftDeleteStaffWithEvent(ctx context.Context, id uuid.UUID, eventPayload map[string]any) error {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("%w: failed to begin transaction: %v", sharedErrors.ErrTransactionFailed, err)

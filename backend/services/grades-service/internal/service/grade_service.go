@@ -10,7 +10,10 @@ import (
 	"github.com/baaaki/mydreamcampus/grades-service/internal/dto"
 	"github.com/baaaki/mydreamcampus/grades-service/internal/errors"
 	"github.com/baaaki/mydreamcampus/grades-service/internal/repository"
+	"github.com/baaaki/mydreamcampus/shared/clock"
 	"github.com/baaaki/mydreamcampus/shared/logger"
+	sharedRepo "github.com/baaaki/mydreamcampus/shared/repository"
+	"github.com/baaaki/mydreamcampus/shared/rules"
 	"github.com/baaaki/mydreamcampus/shared/utils"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -18,13 +21,17 @@ import (
 	"go.uber.org/zap"
 )
 
+// Compile-time check that time is used (needed for time.Time type references).
+var _ = time.Now
+
 type GradeService struct {
-	pool                *pgxpool.Pool
-	cacheRepo           *repository.CacheRepository
-	registrationRepo    *repository.RegistrationRepository
-	scoreRepo           *repository.ScoreRepository
-	completedRepo       *repository.CompletedRepository
-	outboxRepo          *repository.OutboxRepository
+	pool             *pgxpool.Pool
+	cacheRepo        *repository.CacheRepository
+	registrationRepo *repository.RegistrationRepository
+	scoreRepo        *repository.ScoreRepository
+	completedRepo    *repository.CompletedRepository
+	outboxRepo       *repository.OutboxRepository
+	periodRepo       *sharedRepo.PeriodRepository
 }
 
 func NewGradeService(
@@ -34,6 +41,7 @@ func NewGradeService(
 	scoreRepo *repository.ScoreRepository,
 	completedRepo *repository.CompletedRepository,
 	outboxRepo *repository.OutboxRepository,
+	periodRepo *sharedRepo.PeriodRepository,
 ) *GradeService {
 	return &GradeService{
 		pool:             pool,
@@ -42,6 +50,7 @@ func NewGradeService(
 		scoreRepo:        scoreRepo,
 		completedRepo:    completedRepo,
 		outboxRepo:       outboxRepo,
+		periodRepo:       periodRepo,
 	}
 }
 
@@ -78,10 +87,19 @@ func (s *GradeService) SubmitScore(ctx context.Context, instructorID uuid.UUID, 
 		return nil, errors.ErrAttendanceFailed
 	}
 
-	// 5. Check if score is locked (existing score cannot be modified if locked)
+	// 5. Check grading period deadline + score lock using CanEditGrade rule engine
+	isLocked := false
 	existingScore, err := s.scoreRepo.GetScoreByRegistrationAndSlug(ctx, req.RegistrationID, req.Slug)
 	if err == nil && existingScore.IsLocked.Valid && existingScore.IsLocked.Bool {
-		return nil, errors.ErrScoreLocked
+		isLocked = true
+	}
+
+	editResult := s.checkCanEditGrade(ctx, registration.Semester, &courseID, isLocked, false)
+	if !editResult.Allowed {
+		if isLocked {
+			return nil, errors.ErrScoreLocked
+		}
+		return nil, errors.ErrGradingPeriodEnded
 	}
 
 	// 6. Validate score
@@ -363,7 +381,7 @@ func (s *GradeService) AutoFinalize(ctx context.Context, courseID uuid.UUID, ins
 		}
 
 		// Build grading config
-		gradingConfig := make(map[string]interface{})
+		gradingConfig := make(map[string]any)
 		if gradingType == db.GradingTypeEnumRelative {
 			gradingConfig["class_mean"] = classStats.Mean
 			gradingConfig["class_stddev"] = classStats.StdDev
@@ -372,7 +390,7 @@ func (s *GradeService) AutoFinalize(ctx context.Context, courseID uuid.UUID, ins
 		gradingConfigJSON, _ := json.Marshal(gradingConfig)
 
 		// Build class statistics
-		classStatsMap := map[string]interface{}{
+		classStatsMap := map[string]any{
 			"total_students": classStats.Count,
 			"mean":           classStats.Mean,
 			"stddev":         classStats.StdDev,
@@ -402,7 +420,7 @@ func (s *GradeService) AutoFinalize(ctx context.Context, courseID uuid.UUID, ins
 			GradingConfig:      gradingConfigJSON,
 			ClassStatistics:    classStatsJSON,
 			IsAttendanceFailed: utils.BoolToPgBool(student.IsAttendanceFailed),
-			FinalizedAt:        utils.TimeToPgTimestamp(time.Now()),
+			FinalizedAt:        utils.TimeToPgTimestamp(clock.Now()),
 			FinalizedBy:        instructorID,
 		})
 		if err != nil {
@@ -422,7 +440,7 @@ func (s *GradeService) AutoFinalize(ctx context.Context, courseID uuid.UUID, ins
 				// Publish prerequisite passed event
 				prereqEvent := dto.GradeStudentPrerequisitePassedEvent{
 					EventType: "grade.student.prerequisite.passed",
-					Timestamp: time.Now(),
+					Timestamp: clock.Now(),
 				}
 				prereqEvent.Data.StudentID = student.Registration.StudentID
 				prereqEvent.Data.CourseID = courseID
@@ -455,7 +473,7 @@ func (s *GradeService) AutoFinalize(ctx context.Context, courseID uuid.UUID, ins
 	// 11. Publish grade.finalized event
 	finalizedEvent := dto.GradeFinalizedEvent{
 		EventType: "grade.finalized",
-		Timestamp: time.Now(),
+		Timestamp: clock.Now(),
 	}
 	finalizedEvent.Data.CourseID = courseID
 	finalizedEvent.Data.CourseCode = course.CourseCode
@@ -734,7 +752,7 @@ func (s *GradeService) publishGradeSubmitted(ctx context.Context, studentID uuid
 
 	event := dto.GradeSubmittedEvent{
 		EventType: "grade.submitted",
-		Timestamp: time.Now(),
+		Timestamp: clock.Now(),
 	}
 	event.Data.StudentID = studentID
 	event.Data.CourseCode = courseCode
@@ -831,7 +849,7 @@ func (s *GradeService) ProcessAppeal(ctx context.Context, req dto.AppealScoreReq
 	}
 
 	// 10. Update grading config with new z-score if relative
-	gradingConfig := make(map[string]interface{})
+	gradingConfig := make(map[string]any)
 	if completedCourse.GradingType == db.GradingTypeEnumRelative {
 		gradingConfig["class_mean"] = frozenStats.Mean
 		gradingConfig["class_stddev"] = frozenStats.StdDev
@@ -882,4 +900,87 @@ func (s *GradeService) ProcessAppeal(ctx context.Context, req dto.AppealScoreReq
 	}
 
 	return response, nil
+}
+
+// ============================================
+// Score Lock/Unlock (Admin)
+// ============================================
+
+func (s *GradeService) UnlockScore(ctx context.Context, registrationID uuid.UUID, slug string) error {
+	_, err := s.scoreRepo.GetScoreByRegistrationAndSlug(ctx, registrationID, slug)
+	if err != nil {
+		return errors.ErrScoreNotFound
+	}
+
+	if err := s.scoreRepo.UnlockScore(ctx, registrationID, slug); err != nil {
+		logger.Error("failed to unlock score", zap.Error(err))
+		return err
+	}
+
+	logger.Info("score unlocked by admin",
+		zap.String("registration_id", registrationID.String()),
+		zap.String("slug", slug),
+	)
+	return nil
+}
+
+func (s *GradeService) LockScore(ctx context.Context, registrationID uuid.UUID, slug string) error {
+	_, err := s.scoreRepo.GetScoreByRegistrationAndSlug(ctx, registrationID, slug)
+	if err != nil {
+		return errors.ErrScoreNotFound
+	}
+
+	if err := s.scoreRepo.LockScore(ctx, registrationID, slug); err != nil {
+		logger.Error("failed to lock score", zap.Error(err))
+		return err
+	}
+
+	logger.Info("score locked by admin",
+		zap.String("registration_id", registrationID.String()),
+		zap.String("slug", slug),
+	)
+	return nil
+}
+
+// ============================================
+// Grading Period Check
+// ============================================
+
+// checkCanEditGrade checks the 3-layer lock model: score lock + deadline + admin override.
+// If no active period is defined, grading is allowed (no deadline enforced).
+func (s *GradeService) checkCanEditGrade(ctx context.Context, semester string, courseID *uuid.UUID, isLocked bool, isAdmin bool) rules.GradeEditResult {
+	period, err := s.periodRepo.GetEffectiveDeadline(ctx, semester, courseID)
+	if err != nil {
+		// No period defined — still check is_locked
+		if isLocked && !isAdmin {
+			return rules.GradeEditResult{
+				Allowed: false,
+				Reason:  "score is locked — admin must unlock it first",
+			}
+		}
+		return rules.GradeEditResult{Allowed: true, Reason: "no grading period defined — allowed by default"}
+	}
+
+	var overrideDeadline *time.Time
+	if courseID != nil && period.CourseID != nil {
+		// The returned period is a course-specific override
+		overrideDeadline = &period.PeriodEnd
+		// Fetch global deadline for the rule engine
+		globalPeriod, gErr := s.periodRepo.GetEffectiveDeadline(ctx, semester, nil)
+		if gErr == nil {
+			return rules.CanEditGrade(rules.GradeEditParams{
+				IsLocked:         isLocked,
+				GlobalDeadline:   globalPeriod.PeriodEnd,
+				OverrideDeadline: overrideDeadline,
+				IsAdminAction:    isAdmin,
+			})
+		}
+	}
+
+	return rules.CanEditGrade(rules.GradeEditParams{
+		IsLocked:         isLocked,
+		GlobalDeadline:   period.PeriodEnd,
+		OverrideDeadline: nil,
+		IsAdminAction:    isAdmin,
+	})
 }

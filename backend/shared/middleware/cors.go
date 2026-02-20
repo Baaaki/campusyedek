@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -31,13 +32,7 @@ func CORSWithOrigins(allowedOrigins []string) gin.HandlerFunc {
 		origin := c.Request.Header.Get("Origin")
 
 		// Check if origin is allowed
-		allowed := false
-		for _, allowedOrigin := range allowedOrigins {
-			if origin == allowedOrigin {
-				allowed = true
-				break
-			}
-		}
+		allowed := slices.Contains(allowedOrigins, origin)
 
 		if allowed {
 			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)

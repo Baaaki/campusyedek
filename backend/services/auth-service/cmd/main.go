@@ -15,6 +15,7 @@ import (
 	"github.com/baaaki/mydreamcampus/auth-service/internal/service"
 	"github.com/baaaki/mydreamcampus/auth-service/internal/worker"
 	"github.com/baaaki/mydreamcampus/shared/database"
+	sharedHandler "github.com/baaaki/mydreamcampus/shared/handler"
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	sharedMiddleware "github.com/baaaki/mydreamcampus/shared/middleware"
 	"github.com/baaaki/mydreamcampus/shared/rabbitmq"
@@ -99,6 +100,7 @@ func main() {
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(authService, cfg)
+	timeHandler := sharedHandler.NewTimeHandler()
 
 	// Seed admin user
 	ctx := context.Background()
@@ -128,7 +130,7 @@ func main() {
 	}
 
 	// Setup Gin router
-	router := setupRouter(authHandler, cfg.Server.Environment)
+	router := setupRouter(authHandler, timeHandler, cfg.Server.Environment)
 
 	// Start HTTP server
 	srv := &http.Server{
@@ -172,7 +174,7 @@ func main() {
 	logger.Info("server exited")
 }
 
-func setupRouter(authHandler *handler.AuthHandler, env string) *gin.Engine {
+func setupRouter(authHandler *handler.AuthHandler, timeHandler *sharedHandler.TimeHandler, env string) *gin.Engine {
 	if env == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -211,6 +213,14 @@ func setupRouter(authHandler *handler.AuthHandler, env string) *gin.Engine {
 			// Traefik forward auth endpoint
 			protected.GET("/verify", authHandler.Verify)
 		}
+	}
+
+	// Admin routes for Time Machine (protected via Traefik forward-auth)
+	admin := router.Group("/api/auth/admin")
+	admin.Use(sharedMiddleware.ExtractUserFromHeaders())
+	admin.Use(sharedMiddleware.RequireAdmin())
+	{
+		timeHandler.RegisterRoutes(admin)
 	}
 
 	return router

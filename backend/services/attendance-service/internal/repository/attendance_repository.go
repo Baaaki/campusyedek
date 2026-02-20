@@ -6,7 +6,6 @@ import (
 	"github.com/baaaki/mydreamcampus/attendance-service/internal/db"
 	"github.com/baaaki/mydreamcampus/shared/utils"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -30,17 +29,6 @@ func (r *AttendanceRepository) CreateAttendanceRecordManual(ctx context.Context,
 	return r.queries.CreateAttendanceRecordManual(ctx, params)
 }
 
-func (r *AttendanceRepository) CheckAttendanceExists(ctx context.Context, sessionID, studentID uuid.UUID) (bool, error) {
-	count, err := r.queries.CheckAttendanceExists(ctx, db.CheckAttendanceExistsParams{
-		SessionID: utils.UUIDToPgUUID(sessionID),
-		StudentID: utils.UUIDToPgUUID(studentID),
-	})
-	if err != nil {
-		return false, err
-	}
-	return count > 0, nil
-}
-
 func (r *AttendanceRepository) GetMarkedStudentsBySession(ctx context.Context, sessionID uuid.UUID) ([]uuid.UUID, error) {
 	pgtypeUUIDs, err := r.queries.GetMarkedStudentsBySession(ctx, utils.UUIDToPgUUID(sessionID))
 	if err != nil {
@@ -54,8 +42,8 @@ func (r *AttendanceRepository) GetMarkedStudentsBySession(ctx context.Context, s
 	return result, nil
 }
 
-func (r *AttendanceRepository) GetSessionAttendanceCounts(ctx context.Context, sessionID uuid.UUID) (db.GetSessionAttendanceCountsRow, error) {
-	return r.queries.GetSessionAttendanceCounts(ctx, utils.UUIDToPgUUID(sessionID))
+func (r *AttendanceRepository) GetSessionAttendanceCount(ctx context.Context, sessionID uuid.UUID) (int64, error) {
+	return r.queries.GetSessionAttendanceCount(ctx, utils.UUIDToPgUUID(sessionID))
 }
 
 func (r *AttendanceRepository) GetStudentAttendanceByCourse(ctx context.Context, studentID, courseID uuid.UUID, semester string) ([]db.GetStudentAttendanceByCourseRow, error) {
@@ -73,10 +61,12 @@ func (r *AttendanceRepository) GetCourseAttendanceStats(ctx context.Context, cou
 	})
 }
 
-func (r *AttendanceRepository) GetFailingStudentsByCourse(ctx context.Context, courseID uuid.UUID, semester string) ([]db.GetFailingStudentsByCourseRow, error) {
+func (r *AttendanceRepository) GetFailingStudentsByCourse(ctx context.Context, courseID uuid.UUID, semester string, totalSessions int64, maxAllowedAbsences int64) ([]db.GetFailingStudentsByCourseRow, error) {
 	return r.queries.GetFailingStudentsByCourse(ctx, db.GetFailingStudentsByCourseParams{
-		CourseID: utils.UUIDToPgUUID(courseID),
-		Semester: semester,
+		CourseID:           utils.UUIDToPgUUID(courseID),
+		Semester:           semester,
+		TotalSessions:      totalSessions,
+		MaxAllowedAbsences: maxAllowedAbsences,
 	})
 }
 
@@ -84,31 +74,36 @@ func (r *AttendanceRepository) GetAttendanceRecordsBySession(ctx context.Context
 	return r.queries.GetAttendanceRecordsBySession(ctx, utils.UUIDToPgUUID(sessionID))
 }
 
-// BatchCreateAbsentRecords creates multiple absent records at once (for session close)
-func (r *AttendanceRepository) BatchCreateAbsentRecords(ctx context.Context, sessionID, courseID uuid.UUID, semester string, weekNumber int16, instructorID uuid.UUID, studentIDs []uuid.UUID) error {
-	tx, err := r.pool.Begin(ctx)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback(ctx)
+func (r *AttendanceRepository) GetTotalSessionsByCourse(ctx context.Context, courseID uuid.UUID, semester string) (int64, error) {
+	return r.queries.GetTotalSessionsByCourse(ctx, db.GetTotalSessionsByCourseParams{
+		CourseID: utils.UUIDToPgUUID(courseID),
+		Semester: semester,
+	})
+}
 
-	qtx := r.queries.WithTx(tx)
+func (r *AttendanceRepository) GetTotalSessionsByCourseAndType(ctx context.Context, courseID uuid.UUID, semester string, sessionType db.SessionTypeEnum) (int64, error) {
+	return r.queries.GetTotalSessionsByCourseAndType(ctx, db.GetTotalSessionsByCourseAndTypeParams{
+		CourseID:    utils.UUIDToPgUUID(courseID),
+		Semester:    semester,
+		SessionType: sessionType,
+	})
+}
 
-	for _, studentID := range studentIDs {
-		_, err := qtx.CreateAttendanceRecordManual(ctx, db.CreateAttendanceRecordManualParams{
-			SessionID:        utils.UUIDToPgUUID(sessionID),
-			StudentID:        utils.UUIDToPgUUID(studentID),
-			CourseID:         utils.UUIDToPgUUID(courseID),
-			Semester:         semester,
-			WeekNumber:       weekNumber,
-			IsPresent:        false,
-			ManuallyMarkedBy: pgtype.UUID{Bytes: instructorID, Valid: true},
-			ManualNote:       pgtype.Text{},
-		})
-		if err != nil {
-			return err
-		}
-	}
+func (r *AttendanceRepository) GetFailingStudentsByCourseByType(ctx context.Context, courseID uuid.UUID, semester string, sessionType db.SessionTypeEnum, totalSessions int64, minRequired int64) ([]db.GetFailingStudentsByCourseByTypeRow, error) {
+	return r.queries.GetFailingStudentsByCourseByType(ctx, db.GetFailingStudentsByCourseByTypeParams{
+		CourseID:              utils.UUIDToPgUUID(courseID),
+		Semester:              semester,
+		SessionType:           sessionType,
+		TotalSessions:         totalSessions,
+		MinRequiredAttendance: minRequired,
+	})
+}
 
-	return tx.Commit(ctx)
+func (r *AttendanceRepository) GetStudentPresentCountByType(ctx context.Context, studentID, courseID uuid.UUID, semester string, sessionType db.SessionTypeEnum) (int64, error) {
+	return r.queries.GetStudentPresentCountByType(ctx, db.GetStudentPresentCountByTypeParams{
+		StudentID:   utils.UUIDToPgUUID(studentID),
+		CourseID:    utils.UUIDToPgUUID(courseID),
+		Semester:    semester,
+		SessionType: sessionType,
+	})
 }

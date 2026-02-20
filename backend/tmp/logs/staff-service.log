@@ -1,7 +1,8 @@
+[warning] build.bin is deprecated; set build.entrypoint instead
 
   __    _   ___  
  / /\  | | | |_) 
-/_/--\ |_| |_| \_ v1.63.0, built with Go go1.25.1
+/_/--\ |_| |_| \_ v1.64.5, built with Go go1.26.0
 
 watching .
 watching bin
@@ -21,12 +22,45 @@ watching sql/queries
 !exclude tmp
 building...
 running...
-15:59:38.321	[34mINFO[0m	cmd/main.go:38	starting staff-service	{"environment": "development", "port": "8002"}
-15:59:38.329	[34mINFO[0m	cmd/main.go:52	database connection established
-15:59:38.329	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
-15:59:38.334	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
-15:59:38.334	[34mINFO[0m	cmd/main.go:63	RabbitMQ connection established
-15:59:38.334	[34mINFO[0m	cmd/main.go:228	RabbitMQ exchange declared	{"exchange": "staff.events"}
+20:11:03.216	[34mINFO[0m	cmd/main.go:38	starting staff-service	{"environment": "development", "port": "8002"}
+20:11:03.245	[34mINFO[0m	cmd/main.go:52	database connection established
+20:11:03.245	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+20:11:03.257	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+20:11:03.257	[34mINFO[0m	cmd/main.go:63	RabbitMQ connection established
+20:11:03.259	[34mINFO[0m	cmd/main.go:228	RabbitMQ exchange declared	{"exchange": "staff.events"}
+20:11:03.262	[34mINFO[0m	cmd/main.go:252	downstream consumer queues pre-declared
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (4 handlers)
+[GIN-debug] GET    /public/teachers          --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*TeacherProfileHandler).ListTeacherProfiles-fm (4 handlers)
+[GIN-debug] GET    /public/teachers/:id      --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*TeacherProfileHandler).GetTeacherProfileByStaffID-fm (4 handlers)
+[GIN-debug] GET    /api/staff/profile/:id    --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*TeacherProfileHandler).GetTeacherProfileByStaffID-fm (4 handlers)
+[GIN-debug] GET    /internal/staff/:id       --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).GetStaffByID-fm (4 handlers)
+20:11:03.263	[34mINFO[0m	worker/outbox_worker.go:39	starting outbox worker	{"interval": "5s", "batch_size": 10}
+[GIN-debug] GET    /internal/staff/instructors --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).GetInstructorsByDepartment-fm (4 handlers)
+[GIN-debug] GET    /api/staff                --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).ListStaff-fm (5 handlers)
+[GIN-debug] GET    /api/staff/:id            --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).GetStaffByID-fm (5 handlers)
+[GIN-debug] GET    /api/staff/instructors    --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).GetInstructorsByDepartment-fm (5 handlers)
+[GIN-debug] POST   /api/staff                --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).CreateStaff-fm (6 handlers)
+[GIN-debug] PUT    /api/staff/:id            --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).UpdateStaff-fm (6 handlers)
+[GIN-debug] DELETE /api/staff/:id            --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).DeleteStaff-fm (6 handlers)
+[GIN-debug] PUT    /api/staff/:id/profile    --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*TeacherProfileHandler).UpdateTeacherProfile-fm (6 handlers)
+20:11:03.263	[34mINFO[0m	cmd/main.go:113	server starting	{"port": "8002"}
+internal/worker/outbox_worker.go has changed
+building...
+# github.com/baaaki/mydreamcampus/staff-service/internal/worker
+internal/worker/outbox_worker.go:9:2: "github.com/baaaki/mydreamcampus/shared/clock" imported and not used
+failed to build, error: exit status 1
+running...
+01:32:13.829	[34mINFO[0m	cmd/main.go:38	starting staff-service	{"environment": "development", "port": "8002"}
+01:32:13.835	[34mINFO[0m	cmd/main.go:52	database connection established
+01:32:13.835	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+01:32:13.837	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+01:32:13.837	[34mINFO[0m	cmd/main.go:63	RabbitMQ connection established
+01:32:13.837	[34mINFO[0m	cmd/main.go:228	RabbitMQ exchange declared	{"exchange": "staff.events"}
+01:32:13.838	[34mINFO[0m	cmd/main.go:252	downstream consumer queues pre-declared
 [GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
  - using env:	export GIN_MODE=release
  - using code:	gin.SetMode(gin.ReleaseMode)
@@ -43,11 +77,242 @@ running...
 [GIN-debug] POST   /api/staff                --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).CreateStaff-fm (6 handlers)
 [GIN-debug] PUT    /api/staff/:id            --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).UpdateStaff-fm (6 handlers)
 [GIN-debug] DELETE /api/staff/:id            --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).DeleteStaff-fm (6 handlers)
-15:59:38.334	[34mINFO[0m	worker/outbox_worker.go:39	starting outbox worker	{"interval": "5s", "batch_size": 10}
 [GIN-debug] PUT    /api/staff/:id/profile    --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*TeacherProfileHandler).UpdateTeacherProfile-fm (6 handlers)
-15:59:38.334	[34mINFO[0m	cmd/main.go:113	server starting	{"port": "8002"}
-19:44:32.598	[31mERROR[0m	rabbitmq/connection.go:94	rabbitmq connection lost	{"error": "Exception (320) Reason: \"CONNECTION_FORCED - broker forced connection closure with reason 'shutdown'\""}
+01:32:13.838	[34mINFO[0m	worker/outbox_worker.go:39	starting outbox worker	{"interval": "5s", "batch_size": 10}
+01:32:13.838	[34mINFO[0m	cmd/main.go:113	server starting	{"port": "8002"}
+internal/worker/outbox_worker.go has changed
+building...
+running...
+01:32:15.781	[34mINFO[0m	cmd/main.go:38	starting staff-service	{"environment": "development", "port": "8002"}
+01:32:15.787	[34mINFO[0m	cmd/main.go:52	database connection established
+01:32:15.787	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+01:32:15.789	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+01:32:15.789	[34mINFO[0m	cmd/main.go:63	RabbitMQ connection established
+01:32:15.789	[34mINFO[0m	cmd/main.go:228	RabbitMQ exchange declared	{"exchange": "staff.events"}
+01:32:15.790	[34mINFO[0m	cmd/main.go:252	downstream consumer queues pre-declared
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (4 handlers)
+[GIN-debug] GET    /public/teachers          --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*TeacherProfileHandler).ListTeacherProfiles-fm (4 handlers)
+[GIN-debug] GET    /public/teachers/:id      --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*TeacherProfileHandler).GetTeacherProfileByStaffID-fm (4 handlers)
+[GIN-debug] GET    /api/staff/profile/:id    --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*TeacherProfileHandler).GetTeacherProfileByStaffID-fm (4 handlers)
+[GIN-debug] GET    /internal/staff/:id       --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).GetStaffByID-fm (4 handlers)
+[GIN-debug] GET    /internal/staff/instructors --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).GetInstructorsByDepartment-fm (4 handlers)
+[GIN-debug] GET    /api/staff                --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).ListStaff-fm (5 handlers)
+[GIN-debug] GET    /api/staff/:id            --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).GetStaffByID-fm (5 handlers)
+[GIN-debug] GET    /api/staff/instructors    --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).GetInstructorsByDepartment-fm (5 handlers)
+[GIN-debug] POST   /api/staff                --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).CreateStaff-fm (6 handlers)
+[GIN-debug] PUT    /api/staff/:id            --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).UpdateStaff-fm (6 handlers)
+[GIN-debug] DELETE /api/staff/:id            --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).DeleteStaff-fm (6 handlers)
+[GIN-debug] PUT    /api/staff/:id/profile    --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*TeacherProfileHandler).UpdateTeacherProfile-fm (6 handlers)
+01:32:15.790	[34mINFO[0m	worker/outbox_worker.go:40	starting outbox worker	{"interval": "5s", "batch_size": 10}
+01:32:15.790	[34mINFO[0m	cmd/main.go:113	server starting	{"port": "8002"}
+cmd/main.go has changed
+building...
+# command-line-arguments
+cmd/main.go:13:2: "github.com/baaaki/mydreamcampus/shared/handler" imported as sharedHandler and not used
+failed to build, error: exit status 1
+running...
+01:32:26.249	[34mINFO[0m	cmd/main.go:38	starting staff-service	{"environment": "development", "port": "8002"}
+01:32:26.254	[34mINFO[0m	cmd/main.go:52	database connection established
+01:32:26.254	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+01:32:26.256	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+01:32:26.256	[34mINFO[0m	cmd/main.go:63	RabbitMQ connection established
+01:32:26.256	[34mINFO[0m	cmd/main.go:228	RabbitMQ exchange declared	{"exchange": "staff.events"}
+01:32:26.257	[34mINFO[0m	cmd/main.go:252	downstream consumer queues pre-declared
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (4 handlers)
+[GIN-debug] GET    /public/teachers          --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*TeacherProfileHandler).ListTeacherProfiles-fm (4 handlers)
+[GIN-debug] GET    /public/teachers/:id      --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*TeacherProfileHandler).GetTeacherProfileByStaffID-fm (4 handlers)
+01:32:26.257	[34mINFO[0m	worker/outbox_worker.go:40	starting outbox worker	{"interval": "5s", "batch_size": 10}
+[GIN-debug] GET    /api/staff/profile/:id    --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*TeacherProfileHandler).GetTeacherProfileByStaffID-fm (4 handlers)
+[GIN-debug] GET    /internal/staff/:id       --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).GetStaffByID-fm (4 handlers)
+[GIN-debug] GET    /internal/staff/instructors --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).GetInstructorsByDepartment-fm (4 handlers)
+[GIN-debug] GET    /api/staff                --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).ListStaff-fm (5 handlers)
+[GIN-debug] GET    /api/staff/:id            --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).GetStaffByID-fm (5 handlers)
+[GIN-debug] GET    /api/staff/instructors    --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).GetInstructorsByDepartment-fm (5 handlers)
+[GIN-debug] POST   /api/staff                --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).CreateStaff-fm (6 handlers)
+[GIN-debug] PUT    /api/staff/:id            --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).UpdateStaff-fm (6 handlers)
+[GIN-debug] DELETE /api/staff/:id            --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).DeleteStaff-fm (6 handlers)
+[GIN-debug] PUT    /api/staff/:id/profile    --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*TeacherProfileHandler).UpdateTeacherProfile-fm (6 handlers)
+01:32:26.258	[34mINFO[0m	cmd/main.go:113	server starting	{"port": "8002"}
+cmd/main.go has changed
+building...
+# command-line-arguments
+cmd/main.go:88:2: declared and not used: timeHandler
+failed to build, error: exit status 1
+running...
+01:32:28.211	[34mINFO[0m	cmd/main.go:38	starting staff-service	{"environment": "development", "port": "8002"}
+01:32:28.215	[34mINFO[0m	cmd/main.go:52	database connection established
+01:32:28.215	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+01:32:28.220	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+01:32:28.220	[34mINFO[0m	cmd/main.go:63	RabbitMQ connection established
+01:32:28.220	[34mINFO[0m	cmd/main.go:228	RabbitMQ exchange declared	{"exchange": "staff.events"}
+01:32:28.221	[34mINFO[0m	cmd/main.go:252	downstream consumer queues pre-declared
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (4 handlers)
+[GIN-debug] GET    /public/teachers          --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*TeacherProfileHandler).ListTeacherProfiles-fm (4 handlers)
+[GIN-debug] GET    /public/teachers/:id      --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*TeacherProfileHandler).GetTeacherProfileByStaffID-fm (4 handlers)
+[GIN-debug] GET    /api/staff/profile/:id    --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*TeacherProfileHandler).GetTeacherProfileByStaffID-fm (4 handlers)
+[GIN-debug] GET    /internal/staff/:id       --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).GetStaffByID-fm (4 handlers)
+[GIN-debug] GET    /internal/staff/instructors --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).GetInstructorsByDepartment-fm (4 handlers)
+[GIN-debug] GET    /api/staff                --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).ListStaff-fm (5 handlers)
+[GIN-debug] GET    /api/staff/:id            --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).GetStaffByID-fm (5 handlers)
+[GIN-debug] GET    /api/staff/instructors    --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).GetInstructorsByDepartment-fm (5 handlers)
+[GIN-debug] POST   /api/staff                --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).CreateStaff-fm (6 handlers)
+[GIN-debug] PUT    /api/staff/:id            --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).UpdateStaff-fm (6 handlers)
+[GIN-debug] DELETE /api/staff/:id            --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).DeleteStaff-fm (6 handlers)
+[GIN-debug] PUT    /api/staff/:id/profile    --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*TeacherProfileHandler).UpdateTeacherProfile-fm (6 handlers)
+01:32:28.221	[34mINFO[0m	worker/outbox_worker.go:40	starting outbox worker	{"interval": "5s", "batch_size": 10}
+01:32:28.221	[34mINFO[0m	cmd/main.go:113	server starting	{"port": "8002"}
+cmd/main.go has changed
+building...
+# command-line-arguments
+cmd/main.go:105:74: too many arguments in call to setupRouter
+	have (*"github.com/baaaki/mydreamcampus/staff-service/internal/handler".StaffHandler, *"github.com/baaaki/mydreamcampus/staff-service/internal/handler".TeacherProfileHandler, *"github.com/baaaki/mydreamcampus/shared/handler".TimeHandler, string)
+	want (*"github.com/baaaki/mydreamcampus/staff-service/internal/handler".StaffHandler, *"github.com/baaaki/mydreamcampus/staff-service/internal/handler".TeacherProfileHandler, string)
+failed to build, error: exit status 1
+running...
+01:32:29.818	[34mINFO[0m	cmd/main.go:38	starting staff-service	{"environment": "development", "port": "8002"}
+01:32:29.824	[34mINFO[0m	cmd/main.go:52	database connection established
+01:32:29.824	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+01:32:29.826	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+01:32:29.826	[34mINFO[0m	cmd/main.go:63	RabbitMQ connection established
+01:32:29.826	[34mINFO[0m	cmd/main.go:228	RabbitMQ exchange declared	{"exchange": "staff.events"}
+01:32:29.827	[34mINFO[0m	cmd/main.go:252	downstream consumer queues pre-declared
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (4 handlers)
+[GIN-debug] GET    /public/teachers          --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*TeacherProfileHandler).ListTeacherProfiles-fm (4 handlers)
+[GIN-debug] GET    /public/teachers/:id      --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*TeacherProfileHandler).GetTeacherProfileByStaffID-fm (4 handlers)
+[GIN-debug] GET    /api/staff/profile/:id    --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*TeacherProfileHandler).GetTeacherProfileByStaffID-fm (4 handlers)
+[GIN-debug] GET    /internal/staff/:id       --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).GetStaffByID-fm (4 handlers)
+[GIN-debug] GET    /internal/staff/instructors --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).GetInstructorsByDepartment-fm (4 handlers)
+[GIN-debug] GET    /api/staff                --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).ListStaff-fm (5 handlers)
+[GIN-debug] GET    /api/staff/:id            --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).GetStaffByID-fm (5 handlers)
+[GIN-debug] GET    /api/staff/instructors    --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).GetInstructorsByDepartment-fm (5 handlers)
+[GIN-debug] POST   /api/staff                --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).CreateStaff-fm (6 handlers)
+[GIN-debug] PUT    /api/staff/:id            --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).UpdateStaff-fm (6 handlers)
+[GIN-debug] DELETE /api/staff/:id            --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).DeleteStaff-fm (6 handlers)
+[GIN-debug] PUT    /api/staff/:id/profile    --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*TeacherProfileHandler).UpdateTeacherProfile-fm (6 handlers)
+01:32:29.827	[34mINFO[0m	cmd/main.go:113	server starting	{"port": "8002"}
+01:32:29.827	[34mINFO[0m	worker/outbox_worker.go:40	starting outbox worker	{"interval": "5s", "batch_size": 10}
+cmd/main.go has changed
+building...
+running...
+01:32:31.803	[34mINFO[0m	cmd/main.go:39	starting staff-service	{"environment": "development", "port": "8002"}
+01:32:31.808	[34mINFO[0m	cmd/main.go:53	database connection established
+01:32:31.808	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+01:32:31.810	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+01:32:31.810	[34mINFO[0m	cmd/main.go:64	RabbitMQ connection established
+01:32:31.810	[34mINFO[0m	cmd/main.go:230	RabbitMQ exchange declared	{"exchange": "staff.events"}
+01:32:31.811	[34mINFO[0m	cmd/main.go:254	downstream consumer queues pre-declared
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (4 handlers)
+[GIN-debug] GET    /public/teachers          --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*TeacherProfileHandler).ListTeacherProfiles-fm (4 handlers)
+01:32:31.811	[34mINFO[0m	worker/outbox_worker.go:40	starting outbox worker	{"interval": "5s", "batch_size": 10}
+[GIN-debug] GET    /public/teachers/:id      --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*TeacherProfileHandler).GetTeacherProfileByStaffID-fm (4 handlers)
+[GIN-debug] GET    /api/staff/profile/:id    --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*TeacherProfileHandler).GetTeacherProfileByStaffID-fm (4 handlers)
+[GIN-debug] GET    /internal/staff/:id       --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).GetStaffByID-fm (4 handlers)
+[GIN-debug] GET    /internal/staff/instructors --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).GetInstructorsByDepartment-fm (4 handlers)
+[GIN-debug] GET    /api/staff                --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).ListStaff-fm (5 handlers)
+[GIN-debug] GET    /api/staff/:id            --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).GetStaffByID-fm (5 handlers)
+[GIN-debug] GET    /api/staff/instructors    --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).GetInstructorsByDepartment-fm (5 handlers)
+[GIN-debug] POST   /api/staff                --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).CreateStaff-fm (6 handlers)
+[GIN-debug] PUT    /api/staff/:id            --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).UpdateStaff-fm (6 handlers)
+[GIN-debug] DELETE /api/staff/:id            --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).DeleteStaff-fm (6 handlers)
+[GIN-debug] PUT    /api/staff/:id/profile    --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*TeacherProfileHandler).UpdateTeacherProfile-fm (6 handlers)
+01:32:31.812	[34mINFO[0m	cmd/main.go:115	server starting	{"port": "8002"}
+cmd/main.go has changed
+building...
+running...
+01:32:34.644	[34mINFO[0m	cmd/main.go:39	starting staff-service	{"environment": "development", "port": "8002"}
+01:32:34.650	[34mINFO[0m	cmd/main.go:53	database connection established
+01:32:34.650	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+01:32:34.653	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+01:32:34.653	[34mINFO[0m	cmd/main.go:64	RabbitMQ connection established
+01:32:34.653	[34mINFO[0m	cmd/main.go:238	RabbitMQ exchange declared	{"exchange": "staff.events"}
+01:32:34.654	[34mINFO[0m	cmd/main.go:262	downstream consumer queues pre-declared
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (4 handlers)
+[GIN-debug] GET    /public/teachers          --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*TeacherProfileHandler).ListTeacherProfiles-fm (4 handlers)
+[GIN-debug] GET    /public/teachers/:id      --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*TeacherProfileHandler).GetTeacherProfileByStaffID-fm (4 handlers)
+[GIN-debug] GET    /api/staff/profile/:id    --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*TeacherProfileHandler).GetTeacherProfileByStaffID-fm (4 handlers)
+[GIN-debug] GET    /internal/staff/:id       --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).GetStaffByID-fm (4 handlers)
+[GIN-debug] GET    /internal/staff/instructors --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).GetInstructorsByDepartment-fm (4 handlers)
+[GIN-debug] GET    /api/staff                --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).ListStaff-fm (5 handlers)
+[GIN-debug] GET    /api/staff/:id            --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).GetStaffByID-fm (5 handlers)
+[GIN-debug] GET    /api/staff/instructors    --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).GetInstructorsByDepartment-fm (5 handlers)
+[GIN-debug] POST   /api/staff                --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).CreateStaff-fm (6 handlers)
+[GIN-debug] PUT    /api/staff/:id            --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).UpdateStaff-fm (6 handlers)
+[GIN-debug] DELETE /api/staff/:id            --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).DeleteStaff-fm (6 handlers)
+[GIN-debug] PUT    /api/staff/:id/profile    --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*TeacherProfileHandler).UpdateTeacherProfile-fm (6 handlers)
+[GIN-debug] POST   /api/staff/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (6 handlers)
+[GIN-debug] POST   /api/staff/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (6 handlers)
+[GIN-debug] GET    /api/staff/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (6 handlers)
+01:32:34.654	[34mINFO[0m	worker/outbox_worker.go:40	starting outbox worker	{"interval": "5s", "batch_size": 10}
+01:32:34.654	[34mINFO[0m	cmd/main.go:115	server starting	{"port": "8002"}
+01:37:00.099	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:37:00.099	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "3a703082-4680-42d7-80d4-644395b98813", "method": "GET", "path": "/api/staff/admin/time/status", "query": "", "status": 200, "duration": "195.186µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:37:00.136	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:37:00.136	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "5b7c080a-b3fa-4812-b0a9-faf2df20276f", "method": "GET", "path": "/api/staff/admin/time/status", "query": "", "status": 200, "duration": "64.412µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:37:18.113	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:37:18.113	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "7a485ade-bdfd-4803-8ec6-1405a9545ff5", "method": "GET", "path": "/api/staff/admin/time/status", "query": "", "status": 200, "duration": "85.092µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:37:18.186	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:37:18.186	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "ab8d6aa9-58da-45c6-b153-4f9bc77d5d94", "method": "GET", "path": "/api/staff/admin/time/status", "query": "", "status": 200, "duration": "66.481µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:37:52.601	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:37:52.601	[34mINFO[0m	handler/time_handler.go:61	clock reset to real time
+01:37:52.601	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "682c2f83-c276-4ae4-835a-8d381a11b8d7", "method": "POST", "path": "/api/staff/admin/time/reset", "query": "", "status": 200, "duration": "143.104µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:37:52.620	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:37:52.620	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "6880e7d6-95fc-4fd6-a071-43635a85a0c4", "method": "GET", "path": "/api/staff/admin/time/status", "query": "", "status": 200, "duration": "57.932µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:39:44.773	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:39:44.773	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "94cad4c0-ee81-4925-ad9f-ad1adde2a09a", "method": "GET", "path": "/api/staff/admin/time/status", "query": "", "status": 200, "duration": "79.193µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:39:45.738	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:39:45.739	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "e87d6b65-eba7-4d4f-b6f7-90899ae472e8", "method": "GET", "path": "/api/staff/admin/time/status", "query": "", "status": 200, "duration": "65.771µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:39:50.096	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:39:50.096	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "5204d6d7-7214-49de-86d8-20de351836be", "method": "GET", "path": "/api/staff/admin/time/status", "query": "", "status": 200, "duration": "77.092µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:45:37.604	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:45:37.604	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "16506543-1b96-483f-bdf4-05ba9ecc45f7", "method": "GET", "path": "/api/staff/admin/time/status", "query": "", "status": 200, "duration": "87.782µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:45:37.609	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:45:37.609	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "9b4fb911-1772-42a5-8334-7eecf90a2c43", "method": "GET", "path": "/api/staff/admin/time/status", "query": "", "status": 200, "duration": "48.512µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:46:31.366	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:46:31.366	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "a713837e-6c0b-4e94-bba0-646790bfa2de", "method": "GET", "path": "/api/staff/admin/time/status", "query": "", "status": 200, "duration": "63.592µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:46:32.396	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:46:32.396	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "72a3ae99-ed80-4130-bc85-4be2aa4fae8b", "method": "GET", "path": "/api/staff/admin/time/status", "query": "", "status": 200, "duration": "71.782µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:36.527	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:36.527	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "8e4fdd82-0348-4491-80e1-3889a0ec7cf6", "method": "GET", "path": "/api/staff/admin/time/status", "query": "", "status": 200, "duration": "103.283µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:38.150	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:38.151	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "9bf618a6-65dd-4af8-acaf-897a617a188f", "method": "GET", "path": "/api/staff/admin/time/status", "query": "", "status": 200, "duration": "68.852µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:47.387	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:47.388	[34mINFO[0m	handler/time_handler.go:46	clock switched to simulated mode	{"simulated_time": "09:15:08.000"}
+01:47:47.388	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "901abb31-ac21-4a8f-acfe-c76e20b389fe", "method": "POST", "path": "/api/staff/admin/time/simulate", "query": "", "status": 200, "duration": "276.717µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:47.402	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:47.402	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "72b09c14-9be0-42f3-b075-4e9c16c33319", "method": "GET", "path": "/api/staff/admin/time/status", "query": "", "status": 200, "duration": "75.822µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:48.955	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:48.955	[34mINFO[0m	handler/time_handler.go:61	clock reset to real time
+01:47:48.955	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "debf6c07-31b0-4774-bc7a-716677280c76", "method": "POST", "path": "/api/staff/admin/time/reset", "query": "", "status": 200, "duration": "96.543µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:48.969	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:48.969	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "cf42ec68-5252-49ea-b42b-8e3a8090eee4", "method": "GET", "path": "/api/staff/admin/time/status", "query": "", "status": 200, "duration": "88.143µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:53.262	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:53.262	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "911f1efc-de25-4176-9f36-9ac92b6391f4", "method": "GET", "path": "/api/staff/admin/time/status", "query": "", "status": 200, "duration": "46.202µs", "ip": "172.18.0.1", "user_agent": "curl/8.5.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+02:02:07.537	[31mERROR[0m	rabbitmq/connection.go:94	rabbitmq connection lost	{"error": "Exception (320) Reason: \"CONNECTION_FORCED - broker forced connection closure with reason 'shutdown'\""}
 github.com/baaaki/mydreamcampus/shared/rabbitmq.(*Connection).handleReconnect
 	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/rabbitmq/connection.go:94
-19:44:32.598	[34mINFO[0m	rabbitmq/connection.go:99	attempting to reconnect to rabbitmq...
+02:02:07.537	[34mINFO[0m	rabbitmq/connection.go:99	attempting to reconnect to rabbitmq...
 cleaning...

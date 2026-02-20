@@ -34,7 +34,7 @@ func (r *ScheduleRepository) WithTx(tx pgx.Tx) *ScheduleRepository {
 }
 
 // GetScheduleSessionsByCourseID retrieves all schedule sessions for a semester course
-func (r *ScheduleRepository) GetScheduleSessionsByCourseID(ctx context.Context, semesterCourseID uuid.UUID) ([]db.CourseScheduleSession, error) {
+func (r *ScheduleRepository) GetScheduleSessionsByCourseID(ctx context.Context, semesterCourseID uuid.UUID) ([]db.GetScheduleSessionsByCourseIDRow, error) {
 	sessions, err := r.queries.GetScheduleSessionsByCourseID(ctx, utils.UUIDToPgtype(semesterCourseID))
 	if err != nil {
 		return nil, fmt.Errorf("%w: failed to get schedule sessions: %v", sharedErrors.ErrQueryFailed, err)
@@ -43,7 +43,7 @@ func (r *ScheduleRepository) GetScheduleSessionsByCourseID(ctx context.Context, 
 }
 
 // GetScheduleSessionsByMultipleCourseIDs retrieves schedule sessions for multiple courses (prevents N+1 query)
-func (r *ScheduleRepository) GetScheduleSessionsByMultipleCourseIDs(ctx context.Context, courseIDs []uuid.UUID) ([]db.CourseScheduleSession, error) {
+func (r *ScheduleRepository) GetScheduleSessionsByMultipleCourseIDs(ctx context.Context, courseIDs []uuid.UUID) ([]db.GetScheduleSessionsByMultipleCourseIDsRow, error) {
 	// Convert uuid.UUID slice to pgtype.UUID slice
 	pgtypeIDs := make([]pgtype.UUID, len(courseIDs))
 	for i, id := range courseIDs {
@@ -58,10 +58,10 @@ func (r *ScheduleRepository) GetScheduleSessionsByMultipleCourseIDs(ctx context.
 }
 
 // CreateScheduleSession creates a new schedule session
-func (r *ScheduleRepository) CreateScheduleSession(ctx context.Context, params db.CreateScheduleSessionParams) (db.CourseScheduleSession, error) {
+func (r *ScheduleRepository) CreateScheduleSession(ctx context.Context, params db.CreateScheduleSessionParams) (db.CreateScheduleSessionRow, error) {
 	session, err := r.queries.CreateScheduleSession(ctx, params)
 	if err != nil {
-		return db.CourseScheduleSession{}, fmt.Errorf("%w: failed to create schedule session: %v", sharedErrors.ErrQueryFailed, err)
+		return db.CreateScheduleSessionRow{}, fmt.Errorf("%w: failed to create schedule session: %v", sharedErrors.ErrQueryFailed, err)
 	}
 	return session, nil
 }
@@ -80,6 +80,7 @@ func (r *ScheduleRepository) BulkCreateScheduleSessions(ctx context.Context, ses
 			SemesterCourseID: s.SemesterCourseID,
 			DayOfWeek:        s.DayOfWeek,
 			SlotNumber:       s.SlotNumber,
+			SessionType:      s.SessionType,
 		}
 	}
 

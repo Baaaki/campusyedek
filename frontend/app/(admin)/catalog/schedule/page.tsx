@@ -92,7 +92,7 @@ export default function SchedulePage() {
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((slot) => (
                     <tr key={slot}>
                       <td className="border border-gray-300 px-4 py-2 text-sm text-gray-700 bg-gray-50">
-                        {TIME_SLOTS[slot as keyof typeof TIME_SLOTS]}
+                        {TIME_SLOTS[slot as keyof typeof TIME_SLOTS].label}
                       </td>
                       {[1, 2, 3, 4, 5].map((day) => {
                         const course = scheduleGrid[`${day}-${slot}`];
@@ -109,7 +109,7 @@ export default function SchedulePage() {
                                   {course.course_code}
                                 </div>
                                 <div className="text-gray-600 text-xs">
-                                  {course.instructor_name}
+                                  {course.instructor}
                                 </div>
                               </div>
                             )}

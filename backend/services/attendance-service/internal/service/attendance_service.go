@@ -11,11 +11,20 @@ import (
 	"github.com/baaaki/mydreamcampus/attendance-service/internal/dto"
 	"github.com/baaaki/mydreamcampus/attendance-service/internal/errors"
 	"github.com/baaaki/mydreamcampus/attendance-service/internal/repository"
+	"github.com/baaaki/mydreamcampus/shared/clock"
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	"github.com/baaaki/mydreamcampus/shared/utils"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
+)
+
+const (
+	CacheTTLBuffer          = 5 * time.Minute
+	MinTheoryAttendance     = 10 // 14 haftadan en az 10 teorik yoklama
+	MinLabAttendance        = 11 // 14 haftadan en az 11 uygulama yoklama
+	MaxTheoryAbsences       = 4  // 14 - 10
+	MaxLabAbsences          = 3  // 14 - 11
 )
 
 type AttendanceService struct {
@@ -64,8 +73,15 @@ func (s *AttendanceService) CreateSession(ctx context.Context, instructorID uuid
 		return dto.CreateSessionResponse{}, errors.ErrForbidden
 	}
 
-	// 2. Check session doesn't already exist for this week
-	exists, err := s.sessionRepo.CheckSessionExists(ctx, req.CourseID, req.WeekNumber)
+	// 2. Validate lab session is allowed
+	if req.SessionType == "lab" && !course.HasLab {
+		logger.Error("lab session requested but course has no lab hours")
+		return dto.CreateSessionResponse{}, errors.ErrLabNotAvailable
+	}
+
+	// 3. Check session doesn't already exist for this week + session_type
+	sessionType := db.SessionTypeEnum(req.SessionType)
+	exists, err := s.sessionRepo.CheckSessionExists(ctx, req.CourseID, req.WeekNumber, sessionType)
 	if err != nil {
 		return dto.CreateSessionResponse{}, err
 	}
@@ -80,7 +96,7 @@ func (s *AttendanceService) CreateSession(ctx context.Context, instructorID uuid
 	}
 
 	// 4. Create session in DB
-	now := time.Now()
+	now := clock.Now()
 	expiresAt := now.Add(time.Duration(req.DurationMinutes) * time.Minute)
 
 	session, err := s.sessionRepo.CreateAttendanceSession(ctx, db.CreateAttendanceSessionParams{
@@ -89,10 +105,10 @@ func (s *AttendanceService) CreateSession(ctx context.Context, instructorID uuid
 		Semester:           course.Semester,
 		WeekNumber:         req.WeekNumber,
 		SessionDate:        pgtype.Date{Time: now, Valid: true},
-		QrSecret:           qrSecret,
-		QrRotationInterval: utils.Int16ToPgInt2(15),
-		StartedAt:          utils.TimeToPgTimestamp(now),
+		QrSecret:  qrSecret,
+		StartedAt: utils.TimeToPgTimestamp(now),
 		ExpiresAt:          utils.TimeToPgTimestamp(expiresAt),
+		SessionType:        sessionType,
 	})
 	if err != nil {
 		return dto.CreateSessionResponse{}, err
@@ -114,45 +130,37 @@ func (s *AttendanceService) CreateSession(ctx context.Context, instructorID uuid
 	}
 
 	// Session cache
-	s.redisService.SetSessionCache(ctx, sessionID, map[string]interface{}{
+	s.redisService.SetSessionCache(ctx, sessionID, map[string]any{
 		"course_id":            req.CourseID.String(),
 		"instructor_id":        instructorID.String(),
 		"semester":             course.Semester,
 		"week_number":          fmt.Sprintf("%d", req.WeekNumber),
-		"qr_secret":            qrSecret,
-		"qr_rotation_interval": "15",
-		"expires_at":           fmt.Sprintf("%d", expiresAt.Unix()),
+		"session_type":         req.SessionType,
+		"qr_secret":  qrSecret,
+		"expires_at": fmt.Sprintf("%d", expiresAt.Unix()),
 		"enrolled_count":       fmt.Sprintf("%d", len(enrolledStudents)),
-	}, time.Until(expiresAt)+5*time.Minute)
+	}, time.Until(expiresAt)+CacheTTLBuffer)
 
 	return dto.CreateSessionResponse{
 		SessionID:            utils.PgUUIDToUUID(session.ID),
 		CourseID:             req.CourseID,
 		CourseCode:           course.CourseCode,
 		CourseName:           course.CourseName,
-		WeekNumber:           req.WeekNumber,
-		SessionDate:          now.Format("2006-01-02"),
-		QRRotationInterval:   15,
-		StartedAt:            now,
+		WeekNumber:  req.WeekNumber,
+		SessionType: req.SessionType,
+		SessionDate: now.Format("2006-01-02"),
+		StartedAt:   now,
 		ExpiresAt:            expiresAt,
 		EnrolledStudentCount: len(enrolledStudents),
 	}, nil
 }
 
 // ScanQR processes QR code scan for attendance
+// Simplified: no student active check (JWT handles it), no Redis marked set check (DB UNIQUE handles duplicates)
 func (s *AttendanceService) ScanQR(ctx context.Context, studentID uuid.UUID, req dto.ScanQRRequest) (dto.ScanQRResponse, error) {
 	logger.Info("Processing QR scan", zap.String("student_id", studentID.String()))
 
-	// 1. Check student is active
-	student, err := s.cacheRepo.GetStudentCacheByID(ctx, studentID)
-	if err != nil {
-		return dto.ScanQRResponse{}, errors.ErrStudentNotFound
-	}
-	if !utils.PgBoolToBool(student.IsActive) {
-		return dto.ScanQRResponse{}, errors.ErrStudentDeactivated
-	}
-
-	// 2. Get session (with fallback)
+	// 1. Get session (with fallback)
 	sessionID := req.QRPayload.SessionID
 	session, err := s.getSessionWithFallback(ctx, sessionID)
 	if err != nil {
@@ -160,67 +168,70 @@ func (s *AttendanceService) ScanQR(ctx context.Context, studentID uuid.UUID, req
 	}
 
 	// Check if expired
-	if time.Now().After(utils.PgTimestampToTime(session.ExpiresAt)) {
+	if clock.Now().After(utils.PgTimestampToTime(session.ExpiresAt)) {
 		return dto.ScanQRResponse{}, errors.ErrSessionExpired
 	}
 
-	// 3. Validate QR signature
-	rotationInterval := session.QrRotationInterval.Int16
-	if !s.qrService.ValidateQRSignature(req.QRPayload, session.QrSecret, rotationInterval) {
+	// 2. Validate QR signature
+	if !s.qrService.ValidateQRSignature(req.QRPayload, session.QrSecret) {
 		return dto.ScanQRResponse{}, errors.ErrInvalidQRCode
 	}
 
-	// 4. Check timestamp freshness
-	if !s.qrService.IsTimestampFresh(req.QRPayload.Timestamp, rotationInterval) {
-		return dto.ScanQRResponse{}, errors.ErrQRExpired
-	}
-
-	// 5. Check enrollment (with fallback)
+	// 3. Check enrollment (with fallback)
 	courseID := utils.PgUUIDToUUID(session.CourseID)
 	enrolled, err := s.checkEnrollmentWithFallback(ctx, sessionID, studentID, courseID, session.Semester)
 	if err != nil || !enrolled {
 		return dto.ScanQRResponse{}, errors.ErrNotEnrolled
 	}
 
-	// 6. Check not already marked (with fallback)
-	alreadyMarked, err := s.checkAlreadyMarkedWithFallback(ctx, sessionID, studentID)
-	if err != nil {
-		return dto.ScanQRResponse{}, err
-	}
-	if alreadyMarked {
+	// 5. Check if already scanned (via persistent scanned SET - survives buffer flush)
+	alreadyScanned, err := s.redisService.IsAlreadyScanned(ctx, sessionID, studentID.String())
+	if err == nil && alreadyScanned {
 		return dto.ScanQRResponse{}, errors.ErrAlreadyMarked
 	}
 
-	// 7. Write to Redis buffer (or direct DB if Redis down)
-	bufferData := fmt.Sprintf("%d|%d|qr_scan", time.Now().Unix(), req.QRPayload.Timestamp)
-	if err := s.redisService.AddToBuffer(ctx, sessionID, studentID.String(), bufferData); err != nil {
+	// 6. Write to Redis buffer (or direct DB if Redis down)
+	// DB UNIQUE(session_id, student_id) with ON CONFLICT DO NOTHING handles duplicates
+	recordParams := db.CreateAttendanceRecordQRParams{
+		SessionID:   session.ID,
+		StudentID:   utils.UUIDToPgUUID(studentID),
+		CourseID:    session.CourseID,
+		Semester:    session.Semester,
+		WeekNumber:  session.WeekNumber,
+		ScannedAt:   utils.TimeToPgTimestamp(clock.Now()),
+		SessionType: session.SessionType,
+	}
+
+	bufferJSON, err := json.Marshal(recordParams)
+	if err != nil {
+		return dto.ScanQRResponse{}, fmt.Errorf("failed to marshal buffer data: %w", err)
+	}
+
+	// Scanned SET TTL = session remaining time + 1 hour safety buffer
+	scannedTTL := time.Until(utils.PgTimestampToTime(session.ExpiresAt)) + 1*time.Hour
+
+	if err := s.redisService.AddToBuffer(ctx, sessionID, studentID.String(), string(bufferJSON), scannedTTL); err != nil {
 		// Redis down, write directly to DB
 		logger.Warn("Redis down, writing directly to DB", zap.Error(err))
-		if err := s.attendanceRepo.CreateAttendanceRecordQR(ctx, db.CreateAttendanceRecordQRParams{
-			SessionID:   session.ID,
-			StudentID:   utils.UUIDToPgUUID(studentID),
-			CourseID:    session.CourseID,
-			Semester:    session.Semester,
-			WeekNumber:  session.WeekNumber,
-			ScannedAt:   utils.TimeToPgTimestamp(time.Now()),
-			QrTimestamp: pgtype.Int8{Int64: req.QRPayload.Timestamp, Valid: true},
-		}); err != nil {
+		if err := s.attendanceRepo.CreateAttendanceRecordQR(ctx, recordParams); err != nil {
 			return dto.ScanQRResponse{}, err
 		}
 	}
 
-	// Mark as present in Redis
-	s.redisService.MarkStudentPresent(ctx, sessionID, studentID.String())
-
 	// Get course info for response
-	course, _ := s.cacheRepo.GetCourseCacheByID(ctx, courseID)
+	course, err := s.cacheRepo.GetCourseCacheByID(ctx, courseID)
+	if err != nil {
+		logger.Error("failed to get course info for scan response", zap.Error(err))
+		return dto.ScanQRResponse{}, errors.ErrCourseNotFound
+	}
 
 	return dto.ScanQRResponse{
-		Message:    "Yoklama başarıyla alındı",
-		CourseCode: course.CourseCode,
-		CourseName: course.CourseName,
-		WeekNumber: session.WeekNumber,
-		MarkedAt:   time.Now(),
+		Message:     "Yoklama başarıyla alındı",
+		CourseCode:  course.CourseCode,
+		CourseName:  course.CourseName,
+		WeekNumber:  session.WeekNumber,
+		SessionType: string(session.SessionType),
+		MarkedAt:    clock.Now(),
 	}, nil
 }
 
@@ -236,17 +247,13 @@ func (s *AttendanceService) GetQRCode(ctx context.Context, sessionID, instructor
 		return dto.GetQRResponse{}, errors.ErrForbidden
 	}
 
-	// Generate QR payload
-	rotationInterval := session.QrRotationInterval.Int16
-	payload := s.qrService.GenerateQRPayload(sessionID.String(), session.QrSecret, rotationInterval)
-
-	validUntil := time.Now().Add(time.Duration(rotationInterval) * time.Second)
+	// Generate QR payload (static for entire session)
+	payload := s.qrService.GenerateQRPayload(sessionID.String(), session.QrSecret)
 
 	return dto.GetQRResponse{
-		SessionID:        sessionID,
-		QRPayload:        payload,
-		ValidUntil:       validUntil,
-		RotationInterval: rotationInterval,
+		SessionID:  sessionID,
+		QRPayload:  payload,
+		ValidUntil: utils.PgTimestampToTime(session.ExpiresAt),
 	}, nil
 }
 
@@ -263,34 +270,39 @@ func (s *AttendanceService) CreateManualAttendance(ctx context.Context, sessionI
 	}
 
 	// Check enrollment
-	enrolled, _ := s.cacheRepo.CheckEnrollment(ctx, req.StudentID, utils.PgUUIDToUUID(session.CourseID), session.Semester)
+	enrolled, err := s.cacheRepo.CheckEnrollment(ctx, req.StudentID, utils.PgUUIDToUUID(session.CourseID), session.Semester)
+	if err != nil {
+		logger.Error("failed to check enrollment", zap.Error(err))
+		return dto.ManualAttendanceResponse{}, errors.ErrNotEnrolled
+	}
 	if !enrolled {
 		return dto.ManualAttendanceResponse{}, errors.ErrNotEnrolled
 	}
 
-	// Create record
+	// Create record (ON CONFLICT updates existing record)
 	record, err := s.attendanceRepo.CreateAttendanceRecordManual(ctx, db.CreateAttendanceRecordManualParams{
 		SessionID:        utils.UUIDToPgUUID(sessionID),
 		StudentID:        utils.UUIDToPgUUID(req.StudentID),
 		CourseID:         session.CourseID,
 		Semester:         session.Semester,
 		WeekNumber:       session.WeekNumber,
-		IsPresent:        req.IsPresent,
-		ManuallyMarkedBy: pgtype.UUID{Bytes: instructorID, Valid: true},
+		ManuallyMarkedBy: utils.UUIDToPgUUID(instructorID),
 		ManualNote:       utils.StringToPgText(req.Note),
+		SessionType:      session.SessionType,
 	})
 	if err != nil {
 		return dto.ManualAttendanceResponse{}, err
 	}
 
-	// Update Redis marked set
-	s.redisService.MarkStudentPresent(ctx, sessionID.String(), req.StudentID.String())
-
 	// Invalidate student summary cache
 	s.redisService.InvalidateStudentSummary(ctx, req.StudentID, session.Semester)
 
 	// Get student info
-	student, _ := s.cacheRepo.GetStudentCacheByID(ctx, req.StudentID)
+	student, err := s.cacheRepo.GetStudentCacheByID(ctx, req.StudentID)
+	if err != nil {
+		logger.Error("failed to get student info", zap.Error(err))
+		return dto.ManualAttendanceResponse{}, errors.ErrStudentNotFound
+	}
 
 	return dto.ManualAttendanceResponse{
 		ID:            utils.PgUUIDToUUID(record.ID),
@@ -298,14 +310,20 @@ func (s *AttendanceService) CreateManualAttendance(ctx context.Context, sessionI
 		StudentID:     req.StudentID,
 		StudentNumber: student.StudentNumber,
 		StudentName:   fmt.Sprintf("%s %s", utils.PgTextToString(student.FirstName), utils.PgTextToString(student.LastName)),
-		IsPresent:     req.IsPresent,
 		MarkedVia:     "manual",
 		Note:          &req.Note,
-		MarkedAt:      &time.Time{},
+		MarkedAt: func() *time.Time {
+			t := utils.PgTimestampToTime(record.ManuallyMarkedAt)
+			if t.IsZero() {
+				return nil
+			}
+			return &t
+		}(),
 	}, nil
 }
 
-// CloseSession closes session and marks absent students
+// CloseSession closes an attendance session
+// Simplified: no absent record creation needed. Record exists = present, no record = absent.
 func (s *AttendanceService) CloseSession(ctx context.Context, sessionID, instructorID uuid.UUID) (dto.CloseSessionResponse, error) {
 	session, err := s.sessionRepo.GetSessionByID(ctx, sessionID)
 	if err != nil {
@@ -322,49 +340,6 @@ func (s *AttendanceService) CloseSession(ctx context.Context, sessionID, instruc
 		return dto.CloseSessionResponse{}, errors.ErrSessionNotActive
 	}
 
-	// TODO: Flush Redis buffer to PostgreSQL
-
-	// Get all enrolled students
-	courseID := utils.PgUUIDToUUID(session.CourseID)
-	enrolledStudents, err := s.cacheRepo.GetEnrolledStudentsByCourse(ctx, courseID, session.Semester)
-	if err != nil {
-		return dto.CloseSessionResponse{}, err
-	}
-
-	// Get marked students
-	markedStudents, err := s.attendanceRepo.GetMarkedStudentsBySession(ctx, sessionID)
-	if err != nil {
-		return dto.CloseSessionResponse{}, err
-	}
-
-	// Calculate absent students
-	markedMap := make(map[uuid.UUID]bool)
-	for _, id := range markedStudents {
-		markedMap[id] = true
-	}
-
-	var absentStudentIDs []uuid.UUID
-	var newlyMarkedAbsent []dto.AbsentStudent
-
-	for _, student := range enrolledStudents {
-		studentID := utils.PgUUIDToUUID(student.ID)
-		if !markedMap[studentID] {
-			absentStudentIDs = append(absentStudentIDs, studentID)
-			newlyMarkedAbsent = append(newlyMarkedAbsent, dto.AbsentStudent{
-				StudentID:     studentID,
-				StudentNumber: student.StudentNumber,
-				StudentName:   fmt.Sprintf("%s %s", utils.PgTextToString(student.FirstName), utils.PgTextToString(student.LastName)),
-			})
-		}
-	}
-
-	// Batch insert absent records
-	if len(absentStudentIDs) > 0 {
-		if err := s.attendanceRepo.BatchCreateAbsentRecords(ctx, sessionID, courseID, session.Semester, session.WeekNumber, instructorID, absentStudentIDs); err != nil {
-			return dto.CloseSessionResponse{}, err
-		}
-	}
-
 	// Deactivate session
 	if err := s.sessionRepo.DeactivateSession(ctx, sessionID); err != nil {
 		return dto.CloseSessionResponse{}, err
@@ -373,30 +348,39 @@ func (s *AttendanceService) CloseSession(ctx context.Context, sessionID, instruc
 	// Clear Redis keys
 	s.redisService.ClearSessionKeys(ctx, sessionID.String())
 
-	// Get attendance counts
-	counts, _ := s.attendanceRepo.GetSessionAttendanceCounts(ctx, sessionID)
+	// Get counts
+	courseID := utils.PgUUIDToUUID(session.CourseID)
+	enrolledStudents, err := s.cacheRepo.GetEnrolledStudentsByCourse(ctx, courseID, session.Semester)
+	if err != nil {
+		logger.Error("failed to get enrolled students", zap.Error(err))
+		return dto.CloseSessionResponse{}, err
+	}
+
+	presentCount, err := s.attendanceRepo.GetSessionAttendanceCount(ctx, sessionID)
+	if err != nil {
+		logger.Error("failed to get attendance count", zap.Error(err))
+		return dto.CloseSessionResponse{}, err
+	}
+
+	totalEnrolled := len(enrolledStudents)
 
 	return dto.CloseSessionResponse{
 		SessionID: sessionID,
-		ClosedAt:  time.Now(),
+		ClosedAt:  clock.Now(),
 		Summary: dto.SessionSummary{
-			TotalEnrolled: len(enrolledStudents),
-			PresentCount:  int(counts.PresentCount),
-			AbsentCount:   int(counts.AbsentCount),
+			TotalEnrolled: totalEnrolled,
+			PresentCount:  int(presentCount),
+			AbsentCount:   totalEnrolled - int(presentCount),
 		},
-		NewlyMarkedAbsent: newlyMarkedAbsent,
 	}, nil
 }
 
 // GetMyAttendance returns student's own attendance records
 func (s *AttendanceService) GetMyAttendance(ctx context.Context, studentID uuid.UUID, semester string) (dto.GetMyAttendanceResponse, error) {
-	// Check student is active
+	// Check student exists
 	student, err := s.cacheRepo.GetStudentCacheByID(ctx, studentID)
 	if err != nil {
 		return dto.GetMyAttendanceResponse{}, errors.ErrStudentNotFound
-	}
-	if !utils.PgBoolToBool(student.IsActive) {
-		return dto.GetMyAttendanceResponse{}, errors.ErrStudentDeactivated
 	}
 
 	// Get enrollments
@@ -410,45 +394,60 @@ func (s *AttendanceService) GetMyAttendance(ctx context.Context, studentID uuid.
 	for _, enrollment := range enrollments {
 		courseID := utils.PgUUIDToUUID(enrollment.CourseID)
 
-		// Get attendance records
+		// Get attendance records (only records where student was present)
 		records, err := s.attendanceRepo.GetStudentAttendanceByCourse(ctx, studentID, courseID, semester)
 		if err != nil {
 			continue
 		}
 
 		var weeklyRecords []dto.WeeklyAttendanceRecord
-		presentCount := 0
-		absentCount := 0
-		var absentWeeks []int16
-
 		for _, record := range records {
 			weeklyRecords = append(weeklyRecords, dto.WeeklyAttendanceRecord{
-				Week:      record.WeekNumber,
-				Date:      record.SessionDate.Time.Format("2006-01-02"),
-				IsPresent: record.IsPresent,
-				MarkedVia: record.MarkedVia,
+				Week:        record.WeekNumber,
+				SessionType: string(record.SessionType),
+				Date:        record.SessionDate.Time.Format("2006-01-02"),
+				MarkedVia:   record.MarkedVia,
 			})
+		}
 
-			if record.IsPresent {
-				presentCount++
-			} else {
-				absentCount++
-				absentWeeks = append(absentWeeks, record.WeekNumber)
+		// Get theory stats
+		theoryTotal, _ := s.attendanceRepo.GetTotalSessionsByCourseAndType(ctx, courseID, semester, db.SessionTypeEnumTheory)
+		theoryPresent, _ := s.attendanceRepo.GetStudentPresentCountByType(ctx, studentID, courseID, semester, db.SessionTypeEnumTheory)
+
+		// Get lab stats
+		labTotal, _ := s.attendanceRepo.GetTotalSessionsByCourseAndType(ctx, courseID, semester, db.SessionTypeEnumLab)
+		labPresent, _ := s.attendanceRepo.GetStudentPresentCountByType(ctx, studentID, courseID, semester, db.SessionTypeEnumLab)
+
+		detail := dto.CourseAttendanceDetail{
+			CourseID:      courseID,
+			CourseCode:    enrollment.CourseCode,
+			CourseName:    enrollment.CourseName,
+			Instructor:    utils.PgTextToString(enrollment.InstructorFullname),
+			TotalWeeks:    enrollment.TotalWeeks.Int16,
+			WeeklyRecords: weeklyRecords,
+		}
+
+		if theoryTotal > 0 {
+			detail.Theory = &dto.SessionTypeAttendance{
+				PresentCount:  int(theoryPresent),
+				AbsentCount:   int(theoryTotal) - int(theoryPresent),
+				TotalSessions: int(theoryTotal),
+				MinRequired:   MinTheoryAttendance,
+				Passed:        int(theoryPresent) >= MinTheoryAttendance,
 			}
 		}
 
-		courses = append(courses, dto.CourseAttendanceDetail{
-			CourseID:       courseID,
-			CourseCode:     enrollment.CourseCode,
-			CourseName:     enrollment.CourseName,
-			Instructor:     utils.PgTextToString(enrollment.InstructorFullname),
-			TotalWeeks:     enrollment.TotalWeeks.Int16,
-			CompletedWeeks: len(records),
-			PresentCount:   presentCount,
-			AbsentCount:    absentCount,
-			AbsentWeeks:    absentWeeks,
-			WeeklyRecords:  weeklyRecords,
-		})
+		if labTotal > 0 {
+			detail.Lab = &dto.SessionTypeAttendance{
+				PresentCount:  int(labPresent),
+				AbsentCount:   int(labTotal) - int(labPresent),
+				TotalSessions: int(labTotal),
+				MinRequired:   MinLabAttendance,
+				Passed:        int(labPresent) >= MinLabAttendance,
+			}
+		}
+
+		courses = append(courses, detail)
 	}
 
 	return dto.GetMyAttendanceResponse{
@@ -460,6 +459,7 @@ func (s *AttendanceService) GetMyAttendance(ctx context.Context, studentID uuid.
 }
 
 // FinalizeAttendance finalizes attendance for a course and publishes events
+// Checks theory (min 10/14) and lab (min 11/14) separately
 func (s *AttendanceService) FinalizeAttendance(ctx context.Context, courseID, instructorID uuid.UUID, semester string) (dto.FinalizeAttendanceResponse, error) {
 	logger.Info("Finalizing attendance",
 		zap.String("course_id", courseID.String()),
@@ -475,42 +475,149 @@ func (s *AttendanceService) FinalizeAttendance(ctx context.Context, courseID, in
 		return dto.FinalizeAttendanceResponse{}, errors.ErrForbidden
 	}
 
-	// Get failing students (absent_count >= 4)
-	failingStudents, err := s.attendanceRepo.GetFailingStudentsByCourse(ctx, courseID, semester)
-	if err != nil {
-		return dto.FinalizeAttendanceResponse{}, err
+	// Get total sessions by type
+	theoryTotal, _ := s.attendanceRepo.GetTotalSessionsByCourseAndType(ctx, courseID, semester, db.SessionTypeEnumTheory)
+	labTotal, _ := s.attendanceRepo.GetTotalSessionsByCourseAndType(ctx, courseID, semester, db.SessionTypeEnumLab)
+
+	// Get failing students for theory (present_count < MinTheoryAttendance)
+	var theoryFailing []db.GetFailingStudentsByCourseByTypeRow
+	if theoryTotal > 0 {
+		theoryFailing, err = s.attendanceRepo.GetFailingStudentsByCourseByType(ctx, courseID, semester, db.SessionTypeEnumTheory, theoryTotal, int64(MinTheoryAttendance))
+		if err != nil {
+			return dto.FinalizeAttendanceResponse{}, err
+		}
+	}
+
+	// Get failing students for lab (present_count < MinLabAttendance)
+	var labFailing []db.GetFailingStudentsByCourseByTypeRow
+	if labTotal > 0 {
+		labFailing, err = s.attendanceRepo.GetFailingStudentsByCourseByType(ctx, courseID, semester, db.SessionTypeEnumLab, labTotal, int64(MinLabAttendance))
+		if err != nil {
+			return dto.FinalizeAttendanceResponse{}, err
+		}
+	}
+
+	// Merge failing students: a student fails if they fail EITHER theory OR lab
+	type failInfo struct {
+		studentNumber string
+		studentName   string
+		studentEmail  string
+		theoryPresent int
+		theoryAbsent  int
+		theoryFailed  bool
+		labPresent    int
+		labAbsent     int
+		labFailed     bool
+	}
+
+	failMap := make(map[uuid.UUID]*failInfo)
+
+	for _, s := range theoryFailing {
+		sid := utils.PgUUIDToUUID(s.StudentID)
+		failMap[sid] = &failInfo{
+			studentNumber: s.StudentNumber,
+			studentName:   fmt.Sprintf("%s %s", utils.PgTextToString(s.FirstName), utils.PgTextToString(s.LastName)),
+			studentEmail:  utils.PgTextToString(s.Email),
+			theoryPresent: int(s.PresentCount),
+			theoryAbsent:  int(s.AbsentCount),
+			theoryFailed:  true,
+		}
+	}
+
+	for _, s := range labFailing {
+		sid := utils.PgUUIDToUUID(s.StudentID)
+		if info, exists := failMap[sid]; exists {
+			info.labPresent = int(s.PresentCount)
+			info.labAbsent = int(s.AbsentCount)
+			info.labFailed = true
+		} else {
+			failMap[sid] = &failInfo{
+				studentNumber: s.StudentNumber,
+				studentName:   fmt.Sprintf("%s %s", utils.PgTextToString(s.FirstName), utils.PgTextToString(s.LastName)),
+				studentEmail:  utils.PgTextToString(s.Email),
+				labPresent:    int(s.PresentCount),
+				labAbsent:     int(s.AbsentCount),
+				labFailed:     true,
+			}
+		}
 	}
 
 	// Get all students for total count
-	allStudents, _ := s.cacheRepo.GetEnrolledStudentsByCourse(ctx, courseID, semester)
+	allStudents, err := s.cacheRepo.GetEnrolledStudentsByCourse(ctx, courseID, semester)
+	if err != nil {
+		logger.Error("failed to get enrolled students", zap.Error(err))
+		return dto.FinalizeAttendanceResponse{}, err
+	}
 
 	var failed []dto.FailedStudent
 	eventsPublished := 0
 
-	// Publish events for failing students
-	for _, student := range failingStudents {
-		studentID := utils.PgUUIDToUUID(student.StudentID)
-		failed = append(failed, dto.FailedStudent{
+	for studentID, info := range failMap {
+		failedType := "both"
+		if info.theoryFailed && !info.labFailed {
+			failedType = "theory"
+		} else if !info.theoryFailed && info.labFailed {
+			failedType = "lab"
+		}
+
+		failedStudent := dto.FailedStudent{
 			StudentID:     studentID,
-			StudentNumber: student.StudentNumber,
-			StudentName:   fmt.Sprintf("%s %s", utils.PgTextToString(student.FirstName), utils.PgTextToString(student.LastName)),
-			PresentCount:  int(student.PresentCount),
-			AbsentCount:   int(student.AbsentCount),
-		})
+			StudentNumber: info.studentNumber,
+			StudentName:   info.studentName,
+			FailedType:    failedType,
+		}
+
+		if theoryTotal > 0 {
+			failedStudent.Theory = &dto.SessionTypeAttendance{
+				PresentCount:  info.theoryPresent,
+				AbsentCount:   info.theoryAbsent,
+				TotalSessions: int(theoryTotal),
+				MinRequired:   MinTheoryAttendance,
+				Passed:        !info.theoryFailed,
+			}
+		}
+
+		if labTotal > 0 {
+			failedStudent.Lab = &dto.SessionTypeAttendance{
+				PresentCount:  info.labPresent,
+				AbsentCount:   info.labAbsent,
+				TotalSessions: int(labTotal),
+				MinRequired:   MinLabAttendance,
+				Passed:        !info.labFailed,
+			}
+		}
+
+		failed = append(failed, failedStudent)
 
 		// Publish event
 		eventData := dto.AttendanceSemesterFailedEventData{
-			StudentID:          studentID,
-			StudentNumber:      student.StudentNumber,
-			StudentEmail:       utils.PgTextToString(student.Email),
-			CourseID:           courseID,
-			CourseCode:         course.CourseCode,
-			CourseName:         course.CourseName,
-			Semester:           semester,
-			TotalWeeks:         course.TotalWeeks.Int16,
-			PresentCount:       int(student.PresentCount),
-			AbsentCount:        int(student.AbsentCount),
-			MaxAllowedAbsences: 3,
+			StudentID:     studentID,
+			StudentNumber: info.studentNumber,
+			StudentEmail:  info.studentEmail,
+			CourseID:      courseID,
+			CourseCode:    course.CourseCode,
+			CourseName:    course.CourseName,
+			Semester:      semester,
+			TotalWeeks:    course.TotalWeeks.Int16,
+			FailedType:    failedType,
+		}
+
+		if theoryTotal > 0 {
+			eventData.Theory = &dto.AttendanceFailedTypeDetail{
+				TotalSessions: int(theoryTotal),
+				PresentCount:  info.theoryPresent,
+				AbsentCount:   info.theoryAbsent,
+				MinRequired:   MinTheoryAttendance,
+			}
+		}
+
+		if labTotal > 0 {
+			eventData.Lab = &dto.AttendanceFailedTypeDetail{
+				TotalSessions: int(labTotal),
+				PresentCount:  info.labPresent,
+				AbsentCount:   info.labAbsent,
+				MinRequired:   MinLabAttendance,
+			}
 		}
 
 		if err := s.publishFailedAttendanceEvent(ctx, eventData); err == nil {
@@ -524,18 +631,23 @@ func (s *AttendanceService) FinalizeAttendance(ctx context.Context, courseID, in
 		Semester:      semester,
 		TotalStudents: len(allStudents),
 		TotalWeeks:    course.TotalWeeks.Int16,
-		FinalizationSummary: struct {
-			PassingCount       int `json:"passing_count"`
-			FailingCount       int `json:"failing_count"`
-			MaxAllowedAbsences int `json:"max_allowed_absences"`
+		Thresholds: struct {
+			TheoryMinRequired int `json:"theory_min_required"`
+			LabMinRequired    int `json:"lab_min_required"`
 		}{
-			PassingCount:       len(allStudents) - len(failingStudents),
-			FailingCount:       len(failingStudents),
-			MaxAllowedAbsences: 3,
+			TheoryMinRequired: MinTheoryAttendance,
+			LabMinRequired:    MinLabAttendance,
+		},
+		FinalizationSummary: struct {
+			PassingCount int `json:"passing_count"`
+			FailingCount int `json:"failing_count"`
+		}{
+			PassingCount: len(allStudents) - len(failMap),
+			FailingCount: len(failMap),
 		},
 		FailedStudents:  failed,
 		EventsPublished: eventsPublished,
-		FinalizedAt:     time.Now(),
+		FinalizedAt:     clock.Now(),
 	}, nil
 }
 
@@ -549,6 +661,13 @@ func (s *AttendanceService) GetCourseSessions(ctx context.Context, courseID, ins
 	if utils.PgUUIDToUUID(course.InstructorID) != instructorID {
 		return dto.GetCourseSessionsResponse{}, errors.ErrForbidden
 	}
+
+	// Get enrolled students count for absent calculation
+	enrolledStudents, err := s.cacheRepo.GetEnrolledStudentsByCourse(ctx, courseID, course.Semester)
+	if err != nil {
+		return dto.GetCourseSessionsResponse{}, err
+	}
+	totalEnrolled := len(enrolledStudents)
 
 	// Get sessions
 	sessions, err := s.sessionRepo.GetSessionsByCourse(ctx, courseID, course.Semester)
@@ -564,8 +683,12 @@ func (s *AttendanceService) GetCourseSessions(ctx context.Context, courseID, ins
 		isActive := utils.PgBoolToBool(session.IsActive)
 		sessionDate := session.SessionDate.Time.Format("2006-01-02")
 
-		// Get counts
-		counts, _ := s.attendanceRepo.GetSessionAttendanceCounts(ctx, sessionID)
+		// Get present count
+		presentCount64, err := s.attendanceRepo.GetSessionAttendanceCount(ctx, sessionID)
+		if err != nil {
+			logger.Error("failed to get session attendance count", zap.String("session_id", sessionID.String()), zap.Error(err))
+			continue
+		}
 
 		// Status
 		status := "expired"
@@ -573,8 +696,8 @@ func (s *AttendanceService) GetCourseSessions(ctx context.Context, courseID, ins
 			status = "active"
 		}
 
-		presentCount := int(counts.PresentCount)
-		absentCount := int(counts.AbsentCount)
+		presentCount := int(presentCount64)
+		absentCount := totalEnrolled - presentCount
 
 		if !isActive {
 			completedSessions++
@@ -583,70 +706,7 @@ func (s *AttendanceService) GetCourseSessions(ctx context.Context, courseID, ins
 		sessionList = append(sessionList, dto.SessionListItem{
 			SessionID:    &sessionID,
 			WeekNumber:   session.WeekNumber,
-			SessionDate:  &sessionDate,
-			PresentCount: &presentCount,
-			AbsentCount:  &absentCount,
-			IsActive:     &isActive,
-			Status:       &status,
-		})
-	}
-
-	return dto.GetCourseSessionsResponse{
-		CourseID:   courseID,
-		CourseCode: course.CourseCode,
-		CourseName: course.CourseName,
-		Semester:   course.Semester,
-		TotalWeeks: course.TotalWeeks.Int16,
-		Sessions:   sessionList,
-		OverallStats: struct {
-			CompletedSessions int `json:"completed_sessions"`
-		}{
-			CompletedSessions: completedSessions,
-		},
-	}, nil
-}
-
-// GetCourseSessions returns all sessions for a course
-func (s *AttendanceService) GetCourseSessions(ctx context.Context, courseID, instructorID uuid.UUID) (dto.GetCourseSessionsResponse, error) {
-	// Check ownership
-	course, err := s.cacheRepo.GetCourseCacheByID(ctx, courseID)
-	if err != nil {
-		return dto.GetCourseSessionsResponse{}, errors.ErrCourseNotFound
-	}
-	if utils.PgUUIDToUUID(course.InstructorID) != instructorID {
-		return dto.GetCourseSessionsResponse{}, errors.ErrForbidden
-	}
-
-	// Get sessions
-	sessions, err := s.sessionRepo.GetSessionsByCourse(ctx, courseID, course.Semester)
-	if err != nil {
-		return dto.GetCourseSessionsResponse{}, err
-	}
-
-	var sessionList []dto.SessionListItem
-	completedSessions := 0
-
-	for _, session := range sessions {
-		sessionID := utils.PgUUIDToUUID(session.ID)
-		isActive := utils.PgBoolToBool(session.IsActive)
-		sessionDate := session.SessionDate.Time.Format("2006-01-02")
-
-		// Status
-		status := "expired"
-		if isActive {
-			status = "active"
-		}
-
-		presentCount := int(session.PresentCount)
-		absentCount := int(session.AbsentCount)
-
-		if !isActive {
-			completedSessions++
-		}
-
-		sessionList = append(sessionList, dto.SessionListItem{
-			SessionID:    &sessionID,
-			WeekNumber:   session.WeekNumber,
+			SessionType:  string(session.SessionType),
 			SessionDate:  &sessionDate,
 			PresentCount: &presentCount,
 			AbsentCount:  &absentCount,
@@ -673,23 +733,22 @@ func (s *AttendanceService) GetCourseSessions(ctx context.Context, courseID, ins
 // Helper functions
 
 func (s *AttendanceService) getSessionWithFallback(ctx context.Context, sessionID string) (db.AttendanceSession, error) {
+	sessionUUID, err := uuid.Parse(sessionID)
+	if err != nil {
+		return db.AttendanceSession{}, fmt.Errorf("invalid session ID: %w", err)
+	}
+
 	// Try Redis first
-	sessionData, err := s.redisService.GetSessionCache(ctx, sessionID)
-	if err == nil && len(sessionData) > 0 {
-		// Parse from Redis (simplified - in production should construct full session)
-		sessionUUID, _ := uuid.Parse(sessionID)
+	sessionData, redisErr := s.redisService.GetSessionCache(ctx, sessionID)
+	if redisErr == nil && len(sessionData) > 0 {
 		return s.sessionRepo.GetSessionByID(ctx, sessionUUID)
 	}
 
 	// Fallback to DB
-	sessionUUID, _ := uuid.Parse(sessionID)
 	session, err := s.sessionRepo.GetActiveSessionByID(ctx, sessionUUID)
 	if err != nil {
 		return db.AttendanceSession{}, err
 	}
-
-	// Warm cache
-	go s.warmSessionCache(context.Background(), session)
 
 	return session, nil
 }
@@ -705,29 +764,12 @@ func (s *AttendanceService) checkEnrollmentWithFallback(ctx context.Context, ses
 	return s.cacheRepo.CheckEnrollment(ctx, studentID, courseID, semester)
 }
 
-func (s *AttendanceService) checkAlreadyMarkedWithFallback(ctx context.Context, sessionID string, studentID uuid.UUID) (bool, error) {
-	// Try Redis first
-	marked, err := s.redisService.IsAlreadyMarked(ctx, sessionID, studentID.String())
-	if err == nil {
-		return marked, nil
-	}
-
-	// Fallback to DB
-	sessionUUID, _ := uuid.Parse(sessionID)
-	return s.attendanceRepo.CheckAttendanceExists(ctx, sessionUUID, studentID)
-}
-
-func (s *AttendanceService) warmSessionCache(ctx context.Context, session db.AttendanceSession) {
-	// Implementation for warming Redis cache after fallback
-	logger.Debug("warming session cache", zap.String("session_id", utils.PgUUIDToUUID(session.ID).String()))
-}
-
 // publishFailedAttendanceEvent publishes event to outbox
 func (s *AttendanceService) publishFailedAttendanceEvent(ctx context.Context, data dto.AttendanceSemesterFailedEventData) error {
 	payload, err := json.Marshal(dto.BaseEvent{
 		EventID:   uuid.New(),
 		EventType: "attendance.semester.failed",
-		Timestamp: time.Now(),
+		Timestamp: clock.Now(),
 		Data:      data,
 	})
 	if err != nil {
@@ -757,10 +799,20 @@ func (s *AttendanceService) GetSessionDetails(ctx context.Context, sessionID, in
 	}
 
 	// Get enrolled count
-	enrolledStudents, _ := s.cacheRepo.GetEnrolledStudentsByCourse(ctx, courseID, session.Semester)
+	enrolledStudents, err := s.cacheRepo.GetEnrolledStudentsByCourse(ctx, courseID, session.Semester)
+	if err != nil {
+		logger.Error("failed to get enrolled students", zap.Error(err))
+		return dto.GetSessionDetailsResponse{}, err
+	}
 
-	// Get attendance counts
-	counts, _ := s.attendanceRepo.GetSessionAttendanceCounts(ctx, sessionID)
+	// Get present count
+	presentCount, err := s.attendanceRepo.GetSessionAttendanceCount(ctx, sessionID)
+	if err != nil {
+		logger.Error("failed to get attendance count", zap.Error(err))
+		return dto.GetSessionDetailsResponse{}, err
+	}
+
+	totalEnrolled := len(enrolledStudents)
 
 	return dto.GetSessionDetailsResponse{
 		SessionID:            sessionID,
@@ -768,15 +820,15 @@ func (s *AttendanceService) GetSessionDetails(ctx context.Context, sessionID, in
 		CourseCode:           course.CourseCode,
 		CourseName:           course.CourseName,
 		WeekNumber:           session.WeekNumber,
+		SessionType:          string(session.SessionType),
 		SessionDate:          session.SessionDate.Time.Format("2006-01-02"),
 		Semester:             session.Semester,
-		IsActive:             utils.PgBoolToBool(session.IsActive),
-		QRRotationInterval:   session.QrRotationInterval.Int16,
-		StartedAt:            utils.PgTimestampToTime(session.StartedAt),
+		IsActive:  utils.PgBoolToBool(session.IsActive),
+		StartedAt: utils.PgTimestampToTime(session.StartedAt),
 		ExpiresAt:            utils.PgTimestampToTime(session.ExpiresAt),
-		EnrolledStudentCount: len(enrolledStudents),
-		PresentCount:         int(counts.PresentCount),
-		AbsentCount:          int(counts.AbsentCount),
+		EnrolledStudentCount: totalEnrolled,
+		PresentCount:         int(presentCount),
+		AbsentCount:          totalEnrolled - int(presentCount),
 	}, nil
 }
 
@@ -792,18 +844,21 @@ func (s *AttendanceService) GetSessionRecords(ctx context.Context, sessionID, in
 		return dto.GetSessionRecordsResponse{}, errors.ErrForbidden
 	}
 
-	// Get all attendance records for this session
+	// Get all attendance records for this session (all records = present students)
 	records, err := s.attendanceRepo.GetAttendanceRecordsBySession(ctx, sessionID)
 	if err != nil {
 		return dto.GetSessionRecordsResponse{}, err
 	}
 
 	var items []dto.AttendanceRecordItem
-	presentCount := 0
 
 	for _, record := range records {
 		studentID := utils.PgUUIDToUUID(record.StudentID)
-		student, _ := s.cacheRepo.GetStudentCacheByID(ctx, studentID)
+		student, err := s.cacheRepo.GetStudentCacheByID(ctx, studentID)
+		if err != nil {
+			logger.Error("failed to get student info", zap.String("student_id", studentID.String()), zap.Error(err))
+			continue
+		}
 
 		markedAt := utils.PgTimestampToTime(record.MarkedAt)
 		var markedAtPtr *time.Time
@@ -821,22 +876,16 @@ func (s *AttendanceService) GetSessionRecords(ctx context.Context, sessionID, in
 			StudentID:     studentID,
 			StudentNumber: student.StudentNumber,
 			StudentName:   fmt.Sprintf("%s %s", utils.PgTextToString(student.FirstName), utils.PgTextToString(student.LastName)),
-			IsPresent:     record.IsPresent,
 			MarkedVia:     record.MarkedVia,
 			MarkedAt:      markedAtPtr,
 			Note:          notePtr,
 		})
-
-		if record.IsPresent {
-			presentCount++
-		}
 	}
 
 	return dto.GetSessionRecordsResponse{
 		SessionID:    sessionID,
 		WeekNumber:   session.WeekNumber,
-		TotalCount:   len(records),
-		PresentCount: presentCount,
+		PresentCount: len(records),
 		Records:      items,
 	}, nil
 }

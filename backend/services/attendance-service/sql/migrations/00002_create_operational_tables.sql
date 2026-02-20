@@ -31,7 +31,7 @@ CREATE INDEX idx_sessions_course ON attendance_sessions(course_id);
 CREATE INDEX idx_sessions_active ON attendance_sessions(is_active, expires_at) WHERE is_active = TRUE;
 CREATE INDEX idx_sessions_semester ON attendance_sessions(semester);
 
--- Yoklama Kayıtları
+-- Yoklama Kayıtları (kayıt var = derse geldi, kayıt yok = gelmedi)
 CREATE TABLE attendance_records (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     session_id UUID NOT NULL REFERENCES attendance_sessions(id) ON DELETE CASCADE,
@@ -40,15 +40,14 @@ CREATE TABLE attendance_records (
     semester VARCHAR(50) NOT NULL,
     week_number SMALLINT NOT NULL,
 
-    -- Yoklama bilgisi
-    is_present BOOLEAN NOT NULL DEFAULT TRUE,
-    marked_via VARCHAR(20) NOT NULL CHECK (marked_via IN ('qr_scan', 'manual')),
+    -- Nasıl işaretlendi
+    marked_via VARCHAR(20) NOT NULL CHECK (marked_via IN ('qr_scan', 'manual', 'admin')),
 
     -- QR scan detayları (sadece qr_scan için)
     scanned_at TIMESTAMP,
     qr_timestamp BIGINT,
 
-    -- Manuel giriş detayları (sadece manual için)
+    -- Manuel/admin giriş detayları
     manually_marked_by UUID,
     manually_marked_at TIMESTAMP,
     manual_note TEXT,

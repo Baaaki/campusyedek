@@ -1,7 +1,8 @@
+[warning] build.bin is deprecated; set build.entrypoint instead
 
   __    _   ___  
  / /\  | | | |_) 
-/_/--\ |_| |_| \_ v1.63.0, built with Go go1.25.1
+/_/--\ |_| |_| \_ v1.64.5, built with Go go1.26.0
 
 watching .
 watching bin
@@ -13,6 +14,19 @@ watching proto
 !exclude tmp
 building...
 running...
-15:59:36.614	[34mINFO[0m	runtime/proc.go:285	starting payment service (gRPC)	{"environment": "development", "port": "50051"}
-15:59:36.615	[34mINFO[0m	runtime/asm_amd64.s:1693	gRPC server listening	{"address": "[::]:50051"}
+20:11:03.208	[34mINFO[0m	runtime/proc.go:290	starting payment service (gRPC)	{"environment": "development", "port": "50051"}
+20:11:03.209	[34mINFO[0m	runtime/asm_amd64.s:1771	gRPC server listening	{"address": "[::]:50051"}
+internal/server/server.go has changed
+building...
+# github.com/baaaki/mydreamcampus/payment-service/internal/server
+internal/server/server.go:8:2: "github.com/baaaki/mydreamcampus/shared/clock" imported and not used
+failed to build, error: exit status 1
+running...
+01:32:50.101	[34mINFO[0m	runtime/proc.go:290	starting payment service (gRPC)	{"environment": "development", "port": "50051"}
+01:32:50.101	[34mINFO[0m	runtime/asm_amd64.s:1771	gRPC server listening	{"address": "[::]:50051"}
+internal/server/server.go has changed
+building...
+running...
+01:32:52.051	[34mINFO[0m	runtime/proc.go:290	starting payment service (gRPC)	{"environment": "development", "port": "50051"}
+01:32:52.052	[34mINFO[0m	runtime/asm_amd64.s:1771	gRPC server listening	{"address": "[::]:50051"}
 cleaning...

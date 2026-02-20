@@ -7,22 +7,23 @@ import (
 	"time"
 
 	"github.com/baaaki/mydreamcampus/meal-service/internal/db"
-	"github.com/baaaki/mydreamcampus/shared/utils"
 	"github.com/baaaki/mydreamcampus/meal-service/internal/repository"
+	"github.com/baaaki/mydreamcampus/shared/clock"
 	"github.com/baaaki/mydreamcampus/shared/rabbitmq"
+	"github.com/baaaki/mydreamcampus/shared/utils"
 	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
 )
 
 // OutboxWorker polls and publishes pending outbox events
 type OutboxWorker struct {
-	outboxRepo       *repository.OutboxRepository
-	publisher        *rabbitmq.Publisher
-	pollInterval     time.Duration
-	batchSize        int32
-	maxRetries       int
-	logger           *zap.Logger
-	stopChan         chan struct{}
+	outboxRepo   *repository.OutboxRepository
+	publisher    *rabbitmq.Publisher
+	pollInterval time.Duration
+	batchSize    int32
+	maxRetries   int
+	logger       *zap.Logger
+	stopChan     chan struct{}
 }
 
 func NewOutboxWorker(
@@ -105,7 +106,7 @@ func (w *OutboxWorker) processPendingEvents(ctx context.Context) error {
 
 func (w *OutboxWorker) publishEvent(ctx context.Context, event db.OutboxEvent) error {
 	// Unmarshal payload
-	var payload map[string]interface{}
+	var payload map[string]any
 	if err := json.Unmarshal(event.Payload, &payload); err != nil {
 		// Invalid payload, mark as failed
 		w.outboxRepo.MarkOutboxEventFailed(ctx, utils.PgtypeToUUID(event.ID), fmt.Sprintf("invalid payload: %v", err))
@@ -123,7 +124,7 @@ func (w *OutboxWorker) publishEvent(ctx context.Context, event db.OutboxEvent) e
 			w.outboxRepo.MarkOutboxEventFailed(ctx, utils.PgtypeToUUID(event.ID), fmt.Sprintf("max retries exceeded: %v", err))
 		} else {
 			// Schedule retry with exponential backoff
-			nextRetryAt := time.Now().Add(time.Duration(1<<newRetryCount) * time.Minute)
+			nextRetryAt := clock.Now().Add(time.Duration(1<<newRetryCount) * time.Minute)
 			w.outboxRepo.UpdateOutboxEventRetry(ctx, utils.PgtypeToUUID(event.ID), pgtype.Timestamptz{
 				Time:  nextRetryAt,
 				Valid: true,

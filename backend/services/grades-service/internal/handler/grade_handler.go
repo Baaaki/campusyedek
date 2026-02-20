@@ -465,6 +465,80 @@ func (h *GradeHandler) ProcessAppeal(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
+// UnlockScore - POST /api/grades/admin/scores/unlock
+// Admin only: Unlock a specific score so the teacher can re-enter it
+func (h *GradeHandler) UnlockScore(c *gin.Context) {
+	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+		zap.String("handler", "GradeHandler"),
+		zap.String("method", "UnlockScore"),
+	)
+
+	var req dto.ScoreLockRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		handlerLogger.Error("invalid request body", zap.Error(err))
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error: sharedErrors.ErrValidation.Message,
+			Code:  sharedErrors.ErrValidation.Code,
+		})
+		return
+	}
+
+	handlerLogger.Info("unlocking score",
+		zap.String("registration_id", req.RegistrationID.String()),
+		zap.String("slug", req.Slug),
+	)
+
+	if err := h.gradeService.UnlockScore(c.Request.Context(), req.RegistrationID, req.Slug); err != nil {
+		handlerLogger.Error("failed to unlock score", zap.Error(err))
+		h.handleError(c, err)
+		return
+	}
+
+	handlerLogger.Info("score unlocked successfully")
+	c.JSON(http.StatusOK, gin.H{
+		"message":         "score unlocked successfully",
+		"registration_id": req.RegistrationID,
+		"slug":            req.Slug,
+	})
+}
+
+// LockScore - POST /api/grades/admin/scores/lock
+// Admin only: Lock a specific score to prevent modification
+func (h *GradeHandler) LockScore(c *gin.Context) {
+	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+		zap.String("handler", "GradeHandler"),
+		zap.String("method", "LockScore"),
+	)
+
+	var req dto.ScoreLockRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		handlerLogger.Error("invalid request body", zap.Error(err))
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error: sharedErrors.ErrValidation.Message,
+			Code:  sharedErrors.ErrValidation.Code,
+		})
+		return
+	}
+
+	handlerLogger.Info("locking score",
+		zap.String("registration_id", req.RegistrationID.String()),
+		zap.String("slug", req.Slug),
+	)
+
+	if err := h.gradeService.LockScore(c.Request.Context(), req.RegistrationID, req.Slug); err != nil {
+		handlerLogger.Error("failed to lock score", zap.Error(err))
+		h.handleError(c, err)
+		return
+	}
+
+	handlerLogger.Info("score locked successfully")
+	c.JSON(http.StatusOK, gin.H{
+		"message":         "score locked successfully",
+		"registration_id": req.RegistrationID,
+		"slug":            req.Slug,
+	})
+}
+
 // ============================================
 // Helper Functions
 // ============================================

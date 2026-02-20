@@ -6,9 +6,9 @@ import (
 	sharedErrors "github.com/baaaki/mydreamcampus/shared/errors"
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	"github.com/baaaki/mydreamcampus/shared/utils"
-	serviceErrors "github.com/baaaki/mydreamcampus/staff-service/internal/errors"
 	"github.com/baaaki/mydreamcampus/staff-service/internal/db"
 	"github.com/baaaki/mydreamcampus/staff-service/internal/dto"
+	serviceErrors "github.com/baaaki/mydreamcampus/staff-service/internal/errors"
 	"github.com/baaaki/mydreamcampus/staff-service/internal/repository"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -64,7 +64,7 @@ func (s *StaffService) CreateStaff(ctx context.Context, req dto.CreateStaffReque
 		OfficeLocation: utils.StringToPgText(req.OfficeLocation),
 	}
 
-	eventPayload := map[string]interface{}{
+	eventPayload := map[string]any{
 		"id":         nil, // Will be set after creation in repository
 		"email":      req.Email,
 		"first_name": req.FirstName,
@@ -190,7 +190,7 @@ func (s *StaffService) UpdateStaff(ctx context.Context, id string, req dto.Updat
 		OfficeLocation: utils.PointerStringToPgText(req.OfficeLocation),
 	}
 
-	eventPayload := map[string]interface{}{
+	eventPayload := map[string]any{
 		"staff_id":        id,
 		"department":      req.Department,
 		"phone":           req.Phone,
@@ -263,7 +263,7 @@ func (s *StaffService) DeleteStaff(ctx context.Context, id string) error {
 		return sharedErrors.Wrap(sharedErrors.ErrInternal, err)
 	}
 
-	eventPayload := map[string]interface{}{
+	eventPayload := map[string]any{
 		"staff_id": id,
 	}
 

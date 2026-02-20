@@ -39,7 +39,7 @@ func (r *CacheRepository) UpsertCourseCache(ctx context.Context, course db.Upser
 	return r.queries.UpsertCourseCache(ctx, course)
 }
 
-func (r *CacheRepository) GetCourseCacheByID(ctx context.Context, courseID uuid.UUID) (db.CoursesCache, error) {
+func (r *CacheRepository) GetCourseCacheByID(ctx context.Context, courseID uuid.UUID) (db.GetCourseCacheByIDRow, error) {
 	return r.queries.GetCourseCacheByID(ctx, utils.UUIDToPgUUID(courseID))
 }
 

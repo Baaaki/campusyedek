@@ -22,9 +22,9 @@ type OutboxWorker struct {
 
 func NewOutboxWorker(
 	outboxRepo *repository.OutboxRepository,
-	publisher  *rabbitmq.Publisher,
-	interval   time.Duration,
-	batchSize  int32,
+	publisher *rabbitmq.Publisher,
+	interval time.Duration,
+	batchSize int32,
 ) *OutboxWorker {
 	return &OutboxWorker{
 		outboxRepo: outboxRepo,
@@ -84,7 +84,7 @@ func (w *OutboxWorker) processEvents(ctx context.Context) {
 		eventID := utils.PgtypeToUUIDString(event.ID)
 
 		// Parse payload to map for publishing
-		var payload map[string]interface{}
+		var payload map[string]any
 		if err := json.Unmarshal(event.Payload, &payload); err != nil {
 			logger.Error("failed to unmarshal event payload",
 				zap.Error(err),
@@ -101,13 +101,12 @@ func (w *OutboxWorker) processEvents(ctx context.Context) {
 		// Publish to RabbitMQ
 		err := w.publisher.Publish(ctx, "enrollment.events", routingKey, payload)
 		if err != nil {
-			logger.Error("failed to publish event",
+			logger.Warn("failed to publish event, will retry on next poll",
 				zap.Error(err),
 				zap.String("event_id", eventID),
 				zap.String("event_type", event.EventType),
 				zap.String("routing_key", routingKey),
 			)
-			w.outboxRepo.MarkOutboxEventFailed(ctx, utils.PgtypeToUUID(event.ID))
 			failCount++
 			continue
 		}

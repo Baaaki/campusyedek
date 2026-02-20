@@ -15,9 +15,11 @@ import (
 	"github.com/baaaki/mydreamcampus/grades-service/internal/service"
 	"github.com/baaaki/mydreamcampus/grades-service/internal/worker"
 	"github.com/baaaki/mydreamcampus/shared/database"
+	sharedHandler "github.com/baaaki/mydreamcampus/shared/handler"
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	sharedMiddleware "github.com/baaaki/mydreamcampus/shared/middleware"
 	"github.com/baaaki/mydreamcampus/shared/rabbitmq"
+	sharedRepo "github.com/baaaki/mydreamcampus/shared/repository"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -73,9 +75,10 @@ func main() {
 	scoreRepo := repository.NewScoreRepository(pool)
 	completedRepo := repository.NewCompletedRepository(pool)
 	outboxRepo := repository.NewOutboxRepository(pool)
+	periodRepo := sharedRepo.NewPeriodRepository(pool)
 
 	// Initialize services
-	gradeService := service.NewGradeService(pool, cacheRepo, registrationRepo, scoreRepo, completedRepo, outboxRepo)
+	gradeService := service.NewGradeService(pool, cacheRepo, registrationRepo, scoreRepo, completedRepo, outboxRepo, periodRepo)
 	studentGradeService := service.NewStudentGradesService(cacheRepo, registrationRepo, scoreRepo, completedRepo)
 
 	// Initialize handlers
@@ -99,8 +102,12 @@ func main() {
 	// Start outbox worker
 	go outboxWorker.Start(ctx)
 
+	// Initialize shared handlers
+	timeHandler := sharedHandler.NewTimeHandler()
+	periodHandler := sharedHandler.NewPeriodHandler(periodRepo)
+
 	// Setup Gin router
-	router := setupRouter(gradeHandler, cfg)
+	router := setupRouter(gradeHandler, timeHandler, periodHandler, cfg)
 
 	// Start HTTP server
 	srv := &http.Server{
@@ -137,7 +144,7 @@ func main() {
 	logger.Info("server exited")
 }
 
-func setupRouter(gradeHandler *handler.GradeHandler, cfg *config.Config) *gin.Engine {
+func setupRouter(gradeHandler *handler.GradeHandler, timeHandler *sharedHandler.TimeHandler, periodHandler *sharedHandler.PeriodHandler, cfg *config.Config) *gin.Engine {
 	if cfg.Server.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -189,6 +196,12 @@ func setupRouter(gradeHandler *handler.GradeHandler, cfg *config.Config) *gin.En
 	admin.Use(sharedMiddleware.RequireAdmin())
 	{
 		admin.POST("/appeal", gradeHandler.ProcessAppeal)
+		admin.POST("/scores/unlock", gradeHandler.UnlockScore)
+		admin.POST("/scores/lock", gradeHandler.LockScore)
+
+		// Time Machine & Academic Periods (shared handlers)
+		timeHandler.RegisterRoutes(admin)
+		periodHandler.RegisterRoutes(admin)
 	}
 
 	return router

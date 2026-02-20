@@ -15,6 +15,7 @@ import (
 	"github.com/baaaki/mydreamcampus/attendance-service/internal/service"
 	"github.com/baaaki/mydreamcampus/attendance-service/internal/worker"
 	"github.com/baaaki/mydreamcampus/shared/database"
+	sharedHandler "github.com/baaaki/mydreamcampus/shared/handler"
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	sharedMiddleware "github.com/baaaki/mydreamcampus/shared/middleware"
 	"github.com/baaaki/mydreamcampus/shared/rabbitmq"
@@ -103,12 +104,13 @@ func main() {
 
 	// Initialize handlers
 	attendanceHandler := handler.NewAttendanceHandler(attendanceService)
+	timeHandler := sharedHandler.NewTimeHandler()
 
 	// Initialize workers
 	outboxWorker := worker.NewOutboxWorker(outboxRepo, publisher)
 	eventConsumer := worker.NewEventConsumer(consumer, cacheRepo, eventRepo)
 	bufferFlusher := worker.NewBufferFlusher(attendanceRepo, redisService)
-	sessionExpiryHandler := worker.NewSessionExpiryHandler(sessionRepo, attendanceRepo, cacheRepo, redisService)
+	sessionExpiryHandler := worker.NewSessionExpiryHandler(sessionRepo, redisService)
 
 	// Start workers
 	ctx, cancel := context.WithCancel(context.Background())
@@ -120,7 +122,7 @@ func main() {
 	go sessionExpiryHandler.Start(ctx)
 
 	// Setup HTTP server
-	router := setupRouter(cfg, attendanceHandler)
+	router := setupRouter(cfg, attendanceHandler, timeHandler)
 
 	srv := &http.Server{
 		Addr:    ":" + cfg.Server.Port,
@@ -152,7 +154,7 @@ func main() {
 	logger.Info("server exited")
 }
 
-func setupRouter(cfg *config.Config, attendanceHandler *handler.AttendanceHandler) *gin.Engine {
+func setupRouter(cfg *config.Config, attendanceHandler *handler.AttendanceHandler, timeHandler *sharedHandler.TimeHandler) *gin.Engine {
 	if cfg.Server.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -187,6 +189,14 @@ func setupRouter(cfg *config.Config, attendanceHandler *handler.AttendanceHandle
 	api.POST("/sessions/:sessionId/manual", sharedMiddleware.RequireRole("teacher"), attendanceHandler.CreateManualAttendance)
 	api.POST("/sessions/:sessionId/close", sharedMiddleware.RequireRole("teacher"), attendanceHandler.CloseSession)
 	api.POST("/courses/:courseId/finalize", sharedMiddleware.RequireRole("teacher"), attendanceHandler.FinalizeAttendance)
+
+	// Admin routes for Time Machine
+	admin := router.Group("/api/attendance/admin")
+	admin.Use(sharedMiddleware.ExtractUserFromHeaders())
+	admin.Use(sharedMiddleware.RequireAdmin())
+	{
+		timeHandler.RegisterRoutes(admin)
+	}
 
 	return router
 }
@@ -223,8 +233,8 @@ func setupRabbitMQ(conn *rabbitmq.Connection) error {
 		routingKey string
 	}{
 		{"attendance.events", "student.events", "student.#"},
-		{"attendance.events", "course.events", "course_semester.#"},
-		{"attendance.events", "enrollment.events", "enrollment_program.approved"},
+		{"attendance.events", "course.events", "course.semester.#"},
+		{"attendance.events", "enrollment.events", "enrollment.program.approved"},
 	}
 
 	for _, b := range bindings {
@@ -232,6 +242,15 @@ func setupRabbitMQ(conn *rabbitmq.Connection) error {
 			return err
 		}
 	}
+
+	// Pre-declare downstream consumer queues so messages persist even when consumers are offline
+	publisher := rabbitmq.NewPublisher(conn)
+
+	if err := publisher.DeclareAndBindQueue("grades-service-attendance", "attendance.events", "attendance.semester.failed"); err != nil {
+		return fmt.Errorf("failed to declare downstream queue: %w", err)
+	}
+
+	logger.Info("downstream consumer queues pre-declared")
 
 	return nil
 }

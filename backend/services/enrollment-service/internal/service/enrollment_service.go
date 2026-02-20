@@ -4,14 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/baaaki/mydreamcampus/enrollment-service/internal/db"
 	"github.com/baaaki/mydreamcampus/enrollment-service/internal/dto"
 	serviceErrors "github.com/baaaki/mydreamcampus/enrollment-service/internal/errors"
 	"github.com/baaaki/mydreamcampus/enrollment-service/internal/repository"
+	"github.com/baaaki/mydreamcampus/shared/clock"
 	sharedErrors "github.com/baaaki/mydreamcampus/shared/errors"
 	"github.com/baaaki/mydreamcampus/shared/logger"
+	sharedRepo "github.com/baaaki/mydreamcampus/shared/repository"
+	"github.com/baaaki/mydreamcampus/shared/rules"
 	"github.com/baaaki/mydreamcampus/shared/utils"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -21,17 +23,20 @@ type EnrollmentService struct {
 	enrollmentRepo *repository.EnrollmentRepository
 	studentRepo    *repository.StudentRepository
 	courseRepo     *repository.CourseRepository
+	periodRepo     *sharedRepo.SimplePeriodRepository
 }
 
 func NewEnrollmentService(
 	enrollmentRepo *repository.EnrollmentRepository,
 	studentRepo *repository.StudentRepository,
 	courseRepo *repository.CourseRepository,
+	periodRepo *sharedRepo.SimplePeriodRepository,
 ) *EnrollmentService {
 	return &EnrollmentService{
 		enrollmentRepo: enrollmentRepo,
 		studentRepo:    studentRepo,
 		courseRepo:     courseRepo,
+		periodRepo:     periodRepo,
 	}
 }
 
@@ -153,6 +158,23 @@ func (s *EnrollmentService) CreateEnrollmentProgram(ctx context.Context, req dto
 		return dto.EnrollmentProgramResponse{}, serviceErrors.ErrNoCourses
 	}
 
+	// Check enrollment period deadline
+	period, periodErr := s.periodRepo.GetActivePeriodBySemester(ctx, req.Semester)
+	if periodErr == nil {
+		check := rules.IsWithinPeriod(period.PeriodStart, period.PeriodEnd)
+		if !check.Allowed {
+			serviceLogger.Warn("enrollment period check failed",
+				zap.String("reason", check.Reason),
+				zap.Time("deadline", check.EffectiveDeadline),
+			)
+			if check.Reason == "period has not started yet" {
+				return dto.EnrollmentProgramResponse{}, serviceErrors.ErrEnrollmentPeriodNotOpen
+			}
+			return dto.EnrollmentProgramResponse{}, serviceErrors.ErrEnrollmentPeriodEnded
+		}
+	}
+	// If no period defined, enrollment is allowed (no deadline enforced)
+
 	// Get student from cache
 	student, err := s.studentRepo.GetStudentByID(ctx, req.StudentID)
 	if err != nil {
@@ -194,14 +216,14 @@ func (s *EnrollmentService) CreateEnrollmentProgram(ctx context.Context, req dto
 			}
 
 			// Create cancel event payload
-			cancelEventPayload := map[string]interface{}{
+			cancelEventPayload := map[string]any{
 				"program_id":   utils.PgtypeToUUID(existingProgram.ID).String(),
 				"student_id":   req.StudentID.String(),
 				"semester":     req.Semester,
 				"course_ids":   oldCourseIDs,
 				"cancelled_by": "student",
 				"cancel_type":  "auto_replace",
-				"cancelled_at": time.Now(),
+				"cancelled_at": clock.Now(),
 			}
 
 			// Delete old program (with transaction)
@@ -336,13 +358,13 @@ func (s *EnrollmentService) createProgramWithCapacityCheck(ctx context.Context, 
 	}
 
 	// Create event payload
-	eventPayload := map[string]interface{}{
+	eventPayload := map[string]any{
 		"program_id":    nil, // Will be set after creation
 		"student_id":    req.StudentID.String(),
 		"semester":      req.Semester,
 		"course_ids":    req.CourseIDs,
 		"total_courses": len(req.CourseIDs),
-		"submitted_at":  time.Now(),
+		"submitted_at":  clock.Now(),
 	}
 
 	// Create program with courses and event (atomic transaction)
@@ -401,14 +423,14 @@ func (s *EnrollmentService) CancelMyEnrollment(ctx context.Context, studentID uu
 	}
 
 	// Create cancel event payload
-	cancelEventPayload := map[string]interface{}{
+	cancelEventPayload := map[string]any{
 		"program_id":   utils.PgtypeToUUID(existingProgram.ID).String(),
 		"student_id":   studentID.String(),
 		"semester":     semester,
 		"course_ids":   courseIDs,
 		"cancelled_by": "student",
 		"cancel_type":  "manual",
-		"cancelled_at": time.Now(),
+		"cancelled_at": clock.Now(),
 	}
 
 	// Cancel program (decrement enrollments, delete program, create event)

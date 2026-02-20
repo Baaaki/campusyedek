@@ -17,6 +17,15 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { mockFaculties } from '@/mock_data/catalog';
 import { Faculty, Department, AssessmentItem, ScheduleSessionDTO, CourseCatalog, CreateSemesterCourseRequest, SemesterCourse } from '@/lib/types';
 import { catalogApi, staffApi, semesterApi } from '@/lib/api-client';
@@ -179,6 +188,9 @@ export default function SemesterCoursesPage() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<CourseCatalog | null>(null);
   const [semester, setSemester] = useState('2024-2025-Fall'); // Current semester
+  const [activeSessionType, setActiveSessionType] = useState<'theory' | 'lab'>('theory');
+  const [errorDialog, setErrorDialog] = useState<{ open: boolean; title: string; message: string }>({ open: false, title: '', message: '' });
+  const [successDialog, setSuccessDialog] = useState(false);
 
   // Calculate total assessment weight
   const totalWeight = formData.assessment_schema.reduce((sum, item) => sum + item.weight, 0);
@@ -223,18 +235,51 @@ export default function SemesterCoursesPage() {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Day mapping for translating backend English days to Turkish
+  const dayToTurkish: Record<string, string> = {
+    monday: 'Pazartesi', tuesday: 'Salı', wednesday: 'Çarşamba',
+    thursday: 'Perşembe', friday: 'Cuma',
+  };
+
   // Mutation for creating semester course
   const createMutation = useMutation({
     mutationFn: (data: CreateSemesterCourseRequest) => createSemesterCourse(semester, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['semesterCourses', semester] });
-      alert('Dönemlik ders başarıyla açıldı!');
+      setSuccessDialog(true);
       setFormData(initialFormData);
       setSelectedCourse(null);
     },
-    onError: (error: Error) => {
+    onError: async (error: any) => {
       console.error('Ders açılırken hata:', error);
-      alert(`Hata: ${error.message}`);
+      let code = '';
+      let message = error.message;
+      let details: { course_code?: string; department?: string; day_of_week?: string; slot_number?: number } | null = null;
+      try {
+        const body = await error.response?.json();
+        if (body?.error) message = body.error;
+        if (body?.code) code = body.code;
+        if (body?.details) details = body.details;
+      } catch { /* ignore parse errors */ }
+
+      if (code === 'INSTRUCTOR_SCHEDULE_CONFLICT' && details?.department) {
+        // Cross-department conflict with structured details
+        const dayTR = dayToTurkish[details.day_of_week ?? ''] || details.day_of_week;
+        setErrorDialog({
+          open: true,
+          title: 'Program Çakışması',
+          message: `Öğretim görevlisi ${dayTR} ${details.slot_number}. slotta ${details.department} bölümünde ${details.course_code} dersini veriyor`,
+        });
+      } else if (code === 'INSTRUCTOR_SCHEDULE_CONFLICT') {
+        // Same department conflict
+        setErrorDialog({
+          open: true,
+          title: 'Program Çakışması',
+          message: 'Öğretim görevlisinin bu saatlerde başka bir dersi bulunuyor',
+        });
+      } else {
+        setErrorDialog({ open: true, title: 'Hata', message });
+      }
     },
   });
 
@@ -301,7 +346,12 @@ export default function SemesterCoursesPage() {
       const course = courses.find(c => c.id === formData.course_id);
       if (course) {
         setSelectedCourse(course);
-        setFormData(prev => ({ ...prev, class_level: course.class_level }));
+        setFormData(prev => ({ ...prev, class_level: course.class_level, schedule_sessions: [] }));
+        // Auto-select available session type
+        const hasLab = (course.lab_hours ?? 0) > 0;
+        const hasTheory = (course.theoretical_hours ?? 0) > 0;
+        if (hasTheory) setActiveSessionType('theory');
+        else if (hasLab) setActiveSessionType('lab');
       }
     } else {
       setSelectedCourse(null);
@@ -355,10 +405,21 @@ export default function SemesterCoursesPage() {
     }
   };
 
-  // Schedule management
+  // Schedule management - sessions are grouped by day + session_type
   const toggleScheduleSlot = (day: string, slot: number) => {
     setFormData(prev => {
-      const existingSession = prev.schedule_sessions.find(s => s.day_of_week === day);
+      const key = (s: ScheduleSessionDTO) => s.day_of_week === day && s.session_type === activeSessionType;
+      const existingSession = prev.schedule_sessions.find(key);
+
+      // Check if we're adding (not removing) and if limit is reached
+      const isRemoving = existingSession?.slot_numbers.includes(slot);
+      if (!isRemoving) {
+        const maxSlots = activeSessionType === 'theory' ? totalTheoryHours : totalLabHours;
+        const currentUsed = prev.schedule_sessions
+          .filter(s => s.session_type === activeSessionType)
+          .reduce((sum, s) => sum + s.slot_numbers.length, 0);
+        if (currentUsed >= maxSlots) return prev; // limit reached, don't add
+      }
 
       if (existingSession) {
         const hasSlot = existingSession.slot_numbers.includes(slot);
@@ -366,16 +427,15 @@ export default function SemesterCoursesPage() {
           // Remove slot
           const newSlots = existingSession.slot_numbers.filter(s => s !== slot);
           if (newSlots.length === 0) {
-            // Remove entire session if no slots left
             return {
               ...prev,
-              schedule_sessions: prev.schedule_sessions.filter(s => s.day_of_week !== day),
+              schedule_sessions: prev.schedule_sessions.filter(s => !key(s)),
             };
           }
           return {
             ...prev,
             schedule_sessions: prev.schedule_sessions.map(s =>
-              s.day_of_week === day ? { ...s, slot_numbers: newSlots.sort((a, b) => a - b) } : s
+              key(s) ? { ...s, slot_numbers: newSlots.sort((a, b) => a - b) } : s
             ),
           };
         } else {
@@ -383,26 +443,61 @@ export default function SemesterCoursesPage() {
           return {
             ...prev,
             schedule_sessions: prev.schedule_sessions.map(s =>
-              s.day_of_week === day
+              key(s)
                 ? { ...s, slot_numbers: [...s.slot_numbers, slot].sort((a, b) => a - b) }
                 : s
             ),
           };
         }
       } else {
+        // Also check if this slot is selected under a different session_type for the same day
+        const otherSession = prev.schedule_sessions.find(
+          s => s.day_of_week === day && s.session_type !== activeSessionType && s.slot_numbers.includes(slot)
+        );
+        if (otherSession) {
+          // Remove from other session_type first
+          const newOtherSlots = otherSession.slot_numbers.filter(s => s !== slot);
+          const filtered = newOtherSlots.length === 0
+            ? prev.schedule_sessions.filter(s => !(s.day_of_week === day && s.session_type !== activeSessionType))
+            : prev.schedule_sessions.map(s =>
+                s.day_of_week === day && s.session_type !== activeSessionType
+                  ? { ...s, slot_numbers: newOtherSlots.sort((a, b) => a - b) }
+                  : s
+              );
+          return {
+            ...prev,
+            schedule_sessions: [...filtered, { day_of_week: day, slot_numbers: [slot], session_type: activeSessionType }],
+          };
+        }
         // Create new session
         return {
           ...prev,
-          schedule_sessions: [...prev.schedule_sessions, { day_of_week: day, slot_numbers: [slot] }],
+          schedule_sessions: [...prev.schedule_sessions, { day_of_week: day, slot_numbers: [slot], session_type: activeSessionType }],
         };
       }
     });
   };
 
   const isSlotSelected = (day: string, slot: number) => {
-    const session = formData.schedule_sessions.find(s => s.day_of_week === day);
-    return session?.slot_numbers.includes(slot) || false;
+    return formData.schedule_sessions.some(s => s.day_of_week === day && s.slot_numbers.includes(slot));
   };
+
+  const getSlotSessionType = (day: string, slot: number): 'theory' | 'lab' | null => {
+    const session = formData.schedule_sessions.find(s => s.day_of_week === day && s.slot_numbers.includes(slot));
+    return session?.session_type ?? null;
+  };
+
+  // Calculate used and remaining hours per session type
+  const totalTheoryHours = selectedCourse?.theoretical_hours ?? 0;
+  const totalLabHours = selectedCourse?.lab_hours ?? 0;
+  const usedTheorySlots = formData.schedule_sessions
+    .filter(s => s.session_type === 'theory')
+    .reduce((sum, s) => sum + s.slot_numbers.length, 0);
+  const usedLabSlots = formData.schedule_sessions
+    .filter(s => s.session_type === 'lab')
+    .reduce((sum, s) => sum + s.slot_numbers.length, 0);
+  const remainingTheory = totalTheoryHours - usedTheorySlots;
+  const remainingLab = totalLabHours - usedLabSlots;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -652,9 +747,45 @@ export default function SemesterCoursesPage() {
               <Clock className="h-5 w-5" />
               Ders Programı
             </CardTitle>
-            <CardDescription>Dersin hangi gün ve saatlerde yapılacağını seçin</CardDescription>
+            <CardDescription>Dersin hangi gün ve saatlerde yapılacağını seçin. Tip seçip slotlara tıklayın.</CardDescription>
           </CardHeader>
           <CardContent>
+            {selectedCourse ? (
+              <div className="flex items-center gap-3 mb-4">
+                <Label>Ders Tipi:</Label>
+                <div className="flex gap-2">
+                  {totalTheoryHours > 0 && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={activeSessionType === 'theory' ? 'default' : 'outline'}
+                      onClick={() => setActiveSessionType('theory')}
+                    >
+                      Teori ({remainingTheory}/{totalTheoryHours})
+                    </Button>
+                  )}
+                  {totalLabHours > 0 && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={activeSessionType === 'lab' ? 'default' : 'outline'}
+                      className={activeSessionType === 'lab' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+                      onClick={() => setActiveSessionType('lab')}
+                    >
+                      Lab ({remainingLab}/{totalLabHours})
+                    </Button>
+                  )}
+                </div>
+                {(totalTheoryHours > 0 || totalLabHours > 0) && (
+                  <div className="flex items-center gap-3 ml-4 text-xs text-muted-foreground">
+                    {totalTheoryHours > 0 && <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded bg-indigo-200 dark:bg-indigo-800" /> Teori</span>}
+                    {totalLabHours > 0 && <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded bg-emerald-200 dark:bg-emerald-800" /> Lab</span>}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground mb-4">Ders seçildikten sonra program oluşturabilirsiniz.</p>
+            )}
             {existingSemesterCourses.length > 0 && (
               <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                 <p className="text-sm text-blue-900 dark:text-blue-100 flex items-center gap-2">
@@ -688,15 +819,19 @@ export default function SemesterCoursesPage() {
                       {daysOfWeek.map((day) => {
                         const occupied = isSlotOccupied(day.key, slot.slot);
                         const selected = isSlotSelected(day.key, slot.slot);
+                        const slotType = selected ? getSlotSessionType(day.key, slot.slot) : null;
                         const courseCode = occupied ? getOccupiedSlotCourse(day.key, slot.slot) : null;
 
                         return (
                           <td
                             key={day.key}
                             className={`border dark:border-gray-700 p-1 text-center ${
-                              occupied ? 'bg-red-50 dark:bg-red-950/20' : ''
+                              occupied ? 'bg-red-50 dark:bg-red-950/20'
+                              : slotType === 'theory' ? 'bg-indigo-50 dark:bg-indigo-950/20'
+                              : slotType === 'lab' ? 'bg-emerald-50 dark:bg-emerald-950/20'
+                              : ''
                             }`}
-                            title={occupied ? `Dolu: ${courseCode}` : ''}
+                            title={occupied ? `Dolu: ${courseCode}` : slotType ? `${slotType === 'theory' ? 'Teori' : 'Lab'}` : ''}
                           >
                             {occupied ? (
                               <div className="flex items-center justify-center h-full py-2">
@@ -727,9 +862,14 @@ export default function SemesterCoursesPage() {
                 <div className="flex flex-wrap gap-2">
                   {formData.schedule_sessions.map((session) => {
                     const dayLabel = daysOfWeek.find(d => d.key === session.day_of_week)?.label;
+                    const typeLabel = session.session_type === 'lab' ? 'Lab' : 'Teori';
                     return session.slot_numbers.map((slot) => (
-                      <Badge key={`${session.day_of_week}-${slot}`} variant="secondary">
-                        {dayLabel} {slot}. Ders
+                      <Badge
+                        key={`${session.day_of_week}-${session.session_type}-${slot}`}
+                        variant="secondary"
+                        className={session.session_type === 'lab' ? 'bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200' : 'bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200'}
+                      >
+                        {dayLabel} {slot}. Ders ({typeLabel})
                       </Badge>
                     ));
                   })}
@@ -836,6 +976,42 @@ export default function SemesterCoursesPage() {
           </Button>
         </div>
       </form>
+
+      {/* Error Dialog */}
+      <AlertDialog open={errorDialog.open} onOpenChange={(open) => setErrorDialog(prev => ({ ...prev, open }))}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertCircle className="h-5 w-5" />
+              {errorDialog.title}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-base">
+              {errorDialog.message}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction>Anladım</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Success Dialog */}
+      <AlertDialog open={successDialog} onOpenChange={setSuccessDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-green-600">
+              <CheckCircle2 className="h-5 w-5" />
+              Başarılı
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-base">
+              Dönemlik ders başarıyla açıldı!
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction>Anladım</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

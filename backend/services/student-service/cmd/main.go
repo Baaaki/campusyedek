@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/baaaki/mydreamcampus/shared/database"
+	sharedHandler "github.com/baaaki/mydreamcampus/shared/handler"
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	sharedMiddleware "github.com/baaaki/mydreamcampus/shared/middleware"
 	"github.com/baaaki/mydreamcampus/shared/rabbitmq"
@@ -88,6 +89,7 @@ func main() {
 
 	// Initialize handlers
 	studentHandler := handler.NewStudentHandler(studentService, importService)
+	timeHandler := sharedHandler.NewTimeHandler()
 
 	// Initialize workers
 	outboxWorker := worker.NewOutboxWorker(
@@ -118,7 +120,7 @@ func main() {
 	}
 
 	// Setup Gin router
-	router := setupRouter(studentHandler, cfg.Server.Environment)
+	router := setupRouter(studentHandler, timeHandler, cfg.Server.Environment)
 
 	// Start HTTP server
 	srv := &http.Server{
@@ -161,7 +163,7 @@ func main() {
 	logger.Info("server exited")
 }
 
-func setupRouter(studentHandler *handler.StudentHandler, env string) *gin.Engine {
+func setupRouter(studentHandler *handler.StudentHandler, timeHandler *sharedHandler.TimeHandler, env string) *gin.Engine {
 	if env == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -212,6 +214,14 @@ func setupRouter(studentHandler *handler.StudentHandler, env string) *gin.Engine
 		}
 	}
 
+	// Admin routes for Time Machine
+	timeAdmin := router.Group("/api/students/admin")
+	timeAdmin.Use(sharedMiddleware.ExtractUserFromHeaders())
+	timeAdmin.Use(sharedMiddleware.RequireAdmin())
+	{
+		timeHandler.RegisterRoutes(timeAdmin)
+	}
+
 	return router
 }
 
@@ -239,6 +249,36 @@ func setupRabbitMQ(conn *rabbitmq.Connection) error {
 	if err := worker.SetupStaffEventsQueue(conn); err != nil {
 		return fmt.Errorf("failed to setup staff events queue: %w", err)
 	}
+
+	// Pre-declare downstream consumer queues so messages persist even when consumers are offline
+	publisher := rabbitmq.NewPublisher(conn)
+
+	downstreamBindings := []struct {
+		queue      string
+		exchange   string
+		routingKey string
+	}{
+		// auth-service queues
+		{"auth_events_queue", "student.events", "student.created"},
+		{"auth_events_queue", "student.events", "student.updated"},
+		{"auth_events_queue", "student.events", "student.deactivated"},
+		// enrollment-service queues
+		{"enrollment.events", "student.events", "student.*"},
+		// attendance-service queues
+		{"attendance.events", "student.events", "student.#"},
+		// grades-service queues
+		{"grades-service-student", "student.events", "student.created"},
+		{"grades-service-student", "student.events", "student.updated"},
+		{"grades-service-student", "student.events", "student.deactivated"},
+	}
+
+	for _, b := range downstreamBindings {
+		if err := publisher.DeclareAndBindQueue(b.queue, b.exchange, b.routingKey); err != nil {
+			return fmt.Errorf("failed to declare downstream queue %s: %w", b.queue, err)
+		}
+	}
+
+	logger.Info("downstream consumer queues pre-declared")
 
 	return nil
 }

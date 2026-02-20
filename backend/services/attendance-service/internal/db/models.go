@@ -54,6 +54,48 @@ func (ns NullOutboxStatusEnum) Value() (driver.Value, error) {
 	return string(ns.OutboxStatusEnum), nil
 }
 
+type SessionTypeEnum string
+
+const (
+	SessionTypeEnumTheory SessionTypeEnum = "theory"
+	SessionTypeEnumLab    SessionTypeEnum = "lab"
+)
+
+func (e *SessionTypeEnum) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = SessionTypeEnum(s)
+	case string:
+		*e = SessionTypeEnum(s)
+	default:
+		return fmt.Errorf("unsupported scan type for SessionTypeEnum: %T", src)
+	}
+	return nil
+}
+
+type NullSessionTypeEnum struct {
+	SessionTypeEnum SessionTypeEnum `json:"session_type_enum"`
+	Valid           bool            `json:"valid"` // Valid is true if SessionTypeEnum is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullSessionTypeEnum) Scan(value interface{}) error {
+	if value == nil {
+		ns.SessionTypeEnum, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.SessionTypeEnum.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullSessionTypeEnum) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.SessionTypeEnum), nil
+}
+
 type AttendanceRecord struct {
 	ID               pgtype.UUID      `json:"id"`
 	SessionID        pgtype.UUID      `json:"session_id"`
@@ -61,7 +103,6 @@ type AttendanceRecord struct {
 	CourseID         pgtype.UUID      `json:"course_id"`
 	Semester         string           `json:"semester"`
 	WeekNumber       int16            `json:"week_number"`
-	IsPresent        bool             `json:"is_present"`
 	MarkedVia        string           `json:"marked_via"`
 	ScannedAt        pgtype.Timestamp `json:"scanned_at"`
 	QrTimestamp      pgtype.Int8      `json:"qr_timestamp"`
@@ -69,6 +110,7 @@ type AttendanceRecord struct {
 	ManuallyMarkedAt pgtype.Timestamp `json:"manually_marked_at"`
 	ManualNote       pgtype.Text      `json:"manual_note"`
 	CreatedAt        pgtype.Timestamp `json:"created_at"`
+	SessionType      SessionTypeEnum  `json:"session_type"`
 }
 
 type AttendanceSession struct {
@@ -84,6 +126,7 @@ type AttendanceSession struct {
 	ExpiresAt          pgtype.Timestamp `json:"expires_at"`
 	IsActive           pgtype.Bool      `json:"is_active"`
 	CreatedAt          pgtype.Timestamp `json:"created_at"`
+	SessionType        SessionTypeEnum  `json:"session_type"`
 }
 
 type CoursesCache struct {
@@ -97,6 +140,7 @@ type CoursesCache struct {
 	InstructorFullname pgtype.Text      `json:"instructor_fullname"`
 	TotalWeeks         pgtype.Int2      `json:"total_weeks"`
 	SyncedAt           pgtype.Timestamp `json:"synced_at"`
+	HasLab             bool             `json:"has_lab"`
 }
 
 type EnrollmentsCache struct {

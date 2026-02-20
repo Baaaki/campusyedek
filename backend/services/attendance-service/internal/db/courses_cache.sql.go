@@ -22,15 +22,29 @@ func (q *Queries) DeleteCourseCache(ctx context.Context, id pgtype.UUID) error {
 
 const getCourseCacheByID = `-- name: GetCourseCacheByID :one
 SELECT id, course_code, course_name, credits, semester, department,
-       instructor_id, instructor_fullname, total_weeks, synced_at
+       instructor_id, instructor_fullname, total_weeks, has_lab, synced_at
 FROM courses_cache
 WHERE id = $1
 LIMIT 1
 `
 
-func (q *Queries) GetCourseCacheByID(ctx context.Context, id pgtype.UUID) (CoursesCache, error) {
+type GetCourseCacheByIDRow struct {
+	ID                 pgtype.UUID      `json:"id"`
+	CourseCode         string           `json:"course_code"`
+	CourseName         string           `json:"course_name"`
+	Credits            int16            `json:"credits"`
+	Semester           string           `json:"semester"`
+	Department         pgtype.Text      `json:"department"`
+	InstructorID       pgtype.UUID      `json:"instructor_id"`
+	InstructorFullname pgtype.Text      `json:"instructor_fullname"`
+	TotalWeeks         pgtype.Int2      `json:"total_weeks"`
+	HasLab             bool             `json:"has_lab"`
+	SyncedAt           pgtype.Timestamp `json:"synced_at"`
+}
+
+func (q *Queries) GetCourseCacheByID(ctx context.Context, id pgtype.UUID) (GetCourseCacheByIDRow, error) {
 	row := q.db.QueryRow(ctx, getCourseCacheByID, id)
-	var i CoursesCache
+	var i GetCourseCacheByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.CourseCode,
@@ -41,6 +55,7 @@ func (q *Queries) GetCourseCacheByID(ctx context.Context, id pgtype.UUID) (Cours
 		&i.InstructorID,
 		&i.InstructorFullname,
 		&i.TotalWeeks,
+		&i.HasLab,
 		&i.SyncedAt,
 	)
 	return i, err
@@ -49,9 +64,9 @@ func (q *Queries) GetCourseCacheByID(ctx context.Context, id pgtype.UUID) (Cours
 const upsertCourseCache = `-- name: UpsertCourseCache :exec
 INSERT INTO courses_cache (
     id, course_code, course_name, credits, semester, department,
-    instructor_id, instructor_fullname, total_weeks, synced_at
+    instructor_id, instructor_fullname, total_weeks, has_lab, synced_at
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, NOW()
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW()
 ) ON CONFLICT (id) DO UPDATE SET
     course_code = EXCLUDED.course_code,
     course_name = EXCLUDED.course_name,
@@ -61,6 +76,7 @@ INSERT INTO courses_cache (
     instructor_id = EXCLUDED.instructor_id,
     instructor_fullname = EXCLUDED.instructor_fullname,
     total_weeks = EXCLUDED.total_weeks,
+    has_lab = EXCLUDED.has_lab,
     synced_at = NOW()
 `
 
@@ -74,6 +90,7 @@ type UpsertCourseCacheParams struct {
 	InstructorID       pgtype.UUID `json:"instructor_id"`
 	InstructorFullname pgtype.Text `json:"instructor_fullname"`
 	TotalWeeks         pgtype.Int2 `json:"total_weeks"`
+	HasLab             bool        `json:"has_lab"`
 }
 
 func (q *Queries) UpsertCourseCache(ctx context.Context, arg UpsertCourseCacheParams) error {
@@ -87,6 +104,7 @@ func (q *Queries) UpsertCourseCache(ctx context.Context, arg UpsertCourseCachePa
 		arg.InstructorID,
 		arg.InstructorFullname,
 		arg.TotalWeeks,
+		arg.HasLab,
 	)
 	return err
 }

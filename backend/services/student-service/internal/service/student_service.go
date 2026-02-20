@@ -4,12 +4,13 @@ import (
 	"context"
 	"time"
 
+	"github.com/baaaki/mydreamcampus/shared/clock"
 	sharedErrors "github.com/baaaki/mydreamcampus/shared/errors"
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	"github.com/baaaki/mydreamcampus/shared/utils"
-	serviceErrors "github.com/baaaki/mydreamcampus/student-service/internal/errors"
 	"github.com/baaaki/mydreamcampus/student-service/internal/db"
 	"github.com/baaaki/mydreamcampus/student-service/internal/dto"
+	serviceErrors "github.com/baaaki/mydreamcampus/student-service/internal/errors"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
@@ -19,14 +20,14 @@ type StudentRepositoryInterface interface {
 	GetStudentByNumber(ctx context.Context, studentNumber string) (db.Student, error)
 	GetStudentByEmail(ctx context.Context, email string) (db.Student, error)
 	GetStudentByID(ctx context.Context, id uuid.UUID) (db.Student, error)
-	CreateStudentWithEvent(ctx context.Context, params db.CreateStudentParams, eventPayload map[string]interface{}) (db.Student, error)
-	UpdateStudentWithEvent(ctx context.Context, id uuid.UUID, params db.UpdateStudentParams, eventPayload map[string]interface{}) (db.Student, error)
-	SoftDeleteStudentWithEvent(ctx context.Context, id uuid.UUID, eventPayload map[string]interface{}) error
+	CreateStudentWithEvent(ctx context.Context, params db.CreateStudentParams, eventPayload map[string]any) (db.Student, error)
+	UpdateStudentWithEvent(ctx context.Context, id uuid.UUID, params db.UpdateStudentParams, eventPayload map[string]any) (db.Student, error)
+	SoftDeleteStudentWithEvent(ctx context.Context, id uuid.UUID, eventPayload map[string]any) error
 	ListStudentsFiltered(ctx context.Context, params db.ListStudentsParams) ([]db.Student, error)
 	CountStudents(ctx context.Context) (int64, error)
 	ListStudentsByAdvisor(ctx context.Context, advisorID uuid.UUID) ([]db.Student, error)
 	ListOrphanedStudents(ctx context.Context, limit, offset int32) ([]db.Student, int64, error)
-	BulkAssignAdvisor(ctx context.Context, studentIDs []uuid.UUID, advisorID uuid.UUID, advisorName string, eventPayloads []map[string]interface{}) error
+	BulkAssignAdvisor(ctx context.Context, studentIDs []uuid.UUID, advisorID uuid.UUID, advisorName string, eventPayloads []map[string]any) error
 	SearchStudents(ctx context.Context, params db.SearchStudentsParams) ([]db.Student, error)
 }
 
@@ -113,7 +114,7 @@ func (s *StudentService) CreateStudent(ctx context.Context, req dto.CreateStuden
 		AdvisorName:    utils.StringToPgText(advisorInfo.Name),
 	}
 
-	eventPayload := map[string]interface{}{
+	eventPayload := map[string]any{
 		"id":              nil, // Will be set after creation
 		"student_number":  req.StudentNumber,
 		"first_name":      req.FirstName,
@@ -270,7 +271,7 @@ func (s *StudentService) UpdateStudent(ctx context.Context, id string, req dto.U
 		Status:      utils.PointerStringToPgText(req.Status),
 	}
 
-	changedFields := make(map[string]interface{})
+	changedFields := make(map[string]any)
 	if req.ClassLevel != nil {
 		changedFields["class_level"] = *req.ClassLevel
 	}
@@ -281,7 +282,7 @@ func (s *StudentService) UpdateStudent(ctx context.Context, id string, req dto.U
 		changedFields["status"] = *req.Status
 	}
 
-	eventPayload := map[string]interface{}{
+	eventPayload := map[string]any{
 		"id":             id,
 		"student_number": "", // Will be filled from DB
 		"changed_fields": changedFields,
@@ -353,11 +354,11 @@ func (s *StudentService) DeleteStudent(ctx context.Context, id string) error {
 		return sharedErrors.Wrap(sharedErrors.ErrInternal, err)
 	}
 
-	eventPayload := map[string]interface{}{
+	eventPayload := map[string]any{
 		"id":             id,
 		"student_number": student.StudentNumber,
 		"is_active":      false,
-		"deleted_at":     time.Now().Format(time.RFC3339),
+		"deleted_at":     clock.Now().Format(time.RFC3339),
 	}
 
 	err = s.studentRepo.SoftDeleteStudentWithEvent(ctx, studentID, eventPayload)
@@ -526,12 +527,12 @@ func (s *StudentService) BulkAssignAdvisor(ctx context.Context, req dto.BulkAdvi
 	}
 
 	// Create event payloads for each student
-	eventPayloads := make([]map[string]interface{}, len(req.StudentIDs))
+	eventPayloads := make([]map[string]any, len(req.StudentIDs))
 	for i, studentID := range req.StudentIDs {
-		eventPayloads[i] = map[string]interface{}{
+		eventPayloads[i] = map[string]any{
 			"id":             studentID.String(),
 			"student_number": "", // Will be filled from DB if needed
-			"changed_fields": map[string]interface{}{
+			"changed_fields": map[string]any{
 				"advisor_id":   req.AdvisorID.String(),
 				"advisor_name": advisorInfo.Name,
 			},

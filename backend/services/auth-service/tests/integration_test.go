@@ -32,18 +32,18 @@ import (
 // IntegrationTestSuite manages integration tests
 type IntegrationTestSuite struct {
 	suite.Suite
-	router         *gin.Engine
-	pool           *pgxpool.Pool
-	redisClient    *redis.ClientWrapper
-	authRepo       *repository.AuthRepository
-	sessionRepo    *repository.SessionRepository
-	eventRepo      *repository.EventRepository
-	authService    *service.AuthService
-	authHandler    *handler.AuthHandler
-	cfg            *config.Config
-	testUserID     uuid.UUID
-	testUserEmail  string
-	testUserPwd    string
+	router          *gin.Engine
+	pool            *pgxpool.Pool
+	redisClient     *redis.ClientWrapper
+	authRepo        *repository.AuthRepository
+	sessionRepo     *repository.SessionRepository
+	eventRepo       *repository.EventRepository
+	authService     *service.AuthService
+	authHandler     *handler.AuthHandler
+	cfg             *config.Config
+	testUserID      uuid.UUID
+	testUserEmail   string
+	testUserPwd     string
 	testAccessToken string
 }
 
@@ -318,7 +318,7 @@ func (suite *IntegrationTestSuite) TestMultipleFailedLogins() {
 		Password: "WrongPassword",
 	}
 
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		body, _ := json.Marshal(loginReq)
 		req := httptest.NewRequest("POST", "/api/v1/auth/login", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
@@ -334,7 +334,7 @@ func (suite *IntegrationTestSuite) TestMultipleFailedLogins() {
 func (suite *IntegrationTestSuite) TestConcurrentLogins() {
 	done := make(chan bool, 5)
 
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		go func() {
 			loginReq := dto.LoginRequest{
 				Email:    suite.testUserEmail,
@@ -354,7 +354,7 @@ func (suite *IntegrationTestSuite) TestConcurrentLogins() {
 	}
 
 	// Wait for all goroutines
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		select {
 		case <-done:
 		case <-time.After(5 * time.Second):

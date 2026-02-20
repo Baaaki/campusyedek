@@ -188,7 +188,7 @@ func (r *ReservationRepository) FindReservationForQR(ctx context.Context, params
 }
 
 // CancelReservationWithRefund cancels reservation and creates outbox event atomically
-func (r *ReservationRepository) CancelReservationWithRefund(ctx context.Context, reservationID uuid.UUID, eventPayload map[string]interface{}) (db.Reservation, error) {
+func (r *ReservationRepository) CancelReservationWithRefund(ctx context.Context, reservationID uuid.UUID, eventPayload map[string]any) (db.Reservation, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return db.Reservation{}, fmt.Errorf("%w: failed to begin transaction: %v", sharedErrors.ErrTransactionFailed, err)
@@ -249,7 +249,7 @@ func (r *ReservationRepository) CleanupExpiredReservations(ctx context.Context, 
 }
 
 // ConfirmReservationsWithEvents confirms reservations and creates outbox events atomically
-func (r *ReservationRepository) ConfirmReservationsWithEvents(ctx context.Context, reservationIDs []uuid.UUID, eventPayloads []map[string]interface{}) error {
+func (r *ReservationRepository) ConfirmReservationsWithEvents(ctx context.Context, reservationIDs []uuid.UUID, eventPayloads []map[string]any) error {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("%w: failed to begin transaction: %v", sharedErrors.ErrTransactionFailed, err)

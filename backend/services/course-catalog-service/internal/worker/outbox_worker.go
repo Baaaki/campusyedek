@@ -86,7 +86,7 @@ func (w *OutboxWorker) processEvents(ctx context.Context) {
 		eventIDStr := utils.PgtypeToUUIDString(event.ID)
 
 		// Parse payload to map for publishing
-		var payload map[string]interface{}
+		var payload map[string]any
 		if err := json.Unmarshal(event.Payload, &payload); err != nil {
 			logger.Error("failed to unmarshal event payload",
 				zap.Error(err),

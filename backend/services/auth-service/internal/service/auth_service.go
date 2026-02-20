@@ -7,9 +7,10 @@ import (
 
 	"github.com/baaaki/mydreamcampus/auth-service/config"
 	"github.com/baaaki/mydreamcampus/auth-service/internal/db"
+	"github.com/baaaki/mydreamcampus/shared/clock"
 	"github.com/baaaki/mydreamcampus/auth-service/internal/dto"
-	"github.com/baaaki/mydreamcampus/auth-service/internal/repository"
 	serviceErrors "github.com/baaaki/mydreamcampus/auth-service/internal/errors"
+	"github.com/baaaki/mydreamcampus/auth-service/internal/repository"
 	sharedErrors "github.com/baaaki/mydreamcampus/shared/errors"
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	"github.com/baaaki/mydreamcampus/shared/redis"
@@ -80,7 +81,7 @@ func (s *AuthService) Login(ctx context.Context, req dto.LoginRequest, deviceInf
 	}
 
 	// Check if account is locked
-	if user.LockedUntil.Valid && user.LockedUntil.Time.After(time.Now()) {
+	if user.LockedUntil.Valid && user.LockedUntil.Time.After(clock.Now()) {
 		serviceLogger.Warn("login attempt for locked account",
 			zap.Time("locked_until", user.LockedUntil.Time),
 		)
@@ -94,7 +95,7 @@ func (s *AuthService) Login(ctx context.Context, req dto.LoginRequest, deviceInf
 
 		// Lock account if too many failures (5+ attempts)
 		if utils.DerefInt32(user.FailedLoginAttempts, 0)+1 >= 5 {
-			lockUntil := time.Now().Add(30 * time.Minute)
+			lockUntil := clock.Now().Add(30 * time.Minute)
 			_ = s.authRepo.LockAccount(ctx, db.LockAccountParams{
 				ID: user.ID,
 				LockedUntil: pgtype.Timestamp{
@@ -129,16 +130,16 @@ func (s *AuthService) Login(ctx context.Context, req dto.LoginRequest, deviceInf
 	}
 
 	// Create session
-	expiresAt := time.Now().Add(time.Duration(s.config.JWT.RefreshTokenExpiry) * time.Hour)
+	expiresAt := clock.Now().Add(time.Duration(s.config.JWT.RefreshTokenExpiry) * time.Hour)
 	refreshTokenTTL := time.Duration(s.config.JWT.RefreshTokenExpiry) * time.Hour
 	deviceInfoPtr := utils.StringToPointer(deviceInfo)
 	ipAddressPtr := utils.StringToPointer(ipAddress)
 	_, err = s.sessionRepo.CreateSession(ctx, db.CreateSessionParams{
-		UserID:           user.ID,
-		RefreshTokenJti:  jti,
-		DeviceInfo:       deviceInfoPtr,
-		IpAddress:        ipAddressPtr,
-		ExpiresAt:        pgtype.Timestamp{Time: expiresAt, Valid: true},
+		UserID:          user.ID,
+		RefreshTokenJti: jti,
+		DeviceInfo:      deviceInfoPtr,
+		IpAddress:       ipAddressPtr,
+		ExpiresAt:       pgtype.Timestamp{Time: expiresAt, Valid: true},
 	})
 	if err != nil {
 		// Check for query failures - wrap and return, handler will log
@@ -244,7 +245,7 @@ func (s *AuthService) Logout(ctx context.Context, refreshToken string, accessTok
 // blacklistAccessToken adds an access token to the Redis blacklist
 func (s *AuthService) blacklistAccessToken(ctx context.Context, tokenString string) error {
 	// Parse the access token to get JTI and expiry
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
 		return []byte(s.config.JWT.Secret), nil
 	})
 	if err != nil {
@@ -418,13 +419,13 @@ func (s *AuthService) RefreshAccessToken(ctx context.Context, refreshToken strin
 	_ = s.sessionRepo.DeleteSession(ctx, jti)
 
 	// Create new session
-	expiresAt := time.Now().Add(time.Duration(s.config.JWT.RefreshTokenExpiry) * time.Hour)
+	expiresAt := clock.Now().Add(time.Duration(s.config.JWT.RefreshTokenExpiry) * time.Hour)
 	_, err = s.sessionRepo.CreateSession(ctx, db.CreateSessionParams{
-		UserID:           user.ID,
-		RefreshTokenJti:  newJTI,
-		DeviceInfo:       session.DeviceInfo,
-		IpAddress:        session.IpAddress,
-		ExpiresAt:        pgtype.Timestamp{Time: expiresAt, Valid: true},
+		UserID:          user.ID,
+		RefreshTokenJti: newJTI,
+		DeviceInfo:      session.DeviceInfo,
+		IpAddress:       session.IpAddress,
+		ExpiresAt:       pgtype.Timestamp{Time: expiresAt, Valid: true},
 	})
 	if err != nil {
 		// Check for query failures - wrap and return, handler will log
@@ -514,7 +515,7 @@ func (s *AuthService) ChangePassword(ctx context.Context, userID uuid.UUID, req 
 	}
 
 	// Create new session
-	expiresAt := time.Now().Add(time.Duration(s.config.JWT.RefreshTokenExpiry) * time.Hour)
+	expiresAt := clock.Now().Add(time.Duration(s.config.JWT.RefreshTokenExpiry) * time.Hour)
 	_, err = s.sessionRepo.CreateSession(ctx, db.CreateSessionParams{
 		UserID:          user.ID,
 		RefreshTokenJti: jti,
@@ -668,7 +669,7 @@ func (s *AuthService) StartCleanupScheduler(ctx context.Context) {
 
 // generateAccessToken creates a JWT access token
 func (s *AuthService) generateAccessToken(user db.User) (string, error) {
-	now := time.Now()
+	now := clock.Now()
 	expiresAt := now.Add(time.Duration(s.config.JWT.AccessTokenExpiry) * time.Minute)
 	jti := uuid.New().String() // Unique token ID for blacklist tracking
 
@@ -688,7 +689,7 @@ func (s *AuthService) generateAccessToken(user db.User) (string, error) {
 
 // generateRefreshToken creates a JWT refresh token
 func (s *AuthService) generateRefreshToken(user db.User) (string, string, error) {
-	now := time.Now()
+	now := clock.Now()
 	expiresAt := now.Add(time.Duration(s.config.JWT.RefreshTokenExpiry) * time.Hour)
 	jti := uuid.New().String()
 
@@ -711,7 +712,7 @@ func (s *AuthService) generateRefreshToken(user db.User) (string, string, error)
 
 // parseRefreshToken parses and validates a refresh token
 func (s *AuthService) parseRefreshToken(tokenString string) (jwt.MapClaims, error) {
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method")
 		}
@@ -731,7 +732,7 @@ func (s *AuthService) parseRefreshToken(tokenString string) (jwt.MapClaims, erro
 
 // parseRefreshTokenWithoutValidation parses token without expiry validation
 func (s *AuthService) parseRefreshTokenWithoutValidation(tokenString string) (jwt.MapClaims, error) {
-	token, _ := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+	token, _ := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
 		return []byte(s.config.JWT.Secret), nil
 	})
 

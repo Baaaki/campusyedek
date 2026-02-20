@@ -113,6 +113,16 @@ http:
     # Public: /login, /refresh
     # Protected: /logout, /sessions, /verify, etc.
     # ------------------------------------------
+    auth-admin:
+      rule: "PathPrefix(`/api/auth/admin`)"
+      service: auth-service
+      entryPoints:
+        - web
+      middlewares:
+        - cors-headers
+        - forward-auth
+      priority: 120
+
     auth-service:
       rule: "PathPrefix(`/api/auth`)"
       service: auth-service
@@ -159,6 +169,17 @@ http:
     # Public: GET /api/catalog/courses (list courses)
     # Protected: POST, PUT, DELETE operations
     # ------------------------------------------
+    # Admin routes must be protected (higher priority than public GET)
+    catalog-admin:
+      rule: "PathPrefix(`/api/catalog/admin`)"
+      service: catalog-service
+      entryPoints:
+        - web
+      middlewares:
+        - cors-headers
+        - forward-auth
+      priority: 120
+
     catalog-service-public:
       rule: "PathPrefix(`/api/catalog`) && Method(`GET`)"
       service: catalog-service

@@ -11,6 +11,7 @@ type CreateSessionRequest struct {
 	CourseID        uuid.UUID `json:"course_id" binding:"required"`
 	WeekNumber      int16     `json:"week_number" binding:"required,min=1,max=14"`
 	DurationMinutes int       `json:"duration_minutes" binding:"required,min=5,max=120"`
+	SessionType     string    `json:"session_type" binding:"required,oneof=theory lab"`
 }
 
 // CreateSessionResponse is the response for created session
@@ -20,8 +21,8 @@ type CreateSessionResponse struct {
 	CourseCode           string    `json:"course_code"`
 	CourseName           string    `json:"course_name"`
 	WeekNumber           int16     `json:"week_number"`
+	SessionType          string    `json:"session_type"`
 	SessionDate          string    `json:"session_date"`
-	QRRotationInterval   int16     `json:"qr_rotation_interval"`
 	StartedAt            time.Time `json:"started_at"`
 	ExpiresAt            time.Time `json:"expires_at"`
 	EnrolledStudentCount int       `json:"enrolled_student_count"`
@@ -30,16 +31,14 @@ type CreateSessionResponse struct {
 // QRPayload is the data embedded in QR code
 type QRPayload struct {
 	SessionID string `json:"sid"`
-	Timestamp int64  `json:"ts"`
 	Signature string `json:"sig"`
 }
 
 // GetQRResponse is the response for QR code data
 type GetQRResponse struct {
-	SessionID        uuid.UUID `json:"session_id"`
-	QRPayload        QRPayload `json:"qr_payload"`
-	ValidUntil       time.Time `json:"valid_until"`
-	RotationInterval int16     `json:"rotation_interval"`
+	SessionID  uuid.UUID `json:"session_id"`
+	QRPayload  QRPayload `json:"qr_payload"`
+	ValidUntil time.Time `json:"valid_until"`
 }
 
 // ScanQRRequest is the request for QR code scanning
@@ -49,17 +48,17 @@ type ScanQRRequest struct {
 
 // ScanQRResponse is the response for successful scan
 type ScanQRResponse struct {
-	Message    string    `json:"message"`
-	CourseCode string    `json:"course_code"`
-	CourseName string    `json:"course_name"`
-	WeekNumber int16     `json:"week_number"`
-	MarkedAt   time.Time `json:"marked_at"`
+	Message     string    `json:"message"`
+	CourseCode  string    `json:"course_code"`
+	CourseName  string    `json:"course_name"`
+	WeekNumber  int16     `json:"week_number"`
+	SessionType string    `json:"session_type"`
+	MarkedAt    time.Time `json:"marked_at"`
 }
 
 // ManualAttendanceRequest is the request for manual attendance entry
 type ManualAttendanceRequest struct {
 	StudentID uuid.UUID `json:"student_id" binding:"required"`
-	IsPresent bool      `json:"is_present"`
 	Note      string    `json:"note"`
 }
 
@@ -70,7 +69,6 @@ type ManualAttendanceResponse struct {
 	StudentID     uuid.UUID  `json:"student_id"`
 	StudentNumber string     `json:"student_number"`
 	StudentName   string     `json:"student_name"`
-	IsPresent     bool       `json:"is_present"`
 	MarkedVia     string     `json:"marked_via"`
 	Note          *string    `json:"note,omitempty"`
 	MarkedAt      *time.Time `json:"marked_at"`
@@ -78,10 +76,9 @@ type ManualAttendanceResponse struct {
 
 // CloseSessionResponse is the response for closing session
 type CloseSessionResponse struct {
-	SessionID          uuid.UUID        `json:"session_id"`
-	ClosedAt           time.Time        `json:"closed_at"`
-	Summary            SessionSummary   `json:"summary"`
-	NewlyMarkedAbsent  []AbsentStudent  `json:"newly_marked_absent"`
+	SessionID uuid.UUID      `json:"session_id"`
+	ClosedAt  time.Time      `json:"closed_at"`
+	Summary   SessionSummary `json:"summary"`
 }
 
 // SessionSummary contains attendance summary for a session
@@ -91,17 +88,11 @@ type SessionSummary struct {
 	AbsentCount   int `json:"absent_count"`
 }
 
-// AbsentStudent represents a student marked as absent
-type AbsentStudent struct {
-	StudentID     uuid.UUID `json:"student_id"`
-	StudentNumber string    `json:"student_number"`
-	StudentName   string    `json:"student_name"`
-}
-
 // SessionListItem represents a single session in the list
 type SessionListItem struct {
 	SessionID    *uuid.UUID `json:"session_id,omitempty"`
 	WeekNumber   int16      `json:"week_number"`
+	SessionType  string     `json:"session_type"`
 	SessionDate  *string    `json:"session_date,omitempty"`
 	PresentCount *int       `json:"present_count,omitempty"`
 	AbsentCount  *int       `json:"absent_count,omitempty"`
@@ -129,8 +120,6 @@ type StudentAttendanceStats struct {
 	FirstName     string    `json:"first_name"`
 	LastName      string    `json:"last_name"`
 	PresentCount  int       `json:"present_count"`
-	AbsentCount   int       `json:"absent_count"`
-	AbsentWeeks   []int16   `json:"absent_weeks"`
 }
 
 // GetCourseStudentsResponse is the response for course students attendance
@@ -145,11 +134,11 @@ type GetCourseStudentsResponse struct {
 
 // WeeklyAttendanceRecord represents attendance for a specific week
 type WeeklyAttendanceRecord struct {
-	Week      int16      `json:"week"`
-	Date      string     `json:"date"`
-	IsPresent bool       `json:"is_present"`
-	MarkedVia string     `json:"marked_via"`
-	Note      *string    `json:"note,omitempty"`
+	Week        int16   `json:"week"`
+	SessionType string  `json:"session_type"`
+	Date        string  `json:"date"`
+	MarkedVia   string  `json:"marked_via"`
+	Note        *string `json:"note,omitempty"`
 }
 
 // CourseAttendanceDetail represents attendance detail for a course
@@ -159,10 +148,8 @@ type CourseAttendanceDetail struct {
 	CourseName     string                   `json:"course_name"`
 	Instructor     string                   `json:"instructor"`
 	TotalWeeks     int16                    `json:"total_weeks"`
-	CompletedWeeks int                      `json:"completed_weeks"`
-	PresentCount   int                      `json:"present_count"`
-	AbsentCount    int                      `json:"absent_count"`
-	AbsentWeeks    []int16                  `json:"absent_weeks"`
+	Theory         *SessionTypeAttendance   `json:"theory,omitempty"`
+	Lab            *SessionTypeAttendance   `json:"lab,omitempty"`
 	WeeklyRecords  []WeeklyAttendanceRecord `json:"weekly_records"`
 }
 
@@ -174,26 +161,39 @@ type GetMyAttendanceResponse struct {
 	Courses       []CourseAttendanceDetail `json:"courses"`
 }
 
+// SessionTypeAttendance represents attendance stats for a specific session type
+type SessionTypeAttendance struct {
+	PresentCount         int `json:"present_count"`
+	AbsentCount          int `json:"absent_count"`
+	TotalSessions        int `json:"total_sessions"`
+	MinRequired          int `json:"min_required"`
+	Passed               bool `json:"passed"`
+}
+
 // FailedStudent represents a student who failed due to attendance
 type FailedStudent struct {
-	StudentID    uuid.UUID `json:"student_id"`
-	StudentNumber string   `json:"student_number"`
-	StudentName   string   `json:"student_name"`
-	PresentCount  int      `json:"present_count"`
-	AbsentCount   int      `json:"absent_count"`
+	StudentID     uuid.UUID              `json:"student_id"`
+	StudentNumber string                 `json:"student_number"`
+	StudentName   string                 `json:"student_name"`
+	FailedType    string                 `json:"failed_type"` // "theory", "lab", or "both"
+	Theory        *SessionTypeAttendance `json:"theory,omitempty"`
+	Lab           *SessionTypeAttendance `json:"lab,omitempty"`
 }
 
 // FinalizeAttendanceResponse is the response for finalization
 type FinalizeAttendanceResponse struct {
-	CourseID    uuid.UUID `json:"course_id"`
-	CourseCode  string    `json:"course_code"`
-	Semester    string    `json:"semester"`
-	TotalStudents int     `json:"total_students"`
-	TotalWeeks    int16   `json:"total_weeks"`
+	CourseID      uuid.UUID `json:"course_id"`
+	CourseCode    string    `json:"course_code"`
+	Semester      string    `json:"semester"`
+	TotalStudents int       `json:"total_students"`
+	TotalWeeks    int16     `json:"total_weeks"`
+	Thresholds    struct {
+		TheoryMinRequired int `json:"theory_min_required"`
+		LabMinRequired    int `json:"lab_min_required"`
+	} `json:"thresholds"`
 	FinalizationSummary struct {
-		PassingCount        int `json:"passing_count"`
-		FailingCount        int `json:"failing_count"`
-		MaxAllowedAbsences  int `json:"max_allowed_absences"`
+		PassingCount int `json:"passing_count"`
+		FailingCount int `json:"failing_count"`
 	} `json:"finalization_summary"`
 	FailedStudents  []FailedStudent `json:"failed_students"`
 	EventsPublished int             `json:"events_published"`
@@ -213,10 +213,10 @@ type GetSessionDetailsResponse struct {
 	CourseCode           string    `json:"course_code"`
 	CourseName           string    `json:"course_name"`
 	WeekNumber           int16     `json:"week_number"`
+	SessionType          string    `json:"session_type"`
 	SessionDate          string    `json:"session_date"`
 	Semester             string    `json:"semester"`
 	IsActive             bool      `json:"is_active"`
-	QRRotationInterval   int16     `json:"qr_rotation_interval"`
 	StartedAt            time.Time `json:"started_at"`
 	ExpiresAt            time.Time `json:"expires_at"`
 	EnrolledStudentCount int       `json:"enrolled_student_count"`
@@ -230,7 +230,6 @@ type AttendanceRecordItem struct {
 	StudentID     uuid.UUID  `json:"student_id"`
 	StudentNumber string     `json:"student_number"`
 	StudentName   string     `json:"student_name"`
-	IsPresent     bool       `json:"is_present"`
 	MarkedVia     string     `json:"marked_via"`
 	MarkedAt      *time.Time `json:"marked_at,omitempty"`
 	Note          *string    `json:"note,omitempty"`
@@ -240,7 +239,6 @@ type AttendanceRecordItem struct {
 type GetSessionRecordsResponse struct {
 	SessionID    uuid.UUID              `json:"session_id"`
 	WeekNumber   int16                  `json:"week_number"`
-	TotalCount   int                    `json:"total_count"`
 	PresentCount int                    `json:"present_count"`
 	Records      []AttendanceRecordItem `json:"records"`
 }
@@ -257,9 +255,9 @@ type EnrolledStudentItem struct {
 
 // GetSessionStudentsResponse is the response for enrolled students
 type GetSessionStudentsResponse struct {
-	SessionID      uuid.UUID             `json:"session_id"`
-	CourseID       uuid.UUID             `json:"course_id"`
-	TotalEnrolled  int                   `json:"total_enrolled"`
-	MarkedCount    int                   `json:"marked_count"`
-	Students       []EnrolledStudentItem `json:"students"`
+	SessionID     uuid.UUID             `json:"session_id"`
+	CourseID      uuid.UUID             `json:"course_id"`
+	TotalEnrolled int                   `json:"total_enrolled"`
+	MarkedCount   int                   `json:"marked_count"`
+	Students      []EnrolledStudentItem `json:"students"`
 }

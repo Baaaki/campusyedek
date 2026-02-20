@@ -1,6 +1,6 @@
 -- name: GetCourseByCourseCode :one
 SELECT id, course_code, name, faculty, department, offering_unit,
-       class_level, semester, credits, ects, theoretical_hours, practical_hours, lab_hours,
+       class_level, semester, credits, ects, theoretical_hours, lab_hours,
        course_type, course_category, education_level, teaching_type, language,
        prerequisites, coordinator, purpose, description, learning_outcomes,
        learning_outcomes_list, weekly_topics, recommended_sources, syllabus,
@@ -12,14 +12,14 @@ LIMIT 1;
 -- name: CreateCourse :one
 INSERT INTO course_catalog (
     course_code, name, faculty, department, offering_unit,
-    class_level, semester, credits, ects, theoretical_hours, practical_hours, lab_hours,
+    class_level, semester, credits, ects, theoretical_hours, lab_hours,
     course_type, course_category, education_level, teaching_type, language,
     prerequisites, coordinator, purpose, description, learning_outcomes,
     learning_outcomes_list, weekly_topics, recommended_sources, syllabus, status
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)
 RETURNING id, course_code, name, faculty, department, offering_unit,
-          class_level, semester, credits, ects, theoretical_hours, practical_hours, lab_hours,
+          class_level, semester, credits, ects, theoretical_hours, lab_hours,
           course_type, course_category, education_level, teaching_type, language,
           prerequisites, coordinator, purpose, description, learning_outcomes,
           learning_outcomes_list, weekly_topics, recommended_sources, syllabus,
@@ -36,7 +36,6 @@ SET name = COALESCE(sqlc.narg('name'), name),
     credits = COALESCE(sqlc.narg('credits'), credits),
     ects = COALESCE(sqlc.narg('ects'), ects),
     theoretical_hours = COALESCE(sqlc.narg('theoretical_hours'), theoretical_hours),
-    practical_hours = COALESCE(sqlc.narg('practical_hours'), practical_hours),
     lab_hours = COALESCE(sqlc.narg('lab_hours'), lab_hours),
     course_type = COALESCE(sqlc.narg('course_type'), course_type),
     course_category = COALESCE(sqlc.narg('course_category'), course_category),
@@ -56,7 +55,7 @@ SET name = COALESCE(sqlc.narg('name'), name),
     updated_at = NOW()
 WHERE course_code = $1
 RETURNING id, course_code, name, faculty, department, offering_unit,
-          class_level, semester, credits, ects, theoretical_hours, practical_hours, lab_hours,
+          class_level, semester, credits, ects, theoretical_hours, lab_hours,
           course_type, course_category, education_level, teaching_type, language,
           prerequisites, coordinator, purpose, description, learning_outcomes,
           learning_outcomes_list, weekly_topics, recommended_sources, syllabus,
@@ -64,7 +63,7 @@ RETURNING id, course_code, name, faculty, department, offering_unit,
 
 -- name: ListCourses :many
 SELECT id, course_code, name, faculty, department, offering_unit,
-       class_level, semester, credits, ects, theoretical_hours, practical_hours, lab_hours,
+       class_level, semester, credits, ects, theoretical_hours, lab_hours,
        course_type, course_category, education_level, teaching_type, language,
        prerequisites, status
 FROM course_catalog
@@ -97,7 +96,7 @@ WHERE (sqlc.narg('faculty')::text IS NULL OR faculty = sqlc.narg('faculty'))
 
 -- name: GetCourseByID :one
 SELECT id, course_code, name, faculty, department, offering_unit,
-       class_level, semester, credits, ects, theoretical_hours, practical_hours, lab_hours,
+       class_level, semester, credits, ects, theoretical_hours, lab_hours,
        course_type, course_category, education_level, teaching_type, language,
        prerequisites, coordinator, purpose, description, learning_outcomes,
        learning_outcomes_list, weekly_topics, recommended_sources, syllabus,

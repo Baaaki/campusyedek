@@ -1,7 +1,8 @@
+[warning] build.bin is deprecated; set build.entrypoint instead
 
   __    _   ___  
  / /\  | | | |_) 
-/_/--\ |_| |_| \_ v1.63.0, built with Go go1.25.1
+/_/--\ |_| |_| \_ v1.64.5, built with Go go1.26.0
 
 watching .
 watching bin
@@ -22,17 +23,18 @@ watching tests
 !exclude tmp
 building...
 running...
-15:59:38.354	[34mINFO[0m	cmd/main.go:38	starting student-service	{"environment": "development", "port": "8003"}
-15:59:38.360	[34mINFO[0m	cmd/main.go:52	database connection established
-15:59:38.360	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
-15:59:38.364	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
-15:59:38.364	[34mINFO[0m	cmd/main.go:63	RabbitMQ connection established
-15:59:38.364	[34mINFO[0m	cmd/main.go:234	RabbitMQ exchange declared	{"exchange": "student.events"}
-15:59:38.365	[34mINFO[0m	worker/event_consumer.go:155	staff events queue setup completed	{"queue": "student.staff_events", "routing_key": "staff.deleted"}
-15:59:38.365	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
-15:59:38.365	[34mINFO[0m	worker/outbox_worker.go:39	starting outbox worker	{"interval": "5s", "batch_size": 10}
-15:59:38.365	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "student.staff_events"}
-15:59:38.365	[34mINFO[0m	worker/event_consumer.go:46	event consumer started successfully
+20:11:03.232	[34mINFO[0m	cmd/main.go:38	starting student-service	{"environment": "development", "port": "8003"}
+20:11:03.250	[34mINFO[0m	cmd/main.go:52	database connection established
+20:11:03.250	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+20:11:03.258	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+20:11:03.258	[34mINFO[0m	cmd/main.go:63	RabbitMQ connection established
+20:11:03.259	[34mINFO[0m	cmd/main.go:234	RabbitMQ exchange declared	{"exchange": "student.events"}
+20:11:03.260	[34mINFO[0m	worker/event_consumer.go:155	staff events queue setup completed	{"queue": "student.staff_events", "routing_key": "staff.deleted"}
+20:11:03.274	[34mINFO[0m	cmd/main.go:271	downstream consumer queues pre-declared
+20:11:03.274	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+20:11:03.274	[34mINFO[0m	worker/outbox_worker.go:39	starting outbox worker	{"interval": "5s", "batch_size": 10}
+20:11:03.274	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "student.staff_events"}
+20:11:03.274	[34mINFO[0m	worker/event_consumer.go:46	event consumer started successfully
 [GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
  - using env:	export GIN_MODE=release
  - using code:	gin.SetMode(gin.ReleaseMode)
@@ -50,39 +52,266 @@ running...
 [GIN-debug] POST   /api/students/bulk-import --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).BulkImport-fm (6 handlers)
 [GIN-debug] GET    /api/students/bulk-import/:job_id --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).GetImportJobStatus-fm (6 handlers)
 [GIN-debug] GET    /api/students/bulk-import --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).ListImportJobs-fm (6 handlers)
-15:59:38.365	[34mINFO[0m	cmd/main.go:131	server starting	{"port": "8003"}
-16:00:24.474	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
-16:00:24.474	[34mINFO[0m	gin@v1.11.0/context.go:192	getting student by ID	{"request_id": "b4b71386-27dd-45fd-9f49-30732f5d1863", "endpoint": "GetStudentByID", "handler": "StudentHandler", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e"}
-16:00:24.478	[34mINFO[0m	handler/student_handler.go:110	student retrieved successfully from database	{"request_id": "b4b71386-27dd-45fd-9f49-30732f5d1863", "service": "StudentService", "method": "GetStudentByID", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "student_number": "2025001"}
-16:00:24.478	[34mINFO[0m	gin@v1.11.0/context.go:192	student retrieved successfully	{"request_id": "b4b71386-27dd-45fd-9f49-30732f5d1863", "endpoint": "GetStudentByID", "handler": "StudentHandler", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e"}
-16:00:24.478	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "b4b71386-27dd-45fd-9f49-30732f5d1863", "method": "GET", "path": "/api/students/d8cadb82-4ee5-4128-b024-bf90ab33db2e", "query": "", "status": 200, "duration": "4.495865ms", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
-16:00:24.480	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
-16:00:24.480	[34mINFO[0m	gin@v1.11.0/context.go:192	getting student by ID	{"request_id": "811a11da-8d22-4466-8fca-250257c15460", "endpoint": "GetStudentByID", "handler": "StudentHandler", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e"}
-16:00:24.480	[34mINFO[0m	handler/student_handler.go:110	student retrieved successfully from database	{"request_id": "811a11da-8d22-4466-8fca-250257c15460", "service": "StudentService", "method": "GetStudentByID", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "student_number": "2025001"}
-16:00:24.480	[34mINFO[0m	gin@v1.11.0/context.go:192	student retrieved successfully	{"request_id": "811a11da-8d22-4466-8fca-250257c15460", "endpoint": "GetStudentByID", "handler": "StudentHandler", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e"}
-16:00:24.480	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "811a11da-8d22-4466-8fca-250257c15460", "method": "GET", "path": "/api/students/d8cadb82-4ee5-4128-b024-bf90ab33db2e", "query": "", "status": 200, "duration": "358.038µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
-19:27:55.331	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
-19:27:55.331	[34mINFO[0m	gin@v1.11.0/context.go:192	getting student by ID	{"request_id": "2e8d85fc-f6ac-479e-acec-4843b46b92f1", "endpoint": "GetStudentByID", "handler": "StudentHandler", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e"}
-19:27:55.334	[34mINFO[0m	handler/student_handler.go:110	student retrieved successfully from database	{"request_id": "2e8d85fc-f6ac-479e-acec-4843b46b92f1", "service": "StudentService", "method": "GetStudentByID", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "student_number": "2025001"}
-19:27:55.334	[34mINFO[0m	gin@v1.11.0/context.go:192	student retrieved successfully	{"request_id": "2e8d85fc-f6ac-479e-acec-4843b46b92f1", "endpoint": "GetStudentByID", "handler": "StudentHandler", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e"}
-19:27:55.334	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "2e8d85fc-f6ac-479e-acec-4843b46b92f1", "method": "GET", "path": "/api/students/d8cadb82-4ee5-4128-b024-bf90ab33db2e", "query": "", "status": 200, "duration": "2.790314ms", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
-19:27:55.335	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
-19:27:55.335	[34mINFO[0m	gin@v1.11.0/context.go:192	getting student by ID	{"request_id": "9d3c780b-eb63-4e2a-9f6a-7e9673b23735", "endpoint": "GetStudentByID", "handler": "StudentHandler", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e"}
-19:27:55.336	[34mINFO[0m	handler/student_handler.go:110	student retrieved successfully from database	{"request_id": "9d3c780b-eb63-4e2a-9f6a-7e9673b23735", "service": "StudentService", "method": "GetStudentByID", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "student_number": "2025001"}
-19:27:55.336	[34mINFO[0m	gin@v1.11.0/context.go:192	student retrieved successfully	{"request_id": "9d3c780b-eb63-4e2a-9f6a-7e9673b23735", "endpoint": "GetStudentByID", "handler": "StudentHandler", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e"}
-19:27:55.336	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "9d3c780b-eb63-4e2a-9f6a-7e9673b23735", "method": "GET", "path": "/api/students/d8cadb82-4ee5-4128-b024-bf90ab33db2e", "query": "", "status": 200, "duration": "315.899µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
-19:29:50.174	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
-19:29:50.174	[34mINFO[0m	gin@v1.11.0/context.go:192	getting student by ID	{"request_id": "618618e6-eb1d-4397-aeff-22162297e032", "endpoint": "GetStudentByID", "handler": "StudentHandler", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e"}
-19:29:50.175	[34mINFO[0m	handler/student_handler.go:110	student retrieved successfully from database	{"request_id": "618618e6-eb1d-4397-aeff-22162297e032", "service": "StudentService", "method": "GetStudentByID", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "student_number": "2025001"}
-19:29:50.175	[34mINFO[0m	gin@v1.11.0/context.go:192	student retrieved successfully	{"request_id": "618618e6-eb1d-4397-aeff-22162297e032", "endpoint": "GetStudentByID", "handler": "StudentHandler", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e"}
-19:29:50.175	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "618618e6-eb1d-4397-aeff-22162297e032", "method": "GET", "path": "/api/students/d8cadb82-4ee5-4128-b024-bf90ab33db2e", "query": "", "status": 200, "duration": "1.083189ms", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
-19:29:50.178	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
-19:29:50.178	[34mINFO[0m	gin@v1.11.0/context.go:192	getting student by ID	{"request_id": "c1335e16-13b9-4558-bd14-e479eabc1720", "endpoint": "GetStudentByID", "handler": "StudentHandler", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e"}
-19:29:50.179	[34mINFO[0m	handler/student_handler.go:110	student retrieved successfully from database	{"request_id": "c1335e16-13b9-4558-bd14-e479eabc1720", "service": "StudentService", "method": "GetStudentByID", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "student_number": "2025001"}
-19:29:50.179	[34mINFO[0m	gin@v1.11.0/context.go:192	student retrieved successfully	{"request_id": "c1335e16-13b9-4558-bd14-e479eabc1720", "endpoint": "GetStudentByID", "handler": "StudentHandler", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e"}
-19:29:50.179	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "c1335e16-13b9-4558-bd14-e479eabc1720", "method": "GET", "path": "/api/students/d8cadb82-4ee5-4128-b024-bf90ab33db2e", "query": "", "status": 200, "duration": "755.95µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
-19:44:32.598	[31mERROR[0m	rabbitmq/connection.go:94	rabbitmq connection lost	{"error": "Exception (320) Reason: \"CONNECTION_FORCED - broker forced connection closure with reason 'shutdown'\""}
+20:11:03.274	[34mINFO[0m	cmd/main.go:131	server starting	{"port": "8003"}
+internal/service/student_service.go has changed
+building...
+internal/service/student_service.go has changed
+building...
+running...
+01:31:47.824	[34mINFO[0m	cmd/main.go:38	starting student-service	{"environment": "development", "port": "8003"}
+01:31:47.830	[34mINFO[0m	cmd/main.go:52	database connection established
+01:31:47.830	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+01:31:47.833	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+01:31:47.833	[34mINFO[0m	cmd/main.go:63	RabbitMQ connection established
+01:31:47.833	[34mINFO[0m	cmd/main.go:234	RabbitMQ exchange declared	{"exchange": "student.events"}
+01:31:47.834	[34mINFO[0m	worker/event_consumer.go:155	staff events queue setup completed	{"queue": "student.staff_events", "routing_key": "staff.deleted"}
+01:31:47.836	[34mINFO[0m	cmd/main.go:271	downstream consumer queues pre-declared
+01:31:47.836	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+01:31:47.836	[34mINFO[0m	worker/outbox_worker.go:39	starting outbox worker	{"interval": "5s", "batch_size": 10}
+01:31:47.837	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "student.staff_events"}
+01:31:47.837	[34mINFO[0m	worker/event_consumer.go:46	event consumer started successfully
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (4 handlers)
+[GIN-debug] GET    /api/students             --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).ListStudents-fm (5 handlers)
+[GIN-debug] GET    /api/students/:id         --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).GetStudentByID-fm (5 handlers)
+[GIN-debug] POST   /api/students/search      --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).SearchStudents-fm (5 handlers)
+[GIN-debug] GET    /api/students/my-advisees --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).GetMyAdvisees-fm (6 handlers)
+[GIN-debug] POST   /api/students             --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).CreateStudent-fm (6 handlers)
+[GIN-debug] PUT    /api/students/:id         --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).UpdateStudent-fm (6 handlers)
+[GIN-debug] DELETE /api/students/:id         --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).DeleteStudent-fm (6 handlers)
+[GIN-debug] GET    /api/students/orphaned    --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).ListOrphanedStudents-fm (6 handlers)
+[GIN-debug] PUT    /api/students/bulk-advisor-assign --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).BulkAssignAdvisor-fm (6 handlers)
+[GIN-debug] POST   /api/students/bulk-import --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).BulkImport-fm (6 handlers)
+[GIN-debug] GET    /api/students/bulk-import/:job_id --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).GetImportJobStatus-fm (6 handlers)
+[GIN-debug] GET    /api/students/bulk-import --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).ListImportJobs-fm (6 handlers)
+01:31:47.837	[34mINFO[0m	cmd/main.go:131	server starting	{"port": "8003"}
+cmd/main.go has changed
+building...
+# command-line-arguments
+cmd/main.go:92:2: declared and not used: timeHandler
+failed to build, error: exit status 1
+running...
+01:31:58.453	[34mINFO[0m	cmd/main.go:38	starting student-service	{"environment": "development", "port": "8003"}
+01:31:58.458	[34mINFO[0m	cmd/main.go:52	database connection established
+01:31:58.458	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+01:31:58.460	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+01:31:58.460	[34mINFO[0m	cmd/main.go:63	RabbitMQ connection established
+01:31:58.460	[34mINFO[0m	cmd/main.go:234	RabbitMQ exchange declared	{"exchange": "student.events"}
+01:31:58.461	[34mINFO[0m	worker/event_consumer.go:155	staff events queue setup completed	{"queue": "student.staff_events", "routing_key": "staff.deleted"}
+01:31:58.463	[34mINFO[0m	cmd/main.go:271	downstream consumer queues pre-declared
+01:31:58.463	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+01:31:58.463	[34mINFO[0m	worker/outbox_worker.go:39	starting outbox worker	{"interval": "5s", "batch_size": 10}
+01:31:58.463	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "student.staff_events"}
+01:31:58.463	[34mINFO[0m	worker/event_consumer.go:46	event consumer started successfully
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (4 handlers)
+[GIN-debug] GET    /api/students             --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).ListStudents-fm (5 handlers)
+[GIN-debug] GET    /api/students/:id         --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).GetStudentByID-fm (5 handlers)
+[GIN-debug] POST   /api/students/search      --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).SearchStudents-fm (5 handlers)
+[GIN-debug] GET    /api/students/my-advisees --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).GetMyAdvisees-fm (6 handlers)
+[GIN-debug] POST   /api/students             --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).CreateStudent-fm (6 handlers)
+[GIN-debug] PUT    /api/students/:id         --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).UpdateStudent-fm (6 handlers)
+[GIN-debug] DELETE /api/students/:id         --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).DeleteStudent-fm (6 handlers)
+[GIN-debug] GET    /api/students/orphaned    --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).ListOrphanedStudents-fm (6 handlers)
+[GIN-debug] PUT    /api/students/bulk-advisor-assign --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).BulkAssignAdvisor-fm (6 handlers)
+[GIN-debug] POST   /api/students/bulk-import --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).BulkImport-fm (6 handlers)
+[GIN-debug] GET    /api/students/bulk-import/:job_id --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).GetImportJobStatus-fm (6 handlers)
+[GIN-debug] GET    /api/students/bulk-import --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).ListImportJobs-fm (6 handlers)
+01:31:58.463	[34mINFO[0m	cmd/main.go:131	server starting	{"port": "8003"}
+cmd/main.go has changed
+building...
+# command-line-arguments
+cmd/main.go:92:2: declared and not used: timeHandler
+failed to build, error: exit status 1
+running...
+01:31:59.478	[34mINFO[0m	cmd/main.go:38	starting student-service	{"environment": "development", "port": "8003"}
+01:31:59.483	[34mINFO[0m	cmd/main.go:52	database connection established
+01:31:59.483	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+01:31:59.485	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+01:31:59.485	[34mINFO[0m	cmd/main.go:63	RabbitMQ connection established
+01:31:59.485	[34mINFO[0m	cmd/main.go:234	RabbitMQ exchange declared	{"exchange": "student.events"}
+01:31:59.486	[34mINFO[0m	worker/event_consumer.go:155	staff events queue setup completed	{"queue": "student.staff_events", "routing_key": "staff.deleted"}
+01:31:59.488	[34mINFO[0m	cmd/main.go:271	downstream consumer queues pre-declared
+01:31:59.488	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+01:31:59.488	[34mINFO[0m	worker/outbox_worker.go:39	starting outbox worker	{"interval": "5s", "batch_size": 10}
+01:31:59.489	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "student.staff_events"}
+01:31:59.489	[34mINFO[0m	worker/event_consumer.go:46	event consumer started successfully
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (4 handlers)
+[GIN-debug] GET    /api/students             --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).ListStudents-fm (5 handlers)
+[GIN-debug] GET    /api/students/:id         --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).GetStudentByID-fm (5 handlers)
+[GIN-debug] POST   /api/students/search      --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).SearchStudents-fm (5 handlers)
+[GIN-debug] GET    /api/students/my-advisees --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).GetMyAdvisees-fm (6 handlers)
+[GIN-debug] POST   /api/students             --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).CreateStudent-fm (6 handlers)
+[GIN-debug] PUT    /api/students/:id         --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).UpdateStudent-fm (6 handlers)
+[GIN-debug] DELETE /api/students/:id         --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).DeleteStudent-fm (6 handlers)
+[GIN-debug] GET    /api/students/orphaned    --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).ListOrphanedStudents-fm (6 handlers)
+[GIN-debug] PUT    /api/students/bulk-advisor-assign --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).BulkAssignAdvisor-fm (6 handlers)
+[GIN-debug] POST   /api/students/bulk-import --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).BulkImport-fm (6 handlers)
+[GIN-debug] GET    /api/students/bulk-import/:job_id --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).GetImportJobStatus-fm (6 handlers)
+[GIN-debug] GET    /api/students/bulk-import --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).ListImportJobs-fm (6 handlers)
+01:31:59.489	[34mINFO[0m	cmd/main.go:131	server starting	{"port": "8003"}
+cmd/main.go has changed
+building...
+# command-line-arguments
+cmd/main.go:123:53: too many arguments in call to setupRouter
+	have (*"github.com/baaaki/mydreamcampus/student-service/internal/handler".StudentHandler, *"github.com/baaaki/mydreamcampus/shared/handler".TimeHandler, string)
+	want (*"github.com/baaaki/mydreamcampus/student-service/internal/handler".StudentHandler, string)
+failed to build, error: exit status 1
+running...
+01:32:00.683	[34mINFO[0m	cmd/main.go:38	starting student-service	{"environment": "development", "port": "8003"}
+01:32:00.687	[34mINFO[0m	cmd/main.go:52	database connection established
+01:32:00.688	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+01:32:00.691	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+01:32:00.691	[34mINFO[0m	cmd/main.go:63	RabbitMQ connection established
+01:32:00.692	[34mINFO[0m	cmd/main.go:234	RabbitMQ exchange declared	{"exchange": "student.events"}
+01:32:00.692	[34mINFO[0m	worker/event_consumer.go:155	staff events queue setup completed	{"queue": "student.staff_events", "routing_key": "staff.deleted"}
+01:32:00.694	[34mINFO[0m	cmd/main.go:271	downstream consumer queues pre-declared
+01:32:00.694	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+01:32:00.694	[34mINFO[0m	worker/outbox_worker.go:39	starting outbox worker	{"interval": "5s", "batch_size": 10}
+01:32:00.694	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "student.staff_events"}
+01:32:00.694	[34mINFO[0m	worker/event_consumer.go:46	event consumer started successfully
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (4 handlers)
+[GIN-debug] GET    /api/students             --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).ListStudents-fm (5 handlers)
+[GIN-debug] GET    /api/students/:id         --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).GetStudentByID-fm (5 handlers)
+[GIN-debug] POST   /api/students/search      --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).SearchStudents-fm (5 handlers)
+[GIN-debug] GET    /api/students/my-advisees --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).GetMyAdvisees-fm (6 handlers)
+[GIN-debug] POST   /api/students             --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).CreateStudent-fm (6 handlers)
+[GIN-debug] PUT    /api/students/:id         --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).UpdateStudent-fm (6 handlers)
+[GIN-debug] DELETE /api/students/:id         --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).DeleteStudent-fm (6 handlers)
+[GIN-debug] GET    /api/students/orphaned    --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).ListOrphanedStudents-fm (6 handlers)
+[GIN-debug] PUT    /api/students/bulk-advisor-assign --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).BulkAssignAdvisor-fm (6 handlers)
+[GIN-debug] POST   /api/students/bulk-import --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).BulkImport-fm (6 handlers)
+[GIN-debug] GET    /api/students/bulk-import/:job_id --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).GetImportJobStatus-fm (6 handlers)
+[GIN-debug] GET    /api/students/bulk-import --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).ListImportJobs-fm (6 handlers)
+01:32:00.695	[34mINFO[0m	cmd/main.go:131	server starting	{"port": "8003"}
+cmd/main.go has changed
+building...
+running...
+01:32:02.861	[34mINFO[0m	cmd/main.go:39	starting student-service	{"environment": "development", "port": "8003"}
+01:32:02.868	[34mINFO[0m	cmd/main.go:53	database connection established
+01:32:02.868	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+01:32:02.869	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+01:32:02.870	[34mINFO[0m	cmd/main.go:64	RabbitMQ connection established
+01:32:02.870	[34mINFO[0m	cmd/main.go:236	RabbitMQ exchange declared	{"exchange": "student.events"}
+01:32:02.870	[34mINFO[0m	worker/event_consumer.go:155	staff events queue setup completed	{"queue": "student.staff_events", "routing_key": "staff.deleted"}
+01:32:02.872	[34mINFO[0m	cmd/main.go:273	downstream consumer queues pre-declared
+01:32:02.872	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+01:32:02.872	[34mINFO[0m	worker/outbox_worker.go:39	starting outbox worker	{"interval": "5s", "batch_size": 10}
+01:32:02.873	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "student.staff_events"}
+01:32:02.873	[34mINFO[0m	worker/event_consumer.go:46	event consumer started successfully
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (4 handlers)
+[GIN-debug] GET    /api/students             --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).ListStudents-fm (5 handlers)
+[GIN-debug] GET    /api/students/:id         --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).GetStudentByID-fm (5 handlers)
+[GIN-debug] POST   /api/students/search      --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).SearchStudents-fm (5 handlers)
+[GIN-debug] GET    /api/students/my-advisees --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).GetMyAdvisees-fm (6 handlers)
+[GIN-debug] POST   /api/students             --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).CreateStudent-fm (6 handlers)
+[GIN-debug] PUT    /api/students/:id         --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).UpdateStudent-fm (6 handlers)
+[GIN-debug] DELETE /api/students/:id         --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).DeleteStudent-fm (6 handlers)
+[GIN-debug] GET    /api/students/orphaned    --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).ListOrphanedStudents-fm (6 handlers)
+[GIN-debug] PUT    /api/students/bulk-advisor-assign --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).BulkAssignAdvisor-fm (6 handlers)
+[GIN-debug] POST   /api/students/bulk-import --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).BulkImport-fm (6 handlers)
+[GIN-debug] GET    /api/students/bulk-import/:job_id --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).GetImportJobStatus-fm (6 handlers)
+[GIN-debug] GET    /api/students/bulk-import --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).ListImportJobs-fm (6 handlers)
+01:32:02.873	[34mINFO[0m	cmd/main.go:133	server starting	{"port": "8003"}
+cmd/main.go has changed
+building...
+running...
+01:32:05.666	[34mINFO[0m	cmd/main.go:39	starting student-service	{"environment": "development", "port": "8003"}
+01:32:05.672	[34mINFO[0m	cmd/main.go:53	database connection established
+01:32:05.672	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+01:32:05.674	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+01:32:05.674	[34mINFO[0m	cmd/main.go:64	RabbitMQ connection established
+01:32:05.674	[34mINFO[0m	cmd/main.go:244	RabbitMQ exchange declared	{"exchange": "student.events"}
+01:32:05.675	[34mINFO[0m	worker/event_consumer.go:155	staff events queue setup completed	{"queue": "student.staff_events", "routing_key": "staff.deleted"}
+01:32:05.677	[34mINFO[0m	cmd/main.go:281	downstream consumer queues pre-declared
+01:32:05.677	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+01:32:05.677	[34mINFO[0m	worker/outbox_worker.go:39	starting outbox worker	{"interval": "5s", "batch_size": 10}
+01:32:05.677	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "student.staff_events"}
+01:32:05.677	[34mINFO[0m	worker/event_consumer.go:46	event consumer started successfully
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (4 handlers)
+[GIN-debug] GET    /api/students             --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).ListStudents-fm (5 handlers)
+[GIN-debug] GET    /api/students/:id         --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).GetStudentByID-fm (5 handlers)
+[GIN-debug] POST   /api/students/search      --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).SearchStudents-fm (5 handlers)
+[GIN-debug] GET    /api/students/my-advisees --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).GetMyAdvisees-fm (6 handlers)
+[GIN-debug] POST   /api/students             --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).CreateStudent-fm (6 handlers)
+[GIN-debug] PUT    /api/students/:id         --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).UpdateStudent-fm (6 handlers)
+[GIN-debug] DELETE /api/students/:id         --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).DeleteStudent-fm (6 handlers)
+[GIN-debug] GET    /api/students/orphaned    --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).ListOrphanedStudents-fm (6 handlers)
+[GIN-debug] PUT    /api/students/bulk-advisor-assign --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).BulkAssignAdvisor-fm (6 handlers)
+[GIN-debug] POST   /api/students/bulk-import --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).BulkImport-fm (6 handlers)
+[GIN-debug] GET    /api/students/bulk-import/:job_id --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).GetImportJobStatus-fm (6 handlers)
+[GIN-debug] GET    /api/students/bulk-import --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).ListImportJobs-fm (6 handlers)
+[GIN-debug] POST   /api/students/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (6 handlers)
+[GIN-debug] POST   /api/students/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (6 handlers)
+[GIN-debug] GET    /api/students/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (6 handlers)
+01:32:05.677	[34mINFO[0m	cmd/main.go:133	server starting	{"port": "8003"}
+01:37:00.074	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:37:00.074	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "80de95c9-f761-4c24-bb6a-4e93ad7a3f98", "method": "GET", "path": "/api/students/admin/time/status", "query": "", "status": 200, "duration": "166.865µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:37:00.124	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:37:00.124	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "e4ba2a52-9288-4a0d-8c21-a5549ddc52cd", "method": "GET", "path": "/api/students/admin/time/status", "query": "", "status": 200, "duration": "68.342µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:37:18.113	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:37:18.113	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "e639d83b-000b-4c1b-8e73-77899b3bb854", "method": "GET", "path": "/api/students/admin/time/status", "query": "", "status": 200, "duration": "62.282µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:37:18.174	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:37:18.174	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "f038bff0-588a-4f4e-b60e-2a52b26f2043", "method": "GET", "path": "/api/students/admin/time/status", "query": "", "status": 200, "duration": "52.822µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:37:52.601	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:37:52.601	[34mINFO[0m	handler/time_handler.go:61	clock reset to real time
+01:37:52.602	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "b16eacc1-6440-4720-8987-4c5f9a86e6a6", "method": "POST", "path": "/api/students/admin/time/reset", "query": "", "status": 200, "duration": "1.156803ms", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:37:52.619	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:37:52.619	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "9e90dd06-f320-4910-b40e-a0ae4bd997ac", "method": "GET", "path": "/api/students/admin/time/status", "query": "", "status": 200, "duration": "64.121µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:39:44.773	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:39:44.773	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "2dc044d0-7fa8-41bc-ad72-22e20d37b52b", "method": "GET", "path": "/api/students/admin/time/status", "query": "", "status": 200, "duration": "86.552µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:39:45.738	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:39:45.738	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "e5f148ef-e998-4478-b069-60af7b46abe3", "method": "GET", "path": "/api/students/admin/time/status", "query": "", "status": 200, "duration": "74.592µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:39:50.092	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:39:50.092	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "10e4cea6-f941-405e-baa2-c359c6d64ae8", "method": "GET", "path": "/api/students/admin/time/status", "query": "", "status": 200, "duration": "55.102µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:45:37.604	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:45:37.604	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "5033509e-060a-4768-a8e4-2140e74eddbc", "method": "GET", "path": "/api/students/admin/time/status", "query": "", "status": 200, "duration": "77.943µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:45:37.609	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:45:37.609	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "c3bf9d65-2d2b-4258-817c-0361c12d8807", "method": "GET", "path": "/api/students/admin/time/status", "query": "", "status": 200, "duration": "59.981µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:46:31.365	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:46:31.365	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "9fd85cd7-45e0-4ab7-98a8-c1caa235b17d", "method": "GET", "path": "/api/students/admin/time/status", "query": "", "status": 200, "duration": "98.092µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:46:32.396	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:46:32.396	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "c9f3bece-bd41-4d95-b942-26b82e3a9298", "method": "GET", "path": "/api/students/admin/time/status", "query": "", "status": 200, "duration": "74.912µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:36.526	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:36.526	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "e9125af8-a666-4965-b878-be5198811fd3", "method": "GET", "path": "/api/students/admin/time/status", "query": "", "status": 200, "duration": "99.573µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:38.150	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:38.150	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "040be325-7f35-4d6d-8cfb-6e4a84632cba", "method": "GET", "path": "/api/students/admin/time/status", "query": "", "status": 200, "duration": "82.222µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:47.386	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:47.386	[34mINFO[0m	handler/time_handler.go:46	clock switched to simulated mode	{"simulated_time": "09:15:08.000"}
+01:47:47.386	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "1a57f234-ed8b-4167-a0d3-53ecd54b9e2f", "method": "POST", "path": "/api/students/admin/time/simulate", "query": "", "status": 200, "duration": "276.747µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:47.402	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:47.402	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "c48b4914-dea6-4f89-a14b-b1976d7cf6e8", "method": "GET", "path": "/api/students/admin/time/status", "query": "", "status": 200, "duration": "98.903µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:48.954	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:48.955	[34mINFO[0m	handler/time_handler.go:61	clock reset to real time
+01:47:48.955	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "76952ae3-10fc-46b6-b842-7f426f043b53", "method": "POST", "path": "/api/students/admin/time/reset", "query": "", "status": 200, "duration": "108.472µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:48.968	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:48.968	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "153b0019-129e-4635-8ab6-dcc1d699bbd5", "method": "GET", "path": "/api/students/admin/time/status", "query": "", "status": 200, "duration": "93.512µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:53.266	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:53.266	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "618b23e1-dada-463a-999b-3d3671bb1f8c", "method": "GET", "path": "/api/students/admin/time/status", "query": "", "status": 200, "duration": "51.461µs", "ip": "172.18.0.1", "user_agent": "curl/8.5.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+02:02:07.537	[31mERROR[0m	rabbitmq/connection.go:94	rabbitmq connection lost	{"error": "Exception (320) Reason: \"CONNECTION_FORCED - broker forced connection closure with reason 'shutdown'\""}
 github.com/baaaki/mydreamcampus/shared/rabbitmq.(*Connection).handleReconnect
 	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/rabbitmq/connection.go:94
-19:44:32.598	[34mINFO[0m	rabbitmq/connection.go:99	attempting to reconnect to rabbitmq...
+02:02:07.537	[34mINFO[0m	rabbitmq/connection.go:99	attempting to reconnect to rabbitmq...
 cleaning...

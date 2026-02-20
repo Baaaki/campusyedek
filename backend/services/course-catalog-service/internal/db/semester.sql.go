@@ -245,7 +245,7 @@ SELECT
     sc.classroom_location,
     sc.max_capacity,
     cc.theoretical_hours,
-    cc.practical_hours,
+    cc.lab_hours,
     sc.created_at
 FROM semester_courses sc
 JOIN course_catalog cc ON sc.course_code = cc.course_code
@@ -273,7 +273,7 @@ type GetTeacherCoursesRow struct {
 	ClassroomLocation  string           `json:"classroom_location"`
 	MaxCapacity        int16            `json:"max_capacity"`
 	TheoreticalHours   int16            `json:"theoretical_hours"`
-	PracticalHours     int16            `json:"practical_hours"`
+	LabHours           int16            `json:"lab_hours"`
 	CreatedAt          pgtype.Timestamp `json:"created_at"`
 }
 
@@ -300,7 +300,7 @@ func (q *Queries) GetTeacherCourses(ctx context.Context, arg GetTeacherCoursesPa
 			&i.ClassroomLocation,
 			&i.MaxCapacity,
 			&i.TheoreticalHours,
-			&i.PracticalHours,
+			&i.LabHours,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -393,71 +393,4 @@ func (q *Queries) ListSemesterCourses(ctx context.Context, arg ListSemesterCours
 		return nil, err
 	}
 	return items, nil
-}
-
-const updateSemesterCourse = `-- name: UpdateSemesterCourse :one
-UPDATE semester_courses
-SET instructor_id = COALESCE($2, instructor_id),
-    instructor_fullname = COALESCE($3, instructor_fullname),
-    classroom_location = COALESCE($4, classroom_location),
-    max_capacity = COALESCE($5, max_capacity),
-    assessment_schema = COALESCE($6, assessment_schema),
-    updated_at = NOW()
-WHERE id = $1
-RETURNING id, semester, course_code, credits, class_level, instructor_id,
-          instructor_fullname, classroom_location, max_capacity, assessment_schema, prerequisites,
-          created_at, updated_at
-`
-
-type UpdateSemesterCourseParams struct {
-	ID                 pgtype.UUID `json:"id"`
-	InstructorID       pgtype.UUID `json:"instructor_id"`
-	InstructorFullname pgtype.Text `json:"instructor_fullname"`
-	ClassroomLocation  pgtype.Text `json:"classroom_location"`
-	MaxCapacity        pgtype.Int2 `json:"max_capacity"`
-	AssessmentSchema   []byte      `json:"assessment_schema"`
-}
-
-type UpdateSemesterCourseRow struct {
-	ID                 pgtype.UUID      `json:"id"`
-	Semester           string           `json:"semester"`
-	CourseCode         string           `json:"course_code"`
-	Credits            int16            `json:"credits"`
-	ClassLevel         int16            `json:"class_level"`
-	InstructorID       pgtype.UUID      `json:"instructor_id"`
-	InstructorFullname string           `json:"instructor_fullname"`
-	ClassroomLocation  string           `json:"classroom_location"`
-	MaxCapacity        int16            `json:"max_capacity"`
-	AssessmentSchema   []byte           `json:"assessment_schema"`
-	Prerequisites      []byte           `json:"prerequisites"`
-	CreatedAt          pgtype.Timestamp `json:"created_at"`
-	UpdatedAt          pgtype.Timestamp `json:"updated_at"`
-}
-
-func (q *Queries) UpdateSemesterCourse(ctx context.Context, arg UpdateSemesterCourseParams) (UpdateSemesterCourseRow, error) {
-	row := q.db.QueryRow(ctx, updateSemesterCourse,
-		arg.ID,
-		arg.InstructorID,
-		arg.InstructorFullname,
-		arg.ClassroomLocation,
-		arg.MaxCapacity,
-		arg.AssessmentSchema,
-	)
-	var i UpdateSemesterCourseRow
-	err := row.Scan(
-		&i.ID,
-		&i.Semester,
-		&i.CourseCode,
-		&i.Credits,
-		&i.ClassLevel,
-		&i.InstructorID,
-		&i.InstructorFullname,
-		&i.ClassroomLocation,
-		&i.MaxCapacity,
-		&i.AssessmentSchema,
-		&i.Prerequisites,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
 }

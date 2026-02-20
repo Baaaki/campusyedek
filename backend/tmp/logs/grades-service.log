@@ -1,7 +1,8 @@
+[warning] build.bin is deprecated; set build.entrypoint instead
 
   __    _   ___  
  / /\  | | | |_) 
-/_/--\ |_| |_| \_ v1.63.0, built with Go go1.25.1
+/_/--\ |_| |_| \_ v1.64.5, built with Go go1.26.0
 
 watching .
 watching cmd
@@ -20,290 +21,150 @@ watching sql/queries
 !exclude tmp
 building...
 running...
-15:59:36.631	[34mINFO[0m	cmd/main.go:38	starting grades-service	{"environment": "development", "port": "8007"}
-15:59:36.649	[34mINFO[0m	cmd/main.go:50	database connection established
-15:59:36.649	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
-15:59:36.663	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
-15:59:36.663	[34mINFO[0m	cmd/main.go:59	RabbitMQ connection established
-15:59:36.663	[34mINFO[0m	cmd/main.go:213	RabbitMQ exchange declared	{"exchange": "grade.events"}
-[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
- - using env:	export GIN_MODE=release
- - using code:	gin.SetMode(gin.ReleaseMode)
-
-15:59:36.663	[34mINFO[0m	worker/event_consumer.go:35	starting event consumer
-15:59:36.663	[34mINFO[0m	worker/outbox_worker.go:38	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
-[GIN-debug] GET    /health                   --> main.setupRouter.func1 (4 handlers)
-[GIN-debug] GET    /api/grades/course/:courseId/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (6 handlers)
-[GIN-debug] GET    /api/grades/course/:courseId/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (6 handlers)
-[GIN-debug] POST   /api/grades/course/:courseId/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (6 handlers)
-[GIN-debug] POST   /api/grades/course/:courseId/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (6 handlers)
-[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (5 handlers)
-[GIN-debug] GET    /api/grades/transcript/:studentId --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (5 handlers)
-[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (6 handlers)
-15:59:36.663	[34mINFO[0m	cmd/main.go:113	server starting	{"port": "8007"}
-15:59:36.665	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
-15:59:36.668	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
-15:59:36.669	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
-15:59:36.670	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
-15:59:36.670	[34mINFO[0m	worker/event_consumer.go:101	event consumer started
-15:59:45.387	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
-15:59:45.387	[34mINFO[0m	gin@v1.11.0/context.go:192	getting my grades	{"request_id": "e4936b41-c617-4a8a-8df9-739e63ba7fa8", "handler": "GradeHandler", "method": "GetMyGrades", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e"}
-15:59:45.397	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "e4936b41-c617-4a8a-8df9-739e63ba7fa8", "method": "GET", "path": "/api/grades/student/my", "query": "", "status": 200, "duration": "10.411436ms", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
-16:00:45.843	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
-16:00:45.843	[34mINFO[0m	gin@v1.11.0/context.go:192	getting my grades	{"request_id": "df567d39-9b53-4512-bbbd-db35725eb2d0", "handler": "GradeHandler", "method": "GetMyGrades", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e"}
-16:00:45.849	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "df567d39-9b53-4512-bbbd-db35725eb2d0", "method": "GET", "path": "/api/grades/student/my", "query": "", "status": 200, "duration": "5.10677ms", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
-16:00:45.850	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
-16:00:45.850	[34mINFO[0m	gin@v1.11.0/context.go:192	getting my grades	{"request_id": "84dae753-ec90-4d3b-9bda-e58c698c8102", "handler": "GradeHandler", "method": "GetMyGrades", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e"}
-16:00:45.851	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "84dae753-ec90-4d3b-9bda-e58c698c8102", "method": "GET", "path": "/api/grades/student/my", "query": "", "status": 200, "duration": "768.01µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
-19:24:52.249	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
-19:24:52.249	[34mINFO[0m	gin@v1.11.0/context.go:192	getting my grades	{"request_id": "73efd506-f766-4341-b285-84c547f37189", "handler": "GradeHandler", "method": "GetMyGrades", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e"}
-19:24:52.254	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "73efd506-f766-4341-b285-84c547f37189", "method": "GET", "path": "/api/grades/student/my", "query": "", "status": 200, "duration": "5.743568ms", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
-19:27:56.828	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
-19:27:56.828	[34mINFO[0m	gin@v1.11.0/context.go:192	getting my grades	{"request_id": "0de92bca-5fdc-44cc-91cd-df0ea823847c", "handler": "GradeHandler", "method": "GetMyGrades", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e"}
-19:27:56.836	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "0de92bca-5fdc-44cc-91cd-df0ea823847c", "method": "GET", "path": "/api/grades/student/my", "query": "", "status": 200, "duration": "8.432593ms", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
-19:27:56.840	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
-19:27:56.840	[34mINFO[0m	gin@v1.11.0/context.go:192	getting my grades	{"request_id": "df0cc381-f51c-4e52-ab82-fcf76f555458", "handler": "GradeHandler", "method": "GetMyGrades", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e"}
-19:27:56.841	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "df0cc381-f51c-4e52-ab82-fcf76f555458", "method": "GET", "path": "/api/grades/student/my", "query": "", "status": 200, "duration": "1.618513ms", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
-19:29:39.443	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
-19:29:39.443	[34mINFO[0m	gin@v1.11.0/context.go:192	getting my grades	{"request_id": "c2289a05-b399-4439-bc6a-a9b3303d2ae1", "handler": "GradeHandler", "method": "GetMyGrades", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e"}
-19:29:39.444	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "c2289a05-b399-4439-bc6a-a9b3303d2ae1", "method": "GET", "path": "/api/grades/student/my", "query": "", "status": 200, "duration": "1.020948ms", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
-19:31:21.793	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
-19:31:21.793	[34mINFO[0m	gin@v1.11.0/context.go:192	getting my grades	{"request_id": "865dc5c5-c0b2-4080-87f9-3c2d588aa827", "handler": "GradeHandler", "method": "GetMyGrades", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e"}
-19:31:21.794	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "865dc5c5-c0b2-4080-87f9-3c2d588aa827", "method": "GET", "path": "/api/grades/student/my", "query": "", "status": 200, "duration": "899.424µs", "ip": "172.18.0.1", "user_agent": "curl/8.5.0", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
-19:32:05.385	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
-19:32:05.385	[34mINFO[0m	gin@v1.11.0/context.go:192	getting my grades	{"request_id": "5631a917-3bb6-4b97-b5c8-c1c9432d378d", "handler": "GradeHandler", "method": "GetMyGrades", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e"}
-19:32:05.387	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "5631a917-3bb6-4b97-b5c8-c1c9432d378d", "method": "GET", "path": "/api/grades/student/my", "query": "", "status": 200, "duration": "1.839629ms", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
-19:32:05.391	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
-19:32:05.391	[34mINFO[0m	gin@v1.11.0/context.go:192	getting my grades	{"request_id": "3d2b5234-5dd9-4433-9348-b1f888114298", "handler": "GradeHandler", "method": "GetMyGrades", "student_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e"}
-19:32:05.392	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "3d2b5234-5dd9-4433-9348-b1f888114298", "method": "GET", "path": "/api/grades/student/my", "query": "", "status": 200, "duration": "1.319536ms", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "d8cadb82-4ee5-4128-b024-bf90ab33db2e", "role": "student"}
-internal/service/student_grades_service.go has changed
-building...
-# github.com/baaaki/mydreamcampus/grades-service/internal/service
-internal/service/student_grades_service.go:98:9: undefined: parseInterfaceToFloat64
-internal/service/student_grades_service.go:99:18: undefined: parseInterfaceToInt64
-failed to build, error: exit status 1
-running...
-19:32:40.057	[34mINFO[0m	cmd/main.go:38	starting grades-service	{"environment": "development", "port": "8007"}
-19:32:40.063	[34mINFO[0m	cmd/main.go:50	database connection established
-19:32:40.063	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
-19:32:40.065	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
-19:32:40.065	[34mINFO[0m	cmd/main.go:59	RabbitMQ connection established
-19:32:40.066	[34mINFO[0m	cmd/main.go:213	RabbitMQ exchange declared	{"exchange": "grade.events"}
-[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
- - using env:	export GIN_MODE=release
- - using code:	gin.SetMode(gin.ReleaseMode)
-
-[GIN-debug] GET    /health                   --> main.setupRouter.func1 (4 handlers)
-19:32:40.066	[34mINFO[0m	worker/event_consumer.go:35	starting event consumer
-19:32:40.066	[34mINFO[0m	worker/outbox_worker.go:38	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
-[GIN-debug] GET    /api/grades/course/:courseId/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (6 handlers)
-[GIN-debug] GET    /api/grades/course/:courseId/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (6 handlers)
-[GIN-debug] POST   /api/grades/course/:courseId/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (6 handlers)
-[GIN-debug] POST   /api/grades/course/:courseId/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (6 handlers)
-[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (5 handlers)
-[GIN-debug] GET    /api/grades/transcript/:studentId --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (5 handlers)
-[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (6 handlers)
-19:32:40.066	[34mINFO[0m	cmd/main.go:113	server starting	{"port": "8007"}
-19:32:40.067	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
-19:32:40.068	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
-19:32:40.069	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
-19:32:40.069	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
-19:32:40.069	[34mINFO[0m	worker/event_consumer.go:101	event consumer started
-internal/service/student_grades_service.go has changed
-building...
-# github.com/baaaki/mydreamcampus/grades-service/internal/service
-internal/service/student_grades_service.go:98:9: undefined: parseInterfaceToFloat64
-internal/service/student_grades_service.go:99:18: undefined: parseInterfaceToInt64
-internal/service/student_grades_service.go:183:2: declared and not used: gpa2
-internal/service/student_grades_service.go:183:10: undefined: parseInterfaceToFloat64
-internal/service/student_grades_service.go:184:2: declared and not used: totalCredits2
-internal/service/student_grades_service.go:184:19: undefined: parseInterfaceToInt64
-internal/service/student_grades_service.go:204:23: undefined: totalCredits
-internal/service/student_grades_service.go:205:19: undefined: gpa
-failed to build, error: exit status 1
-running...
-19:33:01.264	[34mINFO[0m	cmd/main.go:38	starting grades-service	{"environment": "development", "port": "8007"}
-19:33:01.268	[34mINFO[0m	cmd/main.go:50	database connection established
-19:33:01.268	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
-19:33:01.271	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
-19:33:01.271	[34mINFO[0m	cmd/main.go:59	RabbitMQ connection established
-19:33:01.271	[34mINFO[0m	cmd/main.go:213	RabbitMQ exchange declared	{"exchange": "grade.events"}
-[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
- - using env:	export GIN_MODE=release
- - using code:	gin.SetMode(gin.ReleaseMode)
-
-19:33:01.271	[34mINFO[0m	worker/event_consumer.go:35	starting event consumer
-[GIN-debug] GET    /health                   --> main.setupRouter.func1 (4 handlers)
-[GIN-debug] GET    /api/grades/course/:courseId/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (6 handlers)
-19:33:01.271	[34mINFO[0m	worker/outbox_worker.go:38	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
-[GIN-debug] GET    /api/grades/course/:courseId/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (6 handlers)
-[GIN-debug] POST   /api/grades/course/:courseId/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (6 handlers)
-[GIN-debug] POST   /api/grades/course/:courseId/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (6 handlers)
-[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (5 handlers)
-[GIN-debug] GET    /api/grades/transcript/:studentId --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (5 handlers)
-[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (6 handlers)
-19:33:01.271	[34mINFO[0m	cmd/main.go:113	server starting	{"port": "8007"}
-19:33:01.272	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
-19:33:01.273	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
-19:33:01.274	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
-19:33:01.274	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
-19:33:01.274	[34mINFO[0m	worker/event_consumer.go:101	event consumer started
-internal/service/student_grades_service.go has changed
-building...
-# github.com/baaaki/mydreamcampus/grades-service/internal/service
-internal/service/student_grades_service.go:98:9: undefined: parseInterfaceToFloat64
-internal/service/student_grades_service.go:99:18: undefined: parseInterfaceToInt64
-internal/service/student_grades_service.go:183:9: undefined: parseInterfaceToFloat64
-internal/service/student_grades_service.go:184:18: undefined: parseInterfaceToInt64
-failed to build, error: exit status 1
-running...
-19:33:15.444	[34mINFO[0m	cmd/main.go:38	starting grades-service	{"environment": "development", "port": "8007"}
-19:33:15.448	[34mINFO[0m	cmd/main.go:50	database connection established
-19:33:15.448	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
-19:33:15.450	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
-19:33:15.450	[34mINFO[0m	cmd/main.go:59	RabbitMQ connection established
-19:33:15.451	[34mINFO[0m	cmd/main.go:213	RabbitMQ exchange declared	{"exchange": "grade.events"}
+20:11:04.138	[34mINFO[0m	cmd/main.go:40	starting grades-service	{"environment": "development", "port": "8007"}
+20:11:04.143	[34mINFO[0m	cmd/main.go:52	database connection established
+20:11:04.143	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+20:11:04.146	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+20:11:04.146	[34mINFO[0m	cmd/main.go:61	RabbitMQ connection established
+20:11:04.146	[34mINFO[0m	cmd/main.go:226	RabbitMQ exchange declared	{"exchange": "grade.events"}
 [GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
  - using env:	export GIN_MODE=release
  - using code:	gin.SetMode(gin.ReleaseMode)
 
 [GIN-debug] GET    /health                   --> main.setupRouter.func1 (4 handlers)
 [GIN-debug] GET    /api/grades/course/:courseId/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (6 handlers)
+20:11:04.146	[34mINFO[0m	worker/event_consumer.go:35	starting event consumer
+20:11:04.146	[34mINFO[0m	worker/outbox_worker.go:36	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
 [GIN-debug] GET    /api/grades/course/:courseId/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (6 handlers)
 [GIN-debug] POST   /api/grades/course/:courseId/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (6 handlers)
 [GIN-debug] POST   /api/grades/course/:courseId/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (6 handlers)
 [GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (5 handlers)
 [GIN-debug] GET    /api/grades/transcript/:studentId --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (5 handlers)
 [GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (6 handlers)
-19:33:15.451	[34mINFO[0m	worker/event_consumer.go:35	starting event consumer
-19:33:15.451	[34mINFO[0m	worker/outbox_worker.go:38	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
-19:33:15.451	[34mINFO[0m	cmd/main.go:113	server starting	{"port": "8007"}
-19:33:15.452	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
-19:33:15.453	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
-19:33:15.454	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
-19:33:15.455	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
-19:33:15.455	[34mINFO[0m	worker/event_consumer.go:101	event consumer started
-internal/service/student_grades_service.go has changed
-building...
-# github.com/baaaki/mydreamcampus/grades-service/internal/service
-internal/service/student_grades_service.go:272:8: undefined: fmt
-internal/service/student_grades_service.go:294:8: undefined: fmt
-failed to build, error: exit status 1
-running...
-19:33:33.453	[34mINFO[0m	cmd/main.go:38	starting grades-service	{"environment": "development", "port": "8007"}
-19:33:33.457	[34mINFO[0m	cmd/main.go:50	database connection established
-19:33:33.457	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
-19:33:33.459	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
-19:33:33.459	[34mINFO[0m	cmd/main.go:59	RabbitMQ connection established
-19:33:33.459	[34mINFO[0m	cmd/main.go:213	RabbitMQ exchange declared	{"exchange": "grade.events"}
-[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
- - using env:	export GIN_MODE=release
- - using code:	gin.SetMode(gin.ReleaseMode)
-
-[GIN-debug] GET    /health                   --> main.setupRouter.func1 (4 handlers)
-19:33:33.459	[34mINFO[0m	worker/event_consumer.go:35	starting event consumer
-[GIN-debug] GET    /api/grades/course/:courseId/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (6 handlers)
-[GIN-debug] GET    /api/grades/course/:courseId/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (6 handlers)
-[GIN-debug] POST   /api/grades/course/:courseId/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (6 handlers)
-[GIN-debug] POST   /api/grades/course/:courseId/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (6 handlers)
-[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (5 handlers)
-[GIN-debug] GET    /api/grades/transcript/:studentId --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (5 handlers)
-[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (6 handlers)
-19:33:33.459	[34mINFO[0m	worker/outbox_worker.go:38	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
-19:33:33.460	[34mINFO[0m	cmd/main.go:113	server starting	{"port": "8007"}
-19:33:33.461	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
-19:33:33.462	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
-19:33:33.463	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
-19:33:33.464	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
-19:33:33.464	[34mINFO[0m	worker/event_consumer.go:101	event consumer started
-internal/service/student_grades_service.go has changed
-building...
-running...
-19:33:42.994	[34mINFO[0m	cmd/main.go:38	starting grades-service	{"environment": "development", "port": "8007"}
-19:33:42.999	[34mINFO[0m	cmd/main.go:50	database connection established
-19:33:42.999	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
-19:33:43.003	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
-19:33:43.003	[34mINFO[0m	cmd/main.go:59	RabbitMQ connection established
-19:33:43.003	[34mINFO[0m	cmd/main.go:213	RabbitMQ exchange declared	{"exchange": "grade.events"}
-[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
- - using env:	export GIN_MODE=release
- - using code:	gin.SetMode(gin.ReleaseMode)
-
-19:33:43.003	[34mINFO[0m	worker/event_consumer.go:35	starting event consumer
-[GIN-debug] GET    /health                   --> main.setupRouter.func1 (4 handlers)
-[GIN-debug] GET    /api/grades/course/:courseId/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (6 handlers)
-[GIN-debug] GET    /api/grades/course/:courseId/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (6 handlers)
-19:33:43.003	[34mINFO[0m	worker/outbox_worker.go:38	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
-[GIN-debug] POST   /api/grades/course/:courseId/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (6 handlers)
-[GIN-debug] POST   /api/grades/course/:courseId/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (6 handlers)
-[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (5 handlers)
-[GIN-debug] GET    /api/grades/transcript/:studentId --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (5 handlers)
-[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (6 handlers)
-19:33:43.003	[34mINFO[0m	cmd/main.go:113	server starting	{"port": "8007"}
-19:33:43.004	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
-19:33:43.005	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
-19:33:43.006	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
-19:33:43.006	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
-19:33:43.006	[34mINFO[0m	worker/event_consumer.go:101	event consumer started
-19:33:58.335	[34mINFO[0m	cmd/main.go:124	shutting down server...
-19:33:58.336	[34mINFO[0m	worker/outbox_worker.go:52	outbox worker stopped
-19:33:58.336	[34mINFO[0m	worker/event_consumer.go:105	event consumer stopped
-internal/service/student_grades_service.go has changed
-building...
-# github.com/baaaki/mydreamcampus/grades-service/internal/service
-internal/service/student_grades_service.go:16:2: "github.com/jackc/pgx/v5/pgtype" imported and not used
-failed to build, error: exit status 1
-running...
-19:37:02.373	[34mINFO[0m	cmd/main.go:38	starting grades-service	{"environment": "development", "port": "8007"}
-19:37:02.377	[34mINFO[0m	cmd/main.go:50	database connection established
-19:37:02.377	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
-19:37:02.379	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
-19:37:02.379	[34mINFO[0m	cmd/main.go:59	RabbitMQ connection established
-19:37:02.380	[34mINFO[0m	cmd/main.go:213	RabbitMQ exchange declared	{"exchange": "grade.events"}
-[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
- - using env:	export GIN_MODE=release
- - using code:	gin.SetMode(gin.ReleaseMode)
-
-[GIN-debug] GET    /health                   --> main.setupRouter.func1 (4 handlers)
-19:37:02.380	[34mINFO[0m	worker/event_consumer.go:35	starting event consumer
-19:37:02.380	[34mINFO[0m	worker/outbox_worker.go:38	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
-[GIN-debug] GET    /api/grades/course/:courseId/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (6 handlers)
-[GIN-debug] GET    /api/grades/course/:courseId/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (6 handlers)
-[GIN-debug] POST   /api/grades/course/:courseId/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (6 handlers)
-[GIN-debug] POST   /api/grades/course/:courseId/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (6 handlers)
-[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (5 handlers)
-[GIN-debug] GET    /api/grades/transcript/:studentId --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (5 handlers)
-[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (6 handlers)
-19:37:02.380	[34mINFO[0m	cmd/main.go:113	server starting	{"port": "8007"}
-19:37:02.380	[31mFATAL[0m	cmd/main.go:115	failed to start server	{"error": "listen tcp :8007: bind: address already in use"}
-main.main.func2
-	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/cmd/main.go:115
-internal/service/student_grades_service.go has changed
-building...
-running...
-19:37:18.350	[34mINFO[0m	cmd/main.go:38	starting grades-service	{"environment": "development", "port": "8007"}
-19:37:18.354	[34mINFO[0m	cmd/main.go:50	database connection established
-19:37:18.355	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
-19:37:18.358	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
-19:37:18.358	[34mINFO[0m	cmd/main.go:59	RabbitMQ connection established
-19:37:18.358	[34mINFO[0m	cmd/main.go:213	RabbitMQ exchange declared	{"exchange": "grade.events"}
-[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
- - using env:	export GIN_MODE=release
- - using code:	gin.SetMode(gin.ReleaseMode)
-
-19:37:18.358	[34mINFO[0m	worker/event_consumer.go:35	starting event consumer
-[GIN-debug] GET    /health                   --> main.setupRouter.func1 (4 handlers)
-[GIN-debug] GET    /api/grades/course/:courseId/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (6 handlers)
-[GIN-debug] GET    /api/grades/course/:courseId/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (6 handlers)
-19:37:18.358	[34mINFO[0m	worker/outbox_worker.go:38	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
-[GIN-debug] POST   /api/grades/course/:courseId/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (6 handlers)
-[GIN-debug] POST   /api/grades/course/:courseId/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (6 handlers)
-[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (5 handlers)
-[GIN-debug] GET    /api/grades/transcript/:studentId --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (5 handlers)
-[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (6 handlers)
-19:37:18.358	[34mINFO[0m	cmd/main.go:113	server starting	{"port": "8007"}
-19:37:18.358	[31mFATAL[0m	cmd/main.go:115	failed to start server	{"error": "listen tcp :8007: bind: address already in use"}
-main.main.func2
-	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/grades-service/cmd/main.go:115
-Process Exit with Code: 1
+[GIN-debug] POST   /api/grades/admin/scores/unlock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).UnlockScore-fm (6 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockScore-fm (6 handlers)
+[GIN-debug] POST   /api/grades/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (6 handlers)
+[GIN-debug] POST   /api/grades/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (6 handlers)
+[GIN-debug] GET    /api/grades/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (6 handlers)
+[GIN-debug] POST   /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).CreatePeriod-fm (6 handlers)
+[GIN-debug] GET    /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).ListPeriods-fm (6 handlers)
+[GIN-debug] PUT    /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).UpdatePeriod-fm (6 handlers)
+[GIN-debug] DELETE /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).DeletePeriod-fm (6 handlers)
+20:11:04.146	[34mINFO[0m	cmd/main.go:120	server starting	{"port": "8007"}
+20:11:04.147	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
+20:11:04.149	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
+20:11:04.149	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
+20:11:04.150	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
+20:11:04.150	[34mINFO[0m	worker/event_consumer.go:101	event consumer started
+20:11:19.581	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:11:19.585	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "fc39330f-e5f9-4b31-9d49-a86234ac6ff5", "method": "GET", "path": "/api/grades/admin/periods", "query": "", "status": 200, "duration": "3.990742ms", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:11:19.587	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:11:19.587	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "b1e22393-84fe-4df9-9bc0-43c7affb6799", "method": "GET", "path": "/api/grades/admin/periods", "query": "", "status": 200, "duration": "163.644µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:11:52.034	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:11:52.035	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "85daba8e-aad1-40d5-be22-91c65608a682", "method": "GET", "path": "/api/grades/admin/periods", "query": "", "status": 200, "duration": "385.011µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:13:47.279	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:13:47.282	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "6745e5f9-368d-4281-80c8-6efbe3ec2c30", "method": "GET", "path": "/api/grades/admin/periods", "query": "", "status": 200, "duration": "3.244291ms", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:14:21.088	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:14:21.088	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "fc442301-4955-4760-923b-9bcc4df528ee", "method": "GET", "path": "/api/grades/admin/periods", "query": "", "status": 200, "duration": "384.711µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:21:32.726	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:21:32.729	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "5d9f308c-9831-4a34-9f28-ca25f89403b8", "method": "GET", "path": "/api/grades/admin/periods", "query": "", "status": 200, "duration": "3.061545ms", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:22:08.482	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:22:08.482	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "7fd0e482-0bff-4439-9dc9-3bad2f4ea828", "method": "GET", "path": "/api/grades/admin/periods", "query": "", "status": 200, "duration": "390.241µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:23:35.414	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:23:35.414	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "4cc9f053-816c-47e9-9d53-544085d7cfdc", "method": "GET", "path": "/api/grades/admin/periods", "query": "", "status": 200, "duration": "601.197µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:23:35.417	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:23:35.418	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "e7afaa7e-ff7c-4f2a-8092-a75a63cf9fb9", "method": "GET", "path": "/api/grades/admin/periods", "query": "", "status": 200, "duration": "334.799µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:23:50.024	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:23:50.024	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "0b98fdc5-11e1-410c-a144-42ff80a01051", "method": "GET", "path": "/api/grades/admin/time/status", "query": "", "status": 200, "duration": "135.163µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:23:50.028	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:23:50.028	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "52acc7b5-017a-4c35-bca9-59aee8089e74", "method": "GET", "path": "/api/grades/admin/time/status", "query": "", "status": 200, "duration": "52.391µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:24:51.781	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:24:51.781	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "9a03303d-90db-4005-8cab-e314d623abbf", "method": "GET", "path": "/api/grades/admin/time/status", "query": "", "status": 200, "duration": "96.163µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:24:53.315	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:24:53.315	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "412b638e-2d7e-4dd9-b242-5ed297290c0d", "method": "GET", "path": "/api/grades/admin/periods", "query": "", "status": 200, "duration": "677.918µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:24:53.319	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:24:53.319	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "fdb3dd9c-4c8f-44fa-a981-7d6ca5e5eae8", "method": "GET", "path": "/api/grades/admin/periods", "query": "", "status": 200, "duration": "373.571µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:25:08.900	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:25:08.900	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "1c1a5733-8303-490c-87cf-ed4f443493c6", "method": "GET", "path": "/api/grades/admin/periods", "query": "", "status": 200, "duration": "391.021µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:27:35.810	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:27:35.810	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "0d36271b-3ecf-45ed-8a4b-addf02fed0d9", "method": "GET", "path": "/api/grades/admin/periods", "query": "", "status": 200, "duration": "371.141µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:27:35.812	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:27:35.812	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "101c69dd-9e7a-4b43-8d0f-4a1cdd0971c0", "method": "GET", "path": "/api/grades/admin/periods", "query": "", "status": 200, "duration": "179.065µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:27:47.661	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:27:47.671	[34mINFO[0m	handler/period_handler.go:73	academic period created	{"semester": "2025-2026-Spring", "period_id": "4a6d4b4a-8c98-4f94-8563-f5799c6b0521"}
+20:27:47.671	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "a161df26-d281-4fdd-8626-5e0fbf5fd4fe", "method": "POST", "path": "/api/grades/admin/periods", "query": "", "status": 201, "duration": "9.959517ms", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:27:47.678	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:27:47.679	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "25364cc0-754f-4683-80ec-70ef5df2e3e7", "method": "GET", "path": "/api/grades/admin/periods", "query": "", "status": 200, "duration": "403.621µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:27:55.335	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:27:55.344	[34mINFO[0m	handler/period_handler.go:187	academic period deleted	{"period_id": "4a6d4b4a-8c98-4f94-8563-f5799c6b0521"}
+20:27:55.344	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "2e029c67-7c74-4887-9a1b-4f952feeb319", "method": "DELETE", "path": "/api/grades/admin/periods/4a6d4b4a-8c98-4f94-8563-f5799c6b0521", "query": "", "status": 200, "duration": "8.97584ms", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:27:55.349	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:27:55.349	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "7ec53671-aab7-453f-b3a5-4aa3094dc98f", "method": "GET", "path": "/api/grades/admin/periods", "query": "", "status": 200, "duration": "226.276µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:28:04.267	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:28:04.267	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "43162d84-3b5f-4e5a-8424-308aeb532673", "method": "GET", "path": "/api/grades/admin/periods", "query": "", "status": 200, "duration": "430.722µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:28:04.271	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+20:28:04.271	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "e515123e-83bc-4f7c-be86-9713d520cfd1", "method": "GET", "path": "/api/grades/admin/periods", "query": "", "status": 200, "duration": "316.599µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:33:16.228	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:33:16.230	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "4c94f7d5-8d13-4304-bca1-edcff2b6bd39", "method": "GET", "path": "/api/grades/admin/periods", "query": "", "status": 200, "duration": "2.597513ms", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:33:32.051	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:33:32.052	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "ffbadef5-5f0b-4ba6-ab9c-9c324a3e09e8", "method": "GET", "path": "/api/grades/admin/periods", "query": "", "status": 200, "duration": "467.784µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:33:33.468	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:33:33.469	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "0dfd98d8-5a68-4831-9cea-243ef177bed5", "method": "GET", "path": "/api/grades/admin/periods", "query": "", "status": 200, "duration": "482.973µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:36:55.784	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:36:55.787	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "e3668c5f-282a-4928-bfce-e56268dd24e0", "method": "GET", "path": "/api/grades/admin/periods", "query": "", "status": 200, "duration": "3.072606ms", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:36:59.954	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:36:59.954	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "ef5d15ba-fb88-452a-ade6-7bcd9ecc2816", "method": "GET", "path": "/api/grades/admin/time/status", "query": "", "status": 200, "duration": "82.492µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:37:00.024	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:37:00.024	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "a7dd7002-d51f-4c95-ada2-f08397d27a9c", "method": "GET", "path": "/api/grades/admin/time/status", "query": "", "status": 200, "duration": "78.453µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:37:10.645	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:37:10.646	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "86e52dc1-df07-4eef-978a-2aacf5050c5a", "method": "GET", "path": "/api/grades/admin/periods", "query": "", "status": 200, "duration": "449.412µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:37:10.647	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:37:10.648	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "3dbfc845-f273-4e00-9953-d80586bfc0ed", "method": "GET", "path": "/api/grades/admin/periods", "query": "", "status": 200, "duration": "267.018µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:37:18.111	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:37:18.112	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "0bf67eb3-eae0-4a9e-91b7-2456a51b8d9a", "method": "GET", "path": "/api/grades/admin/time/status", "query": "", "status": 200, "duration": "89.332µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:37:18.136	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:37:18.136	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "5fe207a5-955d-4cab-92c7-a0239f0d2277", "method": "GET", "path": "/api/grades/admin/time/status", "query": "", "status": 200, "duration": "51.441µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:37:52.596	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:37:52.596	[34mINFO[0m	handler/time_handler.go:61	clock reset to real time
+01:37:52.596	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "001460d2-d364-4c28-bda7-3a8017796aec", "method": "POST", "path": "/api/grades/admin/time/reset", "query": "", "status": 200, "duration": "134.804µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:37:52.615	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:37:52.615	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "dc1600e3-cea0-48db-a95a-5e1a6cc3b1c8", "method": "GET", "path": "/api/grades/admin/time/status", "query": "", "status": 200, "duration": "70.462µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:39:44.767	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:39:44.767	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "0f6bfa89-df83-4801-9f7d-077599530244", "method": "GET", "path": "/api/grades/admin/time/status", "query": "", "status": 200, "duration": "102.822µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:39:45.735	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:39:45.735	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "e1c0d261-53a9-4be2-886f-d06169511e36", "method": "GET", "path": "/api/grades/admin/time/status", "query": "", "status": 200, "duration": "84.832µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:39:50.072	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:39:50.072	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "6a1eadc1-55a6-47df-8206-74f7b9fc3df0", "method": "GET", "path": "/api/grades/admin/time/status", "query": "", "status": 200, "duration": "74.702µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:45:37.599	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:45:37.599	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "d59a552c-6e4f-4951-a71d-677e0466a4df", "method": "GET", "path": "/api/grades/admin/time/status", "query": "", "status": 200, "duration": "80.292µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:45:37.606	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:45:37.606	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "67e7f8c2-c9be-47cd-9931-c2e0716e5423", "method": "GET", "path": "/api/grades/admin/time/status", "query": "", "status": 200, "duration": "49.621µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:46:31.363	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:46:31.363	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "592bb96a-01d8-4afc-bc49-da0da9f2d446", "method": "GET", "path": "/api/grades/admin/time/status", "query": "", "status": 200, "duration": "82.392µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:46:32.392	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:46:32.392	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "fd761f87-6a5b-4aac-9e12-90985e4d6b06", "method": "GET", "path": "/api/grades/admin/time/status", "query": "", "status": 200, "duration": "68.022µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:36.519	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:36.519	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "2e73d566-ff30-4e6e-bec3-c79508167359", "method": "GET", "path": "/api/grades/admin/time/status", "query": "", "status": 200, "duration": "102.233µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:38.148	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:38.148	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "3fa0336a-3bb2-4a72-9c9e-1fa09457de4b", "method": "GET", "path": "/api/grades/admin/time/status", "query": "", "status": 200, "duration": "65.312µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:47.381	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:47.382	[34mINFO[0m	handler/time_handler.go:46	clock switched to simulated mode	{"simulated_time": "09:15:08.000"}
+01:47:47.382	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "edc3382b-3568-4675-b6e0-1ab7df3e7ae1", "method": "POST", "path": "/api/grades/admin/time/simulate", "query": "", "status": 200, "duration": "243.336µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:47.396	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:47.396	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "598126ed-1133-470d-84a7-40dd05aba4ee", "method": "GET", "path": "/api/grades/admin/time/status", "query": "", "status": 200, "duration": "85.782µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:48.950	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:48.950	[34mINFO[0m	handler/time_handler.go:61	clock reset to real time
+01:47:48.950	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "b10109f4-aae9-4589-b80f-b6a4ebdddc20", "method": "POST", "path": "/api/grades/admin/time/reset", "query": "", "status": 200, "duration": "96.092µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:48.963	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:48.963	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "efc8207d-ff32-4252-b3f0-da4b939fc8f6", "method": "GET", "path": "/api/grades/admin/time/status", "query": "", "status": 200, "duration": "77.532µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:53.288	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+01:47:53.288	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "d6e05bcd-bce2-48b5-b718-20cbf7b4fb67", "method": "GET", "path": "/api/grades/admin/time/status", "query": "", "status": 200, "duration": "53.392µs", "ip": "172.18.0.1", "user_agent": "curl/8.5.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+02:02:07.537	[31mERROR[0m	rabbitmq/connection.go:94	rabbitmq connection lost	{"error": "Exception (320) Reason: \"CONNECTION_FORCED - broker forced connection closure with reason 'shutdown'\""}
+github.com/baaaki/mydreamcampus/shared/rabbitmq.(*Connection).handleReconnect
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/rabbitmq/connection.go:94
+02:02:07.537	[34mINFO[0m	rabbitmq/connection.go:99	attempting to reconnect to rabbitmq...
+02:02:07.543	[34mINFO[0m	cmd/main.go:131	shutting down server...
 cleaning...
+02:02:07.543	[34mINFO[0m	worker/event_consumer.go:105	event consumer stopped
+02:02:07.543	[34mINFO[0m	cmd/main.go:144	server exited
+02:02:07.543	[34mINFO[0m	worker/outbox_worker.go:50	outbox worker stopped

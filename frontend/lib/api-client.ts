@@ -81,5 +81,33 @@ export const attendanceApi = apiClient.extend({ prefixUrl: `${API_BASE_URL}/api/
 export const gradesApi = apiClient.extend({ prefixUrl: `${API_BASE_URL}/api/grades` });
 export const mealApi = apiClient.extend({ prefixUrl: `${API_BASE_URL}/api/meals` });
 
+// API clients without 401 auto-redirect — for admin pages that call
+// multiple services in parallel (e.g. system page). The global 401 hook
+// would redirect before Promise.allSettled can catch individual failures.
+const noRedirectClient = ky.create({
+  prefixUrl: API_BASE_URL,
+  timeout: 30000,
+  retry: { limit: 0 },
+  hooks: {
+    beforeRequest: [
+      async (request) => {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+        if (token) {
+          request.headers.set('Authorization', `Bearer ${token}`);
+        }
+      },
+    ],
+  },
+});
+
+export const gradesApiSafe = noRedirectClient.extend({ prefixUrl: `${API_BASE_URL}/api/grades` });
+export const enrollmentApiSafe = noRedirectClient.extend({ prefixUrl: `${API_BASE_URL}/api/enrollment` });
+export const mealApiSafe = noRedirectClient.extend({ prefixUrl: `${API_BASE_URL}/api/meals` });
+export const catalogApiSafe = noRedirectClient.extend({ prefixUrl: `${API_BASE_URL}/api/catalog` });
+export const authApiSafe = noRedirectClient.extend({ prefixUrl: `${API_BASE_URL}/api/auth` });
+export const attendanceApiSafe = noRedirectClient.extend({ prefixUrl: `${API_BASE_URL}/api/attendance` });
+export const studentApiSafe = noRedirectClient.extend({ prefixUrl: `${API_BASE_URL}/api/students` });
+export const staffApiSafe = noRedirectClient.extend({ prefixUrl: `${API_BASE_URL}/api/staff` });
+
 // Export the raw ky client for direct use if needed
 export { apiClient };

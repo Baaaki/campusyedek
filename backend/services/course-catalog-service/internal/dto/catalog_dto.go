@@ -45,7 +45,6 @@ type CreateCourseRequest struct {
 	Credits          int16  `json:"credits" binding:"min=0,max=30"`
 	ECTS             *int16 `json:"ects" binding:"omitempty,min=0,max=60"`
 	TheoreticalHours int16  `json:"theoretical_hours" binding:"omitempty,min=0,max=20"`
-	PracticalHours   int16  `json:"practical_hours" binding:"omitempty,min=0,max=20"`
 	LabHours         int16  `json:"lab_hours" binding:"omitempty,min=0,max=20"`
 
 	// Ders tipleri ve kategorileri
@@ -86,7 +85,6 @@ type UpdateCourseRequest struct {
 	Credits          *int16 `json:"credits" binding:"omitempty,min=0,max=30"`
 	ECTS             *int16 `json:"ects" binding:"omitempty,min=0,max=60"`
 	TheoreticalHours *int16 `json:"theoretical_hours" binding:"omitempty,min=0,max=20"`
-	PracticalHours   *int16 `json:"practical_hours" binding:"omitempty,min=0,max=20"`
 	LabHours         *int16 `json:"lab_hours" binding:"omitempty,min=0,max=20"`
 
 	// Ders tipleri ve kategorileri
@@ -129,7 +127,6 @@ type CourseResponse struct {
 	Credits          int16  `json:"credits"`
 	ECTS             *int16 `json:"ects,omitempty"`
 	TheoreticalHours int16  `json:"theoretical_hours"`
-	PracticalHours   int16  `json:"practical_hours"`
 	LabHours         int16  `json:"lab_hours"`
 
 	// Ders tipleri ve kategorileri
@@ -174,7 +171,6 @@ type CourseListItem struct {
 	Credits          int16  `json:"credits"`
 	ECTS             *int16 `json:"ects,omitempty"`
 	TheoreticalHours int16  `json:"theoretical_hours"`
-	PracticalHours   int16  `json:"practical_hours"`
 	LabHours         int16  `json:"lab_hours"`
 
 	// Ders tipleri ve kategorileri

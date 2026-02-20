@@ -15,10 +15,12 @@ import (
 	"github.com/baaaki/mydreamcampus/enrollment-service/internal/service"
 	"github.com/baaaki/mydreamcampus/enrollment-service/internal/worker"
 	"github.com/baaaki/mydreamcampus/shared/database"
+	sharedHandler "github.com/baaaki/mydreamcampus/shared/handler"
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	sharedMiddleware "github.com/baaaki/mydreamcampus/shared/middleware"
 	"github.com/baaaki/mydreamcampus/shared/rabbitmq"
 	sharedRedis "github.com/baaaki/mydreamcampus/shared/redis"
+	sharedRepo "github.com/baaaki/mydreamcampus/shared/repository"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -92,11 +94,15 @@ func main() {
 	outboxRepo := repository.NewOutboxRepository(pool)
 	processedEventsRepo := repository.NewProcessedEventsRepository(pool)
 
+	// Initialize shared repositories
+	periodRepo := sharedRepo.NewSimplePeriodRepository(pool)
+
 	// Initialize services
 	enrollmentService := service.NewEnrollmentService(
 		enrollmentRepo,
 		studentRepo,
 		courseRepo,
+		periodRepo,
 	)
 	eventService := service.NewEventService(
 		studentRepo,
@@ -139,8 +145,12 @@ func main() {
 	// Suppress unused variable warning
 	_ = redisClient
 
+	// Initialize shared handlers
+	timeHandler := sharedHandler.NewTimeHandler()
+	periodHandler := sharedHandler.NewSimplePeriodHandler(periodRepo)
+
 	// Setup Gin router
-	router := setupRouter(enrollmentHandler, cfg.Server.Environment)
+	router := setupRouter(enrollmentHandler, timeHandler, periodHandler, cfg.Server.Environment)
 
 	// Start HTTP server
 	srv := &http.Server{
@@ -183,7 +193,7 @@ func main() {
 	logger.Info("server exited")
 }
 
-func setupRouter(enrollmentHandler *handler.EnrollmentHandler, env string) *gin.Engine {
+func setupRouter(enrollmentHandler *handler.EnrollmentHandler, timeHandler *sharedHandler.TimeHandler, periodHandler *sharedHandler.SimplePeriodHandler, env string) *gin.Engine {
 	if env == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -227,6 +237,14 @@ func setupRouter(enrollmentHandler *handler.EnrollmentHandler, env string) *gin.
 			advisor.GET("/pending-programs", enrollmentHandler.GetPendingProgramsByAdvisor)
 			advisor.POST("/programs/:program_id/approve", enrollmentHandler.ApproveEnrollmentProgram)
 			advisor.POST("/programs/:program_id/reject", enrollmentHandler.RejectEnrollmentProgram)
+		}
+
+		// Admin routes (require admin role)
+		admin := api.Group("/admin")
+		admin.Use(sharedMiddleware.RequireAdmin())
+		{
+			timeHandler.RegisterRoutes(admin)
+			periodHandler.RegisterRoutes(admin)
 		}
 	}
 
@@ -293,6 +311,28 @@ func setupRabbitMQ(conn *rabbitmq.Connection) error {
 		zap.String("queue", queueName),
 		zap.Strings("bindings", []string{"course.events", "student.events"}),
 	)
+
+	// Pre-declare downstream consumer queues so messages persist even when consumers are offline
+	publisher := rabbitmq.NewPublisher(conn)
+
+	downstreamBindings := []struct {
+		queue      string
+		exchange   string
+		routingKey string
+	}{
+		// grades-service queues
+		{"grades-service-enrollment", "enrollment.events", "enrollment.program.approved"},
+		// attendance-service queues
+		{"attendance.events", "enrollment.events", "enrollment.program.approved"},
+	}
+
+	for _, b := range downstreamBindings {
+		if err := publisher.DeclareAndBindQueue(b.queue, b.exchange, b.routingKey); err != nil {
+			return fmt.Errorf("failed to declare downstream queue %s: %w", b.queue, err)
+		}
+	}
+
+	logger.Info("downstream consumer queues pre-declared")
 
 	return nil
 }

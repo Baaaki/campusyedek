@@ -89,13 +89,13 @@ func (w *EventConsumer) handleMessage(body []byte) error {
 		return w.handleStudentUpdated(ctx, body, eventID)
 	case "student.deactivated":
 		return w.handleStudentDeactivated(ctx, body, eventID)
-	case "course_semester.created":
+	case "course.semester.created":
 		return w.handleCourseSemesterCreated(ctx, body, eventID)
-	case "course_semester.updated":
+	case "course.semester.updated":
 		return w.handleCourseSemesterUpdated(ctx, body, eventID)
-	case "course_semester.deleted":
+	case "course.semester.deleted":
 		return w.handleCourseSemesterDeleted(ctx, body, eventID)
-	case "enrollment_program.approved":
+	case "enrollment.program.approved":
 		return w.handleEnrollmentProgramApproved(ctx, body, eventID)
 	default:
 		logger.Warn("unknown event type", zap.String("type", event.EventType))
@@ -185,17 +185,27 @@ func (w *EventConsumer) handleCourseSemesterCreated(ctx context.Context, body []
 		return err
 	}
 
+	// Check if any schedule session has type "lab"
+	hasLab := false
+	for _, s := range eventData.ScheduleSessions {
+		if s.SessionType == "lab" {
+			hasLab = true
+			break
+		}
+	}
+
 	// Upsert course to cache
 	err := w.cacheRepo.UpsertCourseCache(ctx, db.UpsertCourseCacheParams{
-		ID:                 utils.UUIDToPgUUID(eventData.CourseID),
+		ID:                 utils.UUIDToPgUUID(eventData.SemesterCourseID),
 		CourseCode:         eventData.CourseCode,
 		CourseName:         eventData.CourseName,
 		Credits:            eventData.Credits,
 		Semester:           eventData.Semester,
 		Department:         utils.StringToPgText(eventData.Department),
 		InstructorID:       utils.UUIDToPgUUID(eventData.InstructorID),
-		InstructorFullname: utils.StringToPgText(eventData.InstructorName),
-		TotalWeeks:         utils.Int16ToPgInt2(eventData.TotalWeeks),
+		InstructorFullname: utils.StringToPgText(eventData.InstructorFullname),
+		TotalWeeks:         utils.Int16ToPgInt2(14), // default, catalog doesn't send this
+		HasLab:             hasLab,
 	})
 	if err != nil {
 		logger.Error("failed to upsert course cache", zap.Error(err))
@@ -203,11 +213,11 @@ func (w *EventConsumer) handleCourseSemesterCreated(ctx context.Context, body []
 	}
 
 	logger.Info("course cache created",
-		zap.String("course_id", eventData.CourseID.String()),
+		zap.String("course_id", eventData.SemesterCourseID.String()),
 		zap.String("course_code", eventData.CourseCode),
 	)
 
-	return w.eventRepo.MarkEventProcessed(ctx, eventID, "course_semester.created")
+	return w.eventRepo.MarkEventProcessed(ctx, eventID, "course.semester.created")
 }
 
 func (w *EventConsumer) handleCourseSemesterUpdated(ctx context.Context, body []byte, eventID uuid.UUID) error {
@@ -216,17 +226,27 @@ func (w *EventConsumer) handleCourseSemesterUpdated(ctx context.Context, body []
 		return err
 	}
 
+	// Check if any schedule session has type "lab"
+	hasLab := false
+	for _, s := range eventData.ScheduleSessions {
+		if s.SessionType == "lab" {
+			hasLab = true
+			break
+		}
+	}
+
 	// Upsert course to cache
 	err := w.cacheRepo.UpsertCourseCache(ctx, db.UpsertCourseCacheParams{
-		ID:                 utils.UUIDToPgUUID(eventData.CourseID),
+		ID:                 utils.UUIDToPgUUID(eventData.SemesterCourseID),
 		CourseCode:         eventData.CourseCode,
 		CourseName:         eventData.CourseName,
 		Credits:            eventData.Credits,
 		Semester:           eventData.Semester,
 		Department:         utils.StringToPgText(eventData.Department),
 		InstructorID:       utils.UUIDToPgUUID(eventData.InstructorID),
-		InstructorFullname: utils.StringToPgText(eventData.InstructorName),
-		TotalWeeks:         utils.Int16ToPgInt2(eventData.TotalWeeks),
+		InstructorFullname: utils.StringToPgText(eventData.InstructorFullname),
+		TotalWeeks:         utils.Int16ToPgInt2(14), // default, catalog doesn't send this
+		HasLab:             hasLab,
 	})
 	if err != nil {
 		logger.Error("failed to upsert course cache", zap.Error(err))
@@ -234,11 +254,11 @@ func (w *EventConsumer) handleCourseSemesterUpdated(ctx context.Context, body []
 	}
 
 	logger.Info("course cache updated",
-		zap.String("course_id", eventData.CourseID.String()),
+		zap.String("course_id", eventData.SemesterCourseID.String()),
 		zap.String("course_code", eventData.CourseCode),
 	)
 
-	return w.eventRepo.MarkEventProcessed(ctx, eventID, "course_semester.updated")
+	return w.eventRepo.MarkEventProcessed(ctx, eventID, "course.semester.updated")
 }
 
 func (w *EventConsumer) handleCourseSemesterDeleted(ctx context.Context, body []byte, eventID uuid.UUID) error {
@@ -248,49 +268,66 @@ func (w *EventConsumer) handleCourseSemesterDeleted(ctx context.Context, body []
 	}
 
 	// Delete course from cache
-	if err := w.cacheRepo.DeleteCourseCache(ctx, eventData.CourseID); err != nil {
+	if err := w.cacheRepo.DeleteCourseCache(ctx, eventData.SemesterCourseID); err != nil {
 		logger.Error("failed to delete course cache", zap.Error(err))
 		return err
 	}
 
 	logger.Info("course cache deleted",
-		zap.String("course_id", eventData.CourseID.String()),
+		zap.String("course_id", eventData.SemesterCourseID.String()),
 		zap.String("course_code", eventData.CourseCode),
 	)
 
-	return w.eventRepo.MarkEventProcessed(ctx, eventID, "course_semester.deleted")
+	return w.eventRepo.MarkEventProcessed(ctx, eventID, "course.semester.deleted")
 }
 
 func (w *EventConsumer) handleEnrollmentProgramApproved(ctx context.Context, body []byte, eventID uuid.UUID) error {
-	var eventData dto.EnrollmentProgramApprovedEventData
-	if err := json.Unmarshal(body, &eventData); err != nil {
+	// Parse the wrapped event: { event_id, event_type, data: { ... } }
+	var wrapper struct {
+		Data dto.EnrollmentProgramApprovedEventData `json:"data"`
+	}
+	if err := json.Unmarshal(body, &wrapper); err != nil {
 		return err
 	}
+	eventData := wrapper.Data
 
 	// Create enrollment cache entries for each course
-	for _, course := range eventData.Courses {
+	successCount := 0
+	var lastErr error
+	for _, courseID := range eventData.CourseIDs {
 		err := w.cacheRepo.CreateEnrollmentCache(
 			ctx,
 			eventData.StudentID,
-			course.CourseID,
+			courseID,
 			eventData.Semester,
 		)
 		if err != nil {
 			logger.Error("failed to create enrollment cache",
 				zap.String("student_id", eventData.StudentID.String()),
-				zap.String("course_id", course.CourseID.String()),
+				zap.String("course_id", courseID.String()),
 				zap.Error(err),
 			)
-			// Continue with other courses
+			lastErr = err
 			continue
 		}
 
+		successCount++
 		logger.Info("enrollment cache created",
 			zap.String("student_id", eventData.StudentID.String()),
-			zap.String("course_id", course.CourseID.String()),
+			zap.String("course_id", courseID.String()),
 			zap.String("semester", eventData.Semester),
 		)
 	}
 
-	return w.eventRepo.MarkEventProcessed(ctx, eventID, "enrollment_program.approved")
+	// If all enrollments failed (e.g. FK constraint: student not in cache yet), requeue for retry
+	if successCount == 0 && lastErr != nil {
+		logger.Warn("all enrollment cache entries failed, will retry",
+			zap.String("student_id", eventData.StudentID.String()),
+			zap.Int("total_courses", len(eventData.CourseIDs)),
+			zap.Error(lastErr),
+		)
+		return lastErr
+	}
+
+	return w.eventRepo.MarkEventProcessed(ctx, eventID, "enrollment.program.approved")
 }

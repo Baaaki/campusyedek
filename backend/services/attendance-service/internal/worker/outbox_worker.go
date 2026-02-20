@@ -48,7 +48,7 @@ func (w *OutboxWorker) processEvents(ctx context.Context) {
 	}
 
 	for _, event := range events {
-		var payload interface{}
+		var payload any
 		if err := json.Unmarshal(event.Payload, &payload); err != nil {
 			logger.Error("failed to unmarshal payload", zap.Error(err))
 			w.outboxRepo.MarkOutboxEventFailed(ctx, event.ID, err.Error())
@@ -56,8 +56,7 @@ func (w *OutboxWorker) processEvents(ctx context.Context) {
 		}
 
 		if err := w.publisher.Publish(ctx, "attendance.events", event.RoutingKey, payload); err != nil {
-			logger.Error("failed to publish event", zap.Error(err), zap.String("routing_key", event.RoutingKey))
-			w.outboxRepo.MarkOutboxEventFailed(ctx, event.ID, err.Error())
+			logger.Warn("failed to publish event, will retry on next poll", zap.Error(err), zap.String("routing_key", event.RoutingKey))
 		} else {
 			w.outboxRepo.MarkOutboxEventProcessed(ctx, event.ID)
 			logger.Debug("event published", zap.String("routing_key", event.RoutingKey))

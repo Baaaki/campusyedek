@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/baaaki/mydreamcampus/shared/clock"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
@@ -59,7 +60,7 @@ func GenerateAccessToken(userID, role, department string, tokenVersion int) (str
 // Should ONLY be called by Auth Service
 // expiryMinutes: token expiry time in minutes
 func GenerateAccessTokenWithSecret(userID, role, department string, tokenVersion int, secret []byte, expiryMinutes int) (string, error) {
-	now := time.Now()
+	now := clock.Now()
 	expiresAt := now.Add(time.Duration(expiryMinutes) * time.Minute)
 
 	claims := &Claims{
@@ -91,7 +92,7 @@ func GenerateRefreshToken(userID string, tokenVersion int) (string, string, erro
 // Returns: (tokenString, jti, error)
 // expiryHours: token expiry time in hours
 func GenerateRefreshTokenWithSecret(userID string, tokenVersion int, secret []byte, expiryHours int) (string, string, error) {
-	now := time.Now()
+	now := clock.Now()
 	expiresAt := now.Add(time.Duration(expiryHours) * time.Hour)
 	jti := uuid.New().String() // Unique JWT ID for session tracking
 
@@ -121,7 +122,7 @@ func ValidateToken(tokenString string) (*Claims, error) {
 // ValidateTokenWithSecret validates and parses a JWT token with custom secret
 // Used by all services in their middleware
 func ValidateTokenWithSecret(tokenString string, secret []byte) (*Claims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (any, error) {
 		// Validate signing method
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("unexpected signing method")
@@ -154,7 +155,7 @@ func ValidateTokenIgnoreExpiry(tokenString string) (*Claims, error) {
 // ValidateTokenIgnoreExpiryWithSecret validates token signature but ignores expiration with custom secret
 // Used for logout operations where expired tokens should still be accepted
 func ValidateTokenIgnoreExpiryWithSecret(tokenString string, secret []byte) (*Claims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("unexpected signing method")
 		}

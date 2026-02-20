@@ -15,6 +15,8 @@ import {
   ChevronDown,
   ChevronRight,
   CalendarPlus,
+  Timer,
+  CalendarClock,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -88,6 +90,16 @@ const navItems: NavItem[] = [
       { label: 'Yemekhaneler', href: '/meal/cafeterias' },
       { label: 'Menü Ekle', href: '/meal/menus' },
     ],
+  },
+  {
+    label: 'Zaman Makinesi',
+    href: '/system/time',
+    icon: Timer,
+  },
+  {
+    label: 'Dönem Yönetimi',
+    href: '/system/periods',
+    icon: CalendarClock,
   },
   {
     label: 'Ayarlar',

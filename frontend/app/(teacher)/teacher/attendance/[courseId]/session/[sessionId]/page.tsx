@@ -268,6 +268,15 @@ export default function AttendanceSessionPage() {
               <span className="rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-700 dark:bg-green-900/50 dark:text-green-300">
                 Hafta {sessionInfo?.week_number}
               </span>
+              {sessionInfo?.session_type && (
+                <span className={`rounded-full px-3 py-1 text-sm font-medium ${
+                  sessionInfo.session_type === 'theory'
+                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
+                    : 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300'
+                }`}>
+                  {sessionInfo.session_type === 'theory' ? 'Teorik' : 'Uygulama'}
+                </span>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-4 text-sm">

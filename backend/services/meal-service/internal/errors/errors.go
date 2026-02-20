@@ -37,6 +37,7 @@ var (
 	ErrStudentDeactivated = sharedErrors.New("STUDENT_DEACTIVATED", "Student account has been deactivated", http.StatusForbidden)
 
 	// Date and time validation errors
+	ErrCafeteriaClosedOnDate       = sharedErrors.New("CAFETERIA_CLOSED", "Cafeteria is closed on this date (holiday)", http.StatusBadRequest)
 	ErrInvalidDateRange            = sharedErrors.New("INVALID_DATE_RANGE", "Reservation date must be in next week (Monday-Friday)", http.StatusBadRequest)
 	ErrOutsideReservationWindow    = sharedErrors.New("OUTSIDE_RESERVATION_WINDOW", "Reservations can only be made Monday 08:00 - Friday 13:00 (UTC+3)", http.StatusBadRequest)
 	ErrInvalidMealTime             = sharedErrors.New("INVALID_MEAL_TIME", "Invalid meal time (must be 'lunch' or 'dinner')", http.StatusBadRequest)

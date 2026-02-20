@@ -7,8 +7,8 @@ import (
 
 	sharedErrors "github.com/baaaki/mydreamcampus/shared/errors"
 	"github.com/baaaki/mydreamcampus/shared/utils"
-	serviceErrors "github.com/baaaki/mydreamcampus/student-service/internal/errors"
 	"github.com/baaaki/mydreamcampus/student-service/internal/db"
+	serviceErrors "github.com/baaaki/mydreamcampus/student-service/internal/errors"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -260,7 +260,7 @@ func listStudentsByDepartmentRowsToStudents(rows []db.ListStudentsByDepartmentRo
 }
 
 // CreateStudentWithEvent creates student and outbox event atomically
-func (r *StudentRepository) CreateStudentWithEvent(ctx context.Context, params db.CreateStudentParams, eventPayload map[string]interface{}) (db.Student, error) {
+func (r *StudentRepository) CreateStudentWithEvent(ctx context.Context, params db.CreateStudentParams, eventPayload map[string]any) (db.Student, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return db.Student{}, fmt.Errorf("%w: failed to begin transaction: %v", sharedErrors.ErrTransactionFailed, err)
@@ -346,7 +346,7 @@ func (r *StudentRepository) GetStudentByNumber(ctx context.Context, studentNumbe
 }
 
 // UpdateStudentWithEvent updates student information with event
-func (r *StudentRepository) UpdateStudentWithEvent(ctx context.Context, id uuid.UUID, params db.UpdateStudentParams, eventPayload map[string]interface{}) (db.Student, error) {
+func (r *StudentRepository) UpdateStudentWithEvent(ctx context.Context, id uuid.UUID, params db.UpdateStudentParams, eventPayload map[string]any) (db.Student, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return db.Student{}, fmt.Errorf("%w: failed to begin transaction: %v", sharedErrors.ErrTransactionFailed, err)
@@ -383,7 +383,7 @@ func (r *StudentRepository) UpdateStudentWithEvent(ctx context.Context, id uuid.
 }
 
 // SoftDeleteStudentWithEvent soft deletes a student with event
-func (r *StudentRepository) SoftDeleteStudentWithEvent(ctx context.Context, id uuid.UUID, eventPayload map[string]interface{}) error {
+func (r *StudentRepository) SoftDeleteStudentWithEvent(ctx context.Context, id uuid.UUID, eventPayload map[string]any) error {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("%w: failed to begin transaction: %v", sharedErrors.ErrTransactionFailed, err)
@@ -467,7 +467,7 @@ func (r *StudentRepository) ListOrphanedStudents(ctx context.Context, limit, off
 }
 
 // BulkAssignAdvisor assigns advisor to multiple students with event
-func (r *StudentRepository) BulkAssignAdvisor(ctx context.Context, studentIDs []uuid.UUID, advisorID uuid.UUID, advisorName string, eventPayloads []map[string]interface{}) error {
+func (r *StudentRepository) BulkAssignAdvisor(ctx context.Context, studentIDs []uuid.UUID, advisorID uuid.UUID, advisorName string, eventPayloads []map[string]any) error {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("%w: failed to begin transaction: %v", sharedErrors.ErrTransactionFailed, err)

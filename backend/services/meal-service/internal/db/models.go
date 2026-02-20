@@ -193,6 +193,13 @@ type Cafeteria struct {
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 }
 
+type ClosedDay struct {
+	ID        pgtype.UUID        `json:"id"`
+	Date      pgtype.Date        `json:"date"`
+	Reason    string             `json:"reason"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
 type MonthlyMenu struct {
 	ID        pgtype.UUID        `json:"id"`
 	Year      int16              `json:"year"`

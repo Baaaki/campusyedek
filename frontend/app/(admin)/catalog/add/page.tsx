@@ -41,7 +41,7 @@ interface CreateCourseRequest {
   class_level: number;
   credits: number;
   theoretical_hours: number;
-  practical_hours: number;
+  lab_hours: number;
   course_type: string;
   description?: string;
   prerequisites?: string[];
@@ -65,7 +65,6 @@ interface FormData {
   class_level: number;
   credits: number;
   theoretical_hours: number;
-  practical_hours: number;
   lab_hours: number;
   ects: number;
 
@@ -96,9 +95,8 @@ const initialFormData: FormData = {
   offering_unit: '',
   semester: 1,
   class_level: 1,
-  credits: 0,
+  credits: 1,
   theoretical_hours: 0,
-  practical_hours: 0,
   lab_hours: 0,
   ects: 0,
   course_type: 'Zorunlu',
@@ -132,9 +130,14 @@ export default function AddCoursePage() {
       alert('Ders başarıyla eklendi!');
       router.push('/catalog');
     },
-    onError: (error: Error) => {
+    onError: async (error: any) => {
       console.error('Ders eklenirken hata:', error);
-      alert(`Hata: ${error.message}`);
+      let message = error.message;
+      try {
+        const body = await error.response?.json();
+        if (body?.error) message = body.error;
+      } catch { /* ignore parse errors */ }
+      alert(`Hata: ${message}`);
     },
   });
 
@@ -267,7 +270,7 @@ export default function AddCoursePage() {
       class_level: formData.class_level,
       credits: formData.credits,
       theoretical_hours: formData.theoretical_hours,
-      practical_hours: formData.practical_hours,
+      lab_hours: formData.lab_hours,
       course_type: formData.course_type === 'Zorunlu' ? 'mandatory' : 'elective',
       description: formData.description || undefined,
     };
@@ -465,7 +468,7 @@ export default function AddCoursePage() {
 
             <Separator />
 
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="theoretical_hours">Teorik (Saat)</Label>
                 <Input
@@ -474,16 +477,6 @@ export default function AddCoursePage() {
                   min="0"
                   value={formData.theoretical_hours}
                   onChange={(e) => handleInputChange('theoretical_hours', parseInt(e.target.value) || 0)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="practical_hours">Uygulama (Saat)</Label>
-                <Input
-                  id="practical_hours"
-                  type="number"
-                  min="0"
-                  value={formData.practical_hours}
-                  onChange={(e) => handleInputChange('practical_hours', parseInt(e.target.value) || 0)}
                 />
               </div>
               <div className="space-y-2">
@@ -497,11 +490,11 @@ export default function AddCoursePage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="credits">Kredi</Label>
+                <Label htmlFor="credits">Kredi *</Label>
                 <Input
                   id="credits"
                   type="number"
-                  min="0"
+                  min="1"
                   value={formData.credits}
                   onChange={(e) => handleInputChange('credits', parseInt(e.target.value) || 0)}
                 />

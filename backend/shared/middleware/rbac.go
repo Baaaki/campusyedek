@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"slices"
+
 	"github.com/baaaki/mydreamcampus/shared/errors"
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	"github.com/gin-gonic/gin"
@@ -24,11 +26,9 @@ func RequireRole(allowedRoles ...string) gin.HandlerFunc {
 		userRole := role.(string)
 
 		// Check if user role is in allowed roles
-		for _, allowedRole := range allowedRoles {
-			if userRole == allowedRole {
-				c.Next()
-				return
-			}
+		if slices.Contains(allowedRoles, userRole) {
+			c.Next()
+			return
 		}
 
 		// Access denied

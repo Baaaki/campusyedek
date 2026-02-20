@@ -33,10 +33,11 @@ func (r *SessionRepository) GetActiveSessionByID(ctx context.Context, sessionID 
 	return r.queries.GetActiveSessionByID(ctx, utils.UUIDToPgUUID(sessionID))
 }
 
-func (r *SessionRepository) CheckSessionExists(ctx context.Context, courseID uuid.UUID, weekNumber int16) (bool, error) {
+func (r *SessionRepository) CheckSessionExists(ctx context.Context, courseID uuid.UUID, weekNumber int16, sessionType db.SessionTypeEnum) (bool, error) {
 	count, err := r.queries.CheckSessionExists(ctx, db.CheckSessionExistsParams{
-		CourseID:   utils.UUIDToPgUUID(courseID),
-		WeekNumber: weekNumber,
+		CourseID:    utils.UUIDToPgUUID(courseID),
+		WeekNumber:  weekNumber,
+		SessionType: sessionType,
 	})
 	if err != nil {
 		return false, err

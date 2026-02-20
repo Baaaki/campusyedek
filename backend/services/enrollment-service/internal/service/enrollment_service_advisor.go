@@ -8,6 +8,7 @@ import (
 	"github.com/baaaki/mydreamcampus/enrollment-service/internal/db"
 	"github.com/baaaki/mydreamcampus/enrollment-service/internal/dto"
 	serviceErrors "github.com/baaaki/mydreamcampus/enrollment-service/internal/errors"
+	"github.com/baaaki/mydreamcampus/shared/clock"
 	sharedErrors "github.com/baaaki/mydreamcampus/shared/errors"
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	"github.com/baaaki/mydreamcampus/shared/utils"
@@ -66,14 +67,19 @@ func (s *EnrollmentService) ApproveEnrollmentProgram(ctx context.Context, progra
 		courseIDs[i] = utils.PgtypeToUUID(row.CourseID)
 	}
 
-	// Create event payload
-	eventPayload := map[string]interface{}{
-		"program_id":  programID.String(),
-		"student_id":  utils.PgtypeToUUID(program.StudentID).String(),
-		"semester":    program.Semester,
-		"course_ids":  courseIDs,
-		"approved_by": advisorID.String(),
-		"approved_at": time.Now(),
+	// Create event payload (wrapped with event_id, event_type, data)
+	eventPayload := map[string]any{
+		"event_id":   uuid.New().String(),
+		"event_type": "enrollment.program.approved",
+		"timestamp":  clock.Now().Format(time.RFC3339),
+		"data": map[string]any{
+			"program_id":  programID.String(),
+			"student_id":  utils.PgtypeToUUID(program.StudentID).String(),
+			"semester":    program.Semester,
+			"course_ids":  courseIDs,
+			"approved_by": advisorID.String(),
+			"approved_at": clock.Now(),
+		},
 	}
 
 	// Approve program (with event)
@@ -192,14 +198,14 @@ func (s *EnrollmentService) RejectEnrollmentProgram(ctx context.Context, program
 	}
 
 	// Create event payload
-	eventPayload := map[string]interface{}{
+	eventPayload := map[string]any{
 		"program_id":       programID.String(),
 		"student_id":       utils.PgtypeToUUID(program.StudentID).String(),
 		"semester":         program.Semester,
 		"course_ids":       courseIDs,
 		"rejected_by":      advisorID.String(),
 		"rejection_reason": rejectionReason,
-		"rejected_at":      time.Now(),
+		"rejected_at":      clock.Now(),
 	}
 
 	// Reject program (create log, decrement enrollments, delete program, create event)

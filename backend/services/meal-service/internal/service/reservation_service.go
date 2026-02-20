@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/baaaki/mydreamcampus/meal-service/config"
+	"github.com/baaaki/mydreamcampus/shared/clock"
 	"github.com/baaaki/mydreamcampus/meal-service/internal/db"
 	"github.com/baaaki/mydreamcampus/meal-service/internal/dto"
 	serviceErrors "github.com/baaaki/mydreamcampus/meal-service/internal/errors"
@@ -26,6 +27,7 @@ type ReservationService struct {
 	reservationRepo  *repository.ReservationRepository
 	cafeteriaRepo    *repository.CafeteriaRepository
 	studentCacheRepo *repository.StudentCacheRepository
+	closedDaysRepo   *repository.ClosedDaysRepository
 	paymentClient    *PaymentClient
 	cfg              *config.Config
 	logger           *zap.Logger
@@ -35,6 +37,7 @@ func NewReservationService(
 	reservationRepo *repository.ReservationRepository,
 	cafeteriaRepo *repository.CafeteriaRepository,
 	studentCacheRepo *repository.StudentCacheRepository,
+	closedDaysRepo *repository.ClosedDaysRepository,
 	paymentClient *PaymentClient,
 	cfg *config.Config,
 	logger *zap.Logger,
@@ -43,6 +46,7 @@ func NewReservationService(
 		reservationRepo:  reservationRepo,
 		cafeteriaRepo:    cafeteriaRepo,
 		studentCacheRepo: studentCacheRepo,
+		closedDaysRepo:   closedDaysRepo,
 		paymentClient:    paymentClient,
 		cfg:              cfg,
 		logger:           logger,
@@ -77,7 +81,7 @@ func (s *ReservationService) CreateReservation(ctx context.Context, studentID uu
 	}
 
 	// 4. Validate date is in next week (Monday-Friday)
-	if err := s.validateReservationDate(reservationDate); err != nil {
+	if err := s.validateReservationDate(ctx, reservationDate); err != nil {
 		return nil, err
 	}
 
@@ -138,7 +142,7 @@ func (s *ReservationService) CreateReservation(ctx context.Context, studentID uu
 	}
 
 	// 10. Payment successful - now save reservation to DB
-	expiresAt := time.Now().Add(time.Duration(s.cfg.Reservation.TimeoutMinutes) * time.Minute)
+	expiresAt := clock.Now().Add(time.Duration(s.cfg.Reservation.TimeoutMinutes) * time.Minute)
 
 	reservation, err := s.reservationRepo.CreateReservation(ctx, db.CreateReservationParams{
 		BatchID:         pgtype.UUID{Valid: false},
@@ -210,7 +214,7 @@ func (s *ReservationService) CreateBatchReservation(ctx context.Context, student
 	cafeterias := make(map[string]db.Cafeteria)
 
 	batchID := uuid.New()
-	expiresAt := time.Now().Add(time.Duration(s.cfg.Reservation.TimeoutMinutes) * time.Minute)
+	expiresAt := clock.Now().Add(time.Duration(s.cfg.Reservation.TimeoutMinutes) * time.Minute)
 
 	for i, r := range req.Reservations {
 		// Parse date
@@ -227,7 +231,7 @@ func (s *ReservationService) CreateBatchReservation(ctx context.Context, student
 		}
 
 		// Validate date
-		if err := s.validateReservationDate(reservationDate); err != nil {
+		if err := s.validateReservationDate(ctx, reservationDate); err != nil {
 			validationErrors = append(validationErrors, dto.ValidationError{
 				Index:    i,
 				Date:     r.Date,
@@ -451,7 +455,7 @@ func (s *ReservationService) GetMyReservations(ctx context.Context, studentID uu
 			StudentID: utils.UUIDToPgtype(studentID),
 			Column2:   fromDate,
 			Column3:   toDate,
-			Column4:   status,
+			Status:    status,
 		})
 		if err != nil {
 			s.logger.Error("failed to count student reservations", zap.Error(err))
@@ -463,8 +467,8 @@ func (s *ReservationService) GetMyReservations(ctx context.Context, studentID uu
 		StudentID: utils.UUIDToPgtype(studentID),
 		Column2:   fromDate,
 		Column3:   toDate,
-		Column4:   status,
-		Column5:   limit,
+		Status:    status,
+		Column4:   limit,
 		Offset:    offset,
 	})
 	if err != nil {
@@ -592,7 +596,7 @@ func (s *ReservationService) CancelReservation(ctx context.Context, studentID uu
 	}
 
 	// 9. Cancel reservation and create outbox event
-	eventPayload := map[string]interface{}{
+	eventPayload := map[string]any{
 		"reservation_id": reservation.ID.String(),
 		"student_id":     student.ID.String(),
 		"student_number": student.StudentNumber,
@@ -635,7 +639,7 @@ func (s *ReservationService) UseReservation(ctx context.Context, studentID uuid.
 	}
 
 	// 3. Validate date (must be today)
-	today := time.Now().In(time.FixedZone("UTC+3", 3*3600)).Format("2006-01-02")
+	today := clock.Now().In(time.FixedZone("UTC+3", 3*3600)).Format("2006-01-02")
 	if date != today {
 		return nil, serviceErrors.ErrInvalidQRDate
 	}
@@ -714,7 +718,7 @@ func (s *ReservationService) GenerateQR(ctx context.Context, cafeteriaID string,
 
 	// Default date to today if not provided
 	if date == "" {
-		date = time.Now().In(time.FixedZone("UTC+3", 3*3600)).Format("2006-01-02")
+		date = clock.Now().In(time.FixedZone("UTC+3", 3*3600)).Format("2006-01-02")
 	}
 
 	// Generate QR payload
@@ -769,7 +773,7 @@ func (s *ReservationService) validateReservationWindow() error {
 	return nil
 }
 
-func (s *ReservationService) validateReservationDate(date time.Time) error {
+func (s *ReservationService) validateReservationDate(ctx context.Context, date time.Time) error {
 	// DISABLED FOR TESTING: Allow reservations for any date
 	// // Get next Monday
 	// now := time.Now().In(time.FixedZone("UTC+3", 3*3600))
@@ -795,6 +799,16 @@ func (s *ReservationService) validateReservationDate(date time.Time) error {
 	// 	return serviceErrors.ErrInvalidDateRange
 	// }
 
+	// Check if the date is a closed day (holiday)
+	isClosed, err := s.closedDaysRepo.IsDateClosed(ctx, pgtype.Date{Time: date, Valid: true})
+	if err != nil {
+		s.logger.Error("failed to check closed day", zap.Error(err), zap.Time("date", date))
+		return err
+	}
+	if isClosed {
+		return serviceErrors.ErrCafeteriaClosedOnDate
+	}
+
 	return nil
 }
 
@@ -819,7 +833,7 @@ func (s *ReservationService) validateMealTimeAndMenu(mealTime, menuType string, 
 }
 
 func (s *ReservationService) validateMealTimeWindow(mealTime string) error {
-	now := time.Now().In(time.FixedZone("UTC+3", 3*3600))
+	now := clock.Now().In(time.FixedZone("UTC+3", 3*3600))
 	hour := now.Hour()
 
 	if mealTime == "lunch" {

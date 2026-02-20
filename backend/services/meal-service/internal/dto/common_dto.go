@@ -2,15 +2,15 @@ package dto
 
 // ErrorResponse represents error response
 type ErrorResponse struct {
-	Code    string      `json:"code"`
-	Message string      `json:"message"`
-	Details interface{} `json:"details,omitempty"`
+	Code    string `json:"code"`
+	Message string `json:"message"`
+	Details any    `json:"details,omitempty"`
 }
 
 // SuccessResponse represents generic success response
 type SuccessResponse struct {
-	Success bool        `json:"success"`
-	Data    interface{} `json:"data"`
+	Success bool `json:"success"`
+	Data    any  `json:"data"`
 }
 
 // ErrorResponseWrapper wraps error response

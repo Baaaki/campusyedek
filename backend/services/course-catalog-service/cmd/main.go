@@ -15,9 +15,11 @@ import (
 	"github.com/baaaki/mydreamcampus/course-catalog-service/internal/repository"
 	"github.com/baaaki/mydreamcampus/course-catalog-service/internal/service"
 	"github.com/baaaki/mydreamcampus/course-catalog-service/internal/worker"
+	sharedHandler "github.com/baaaki/mydreamcampus/shared/handler"
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	sharedMiddleware "github.com/baaaki/mydreamcampus/shared/middleware"
 	"github.com/baaaki/mydreamcampus/shared/rabbitmq"
+	sharedRepo "github.com/baaaki/mydreamcampus/shared/repository"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -78,6 +80,13 @@ func main() {
 	scheduleRepo := repository.NewScheduleRepository(pool)
 	outboxRepo := repository.NewOutboxRepository(pool)
 
+	// Initialize shared repositories
+	periodRepo := sharedRepo.NewSimplePeriodRepository(pool)
+
+	// Initialize shared handlers
+	timeHandler := sharedHandler.NewTimeHandler()
+	periodHandler := sharedHandler.NewSimplePeriodHandler(periodRepo)
+
 	// Initialize staff client
 	staffClient := service.NewHTTPStaffClient(cfg.StaffService.BaseURL)
 
@@ -89,6 +98,7 @@ func main() {
 		scheduleRepo,
 		outboxRepo,
 		staffClient,
+		periodRepo,
 	)
 
 	// Initialize handlers
@@ -110,7 +120,7 @@ func main() {
 	go outboxWorker.Start(ctx)
 
 	// Setup Gin router
-	router := setupRouter(catalogHandler, semesterHandler, cfg.Server.Environment)
+	router := setupRouter(catalogHandler, semesterHandler, timeHandler, periodHandler, cfg.Server.Environment)
 
 	// Start HTTP server
 	srv := &http.Server{
@@ -153,7 +163,7 @@ func main() {
 	logger.Info("server exited")
 }
 
-func setupRouter(catalogHandler *handler.CatalogHandler, semesterHandler *handler.SemesterHandler, env string) *gin.Engine {
+func setupRouter(catalogHandler *handler.CatalogHandler, semesterHandler *handler.SemesterHandler, timeHandler *sharedHandler.TimeHandler, periodHandler *sharedHandler.SimplePeriodHandler, env string) *gin.Engine {
 	if env == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -197,6 +207,14 @@ func setupRouter(catalogHandler *handler.CatalogHandler, semesterHandler *handle
 				catalogAdmin.PUT("/courses/:course_code", sharedMiddleware.RequireAdmin(), catalogHandler.UpdateCourse)
 			}
 
+			// Admin routes for Time Machine & Academic Periods
+			admin := protectedApi.Group("/catalog/admin")
+			admin.Use(sharedMiddleware.RequireAdmin())
+			{
+				timeHandler.RegisterRoutes(admin)
+				periodHandler.RegisterRoutes(admin)
+			}
+
 			// Semester routes - all require authentication
 			semesters := protectedApi.Group("/semesters")
 			{
@@ -212,7 +230,6 @@ func setupRouter(catalogHandler *handler.CatalogHandler, semesterHandler *handle
 
 					// Admin only routes
 					semesterCourses.POST("", sharedMiddleware.RequireAdmin(), semesterHandler.CreateSemesterCourse)
-					semesterCourses.PUT("/:course_id", sharedMiddleware.RequireAdmin(), semesterHandler.UpdateSemesterCourse)
 					semesterCourses.DELETE("/:course_id", sharedMiddleware.RequireAdmin(), semesterHandler.DeleteSemesterCourse)
 				}
 			}
@@ -241,6 +258,34 @@ func setupRabbitMQ(conn *rabbitmq.Connection) error {
 	logger.Info("RabbitMQ exchange declared",
 		zap.String("exchange", "course.events"),
 	)
+
+	// Pre-declare downstream consumer queues so messages persist even when consumers are offline
+	publisher := rabbitmq.NewPublisher(conn)
+
+	downstreamBindings := []struct {
+		queue      string
+		exchange   string
+		routingKey string
+	}{
+		// enrollment-service queues
+		{"enrollment.events", "course.events", "course.#"},
+		// grades-service queues
+		{"grades-service-course", "course.events", "course.semester.created"},
+		{"grades-service-course", "course.events", "course.semester.updated"},
+		{"grades-service-course", "course.events", "course.semester.deleted"},
+		{"grades-service-course", "course.events", "course.instructor.changed"},
+		{"grades-service-course", "course.events", "course.prerequisites.updated"},
+		// attendance-service queues
+		{"attendance.events", "course.events", "course.semester.#"},
+	}
+
+	for _, b := range downstreamBindings {
+		if err := publisher.DeclareAndBindQueue(b.queue, b.exchange, b.routingKey); err != nil {
+			return fmt.Errorf("failed to declare downstream queue %s: %w", b.queue, err)
+		}
+	}
+
+	logger.Info("downstream consumer queues pre-declared")
 
 	return nil
 }

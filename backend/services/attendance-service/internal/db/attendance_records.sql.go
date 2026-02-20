@@ -11,49 +11,30 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const checkAttendanceExists = `-- name: CheckAttendanceExists :one
-SELECT COUNT(*) as count
-FROM attendance_records
-WHERE session_id = $1 AND student_id = $2
-`
-
-type CheckAttendanceExistsParams struct {
-	SessionID pgtype.UUID `json:"session_id"`
-	StudentID pgtype.UUID `json:"student_id"`
-}
-
-func (q *Queries) CheckAttendanceExists(ctx context.Context, arg CheckAttendanceExistsParams) (int64, error) {
-	row := q.db.QueryRow(ctx, checkAttendanceExists, arg.SessionID, arg.StudentID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const createAttendanceRecordManual = `-- name: CreateAttendanceRecordManual :one
 INSERT INTO attendance_records (
     session_id, student_id, course_id, semester, week_number,
-    is_present, marked_via, manually_marked_by, manually_marked_at, manual_note
+    marked_via, manually_marked_by, manually_marked_at, manual_note, session_type
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, 'manual', $7, NOW(), $8
+    $1, $2, $3, $4, $5, 'manual', $6, NOW(), $7, $8
 ) ON CONFLICT (session_id, student_id)
 DO UPDATE SET
-    is_present = EXCLUDED.is_present,
     marked_via = EXCLUDED.marked_via,
     manually_marked_by = EXCLUDED.manually_marked_by,
     manually_marked_at = NOW(),
     manual_note = EXCLUDED.manual_note
-RETURNING id, session_id, student_id, course_id, semester, week_number, is_present, marked_via, scanned_at, qr_timestamp, manually_marked_by, manually_marked_at, manual_note, created_at
+RETURNING id, session_id, student_id, course_id, semester, week_number, marked_via, scanned_at, qr_timestamp, manually_marked_by, manually_marked_at, manual_note, created_at, session_type
 `
 
 type CreateAttendanceRecordManualParams struct {
-	SessionID        pgtype.UUID `json:"session_id"`
-	StudentID        pgtype.UUID `json:"student_id"`
-	CourseID         pgtype.UUID `json:"course_id"`
-	Semester         string      `json:"semester"`
-	WeekNumber       int16       `json:"week_number"`
-	IsPresent        bool        `json:"is_present"`
-	ManuallyMarkedBy pgtype.UUID `json:"manually_marked_by"`
-	ManualNote       pgtype.Text `json:"manual_note"`
+	SessionID        pgtype.UUID     `json:"session_id"`
+	StudentID        pgtype.UUID     `json:"student_id"`
+	CourseID         pgtype.UUID     `json:"course_id"`
+	Semester         string          `json:"semester"`
+	WeekNumber       int16           `json:"week_number"`
+	ManuallyMarkedBy pgtype.UUID     `json:"manually_marked_by"`
+	ManualNote       pgtype.Text     `json:"manual_note"`
+	SessionType      SessionTypeEnum `json:"session_type"`
 }
 
 func (q *Queries) CreateAttendanceRecordManual(ctx context.Context, arg CreateAttendanceRecordManualParams) (AttendanceRecord, error) {
@@ -63,9 +44,9 @@ func (q *Queries) CreateAttendanceRecordManual(ctx context.Context, arg CreateAt
 		arg.CourseID,
 		arg.Semester,
 		arg.WeekNumber,
-		arg.IsPresent,
 		arg.ManuallyMarkedBy,
 		arg.ManualNote,
+		arg.SessionType,
 	)
 	var i AttendanceRecord
 	err := row.Scan(
@@ -75,7 +56,6 @@ func (q *Queries) CreateAttendanceRecordManual(ctx context.Context, arg CreateAt
 		&i.CourseID,
 		&i.Semester,
 		&i.WeekNumber,
-		&i.IsPresent,
 		&i.MarkedVia,
 		&i.ScannedAt,
 		&i.QrTimestamp,
@@ -83,6 +63,7 @@ func (q *Queries) CreateAttendanceRecordManual(ctx context.Context, arg CreateAt
 		&i.ManuallyMarkedAt,
 		&i.ManualNote,
 		&i.CreatedAt,
+		&i.SessionType,
 	)
 	return i, err
 }
@@ -90,9 +71,9 @@ func (q *Queries) CreateAttendanceRecordManual(ctx context.Context, arg CreateAt
 const createAttendanceRecordQR = `-- name: CreateAttendanceRecordQR :exec
 INSERT INTO attendance_records (
     session_id, student_id, course_id, semester, week_number,
-    is_present, marked_via, scanned_at, qr_timestamp
+    marked_via, scanned_at, qr_timestamp, session_type
 ) VALUES (
-    $1, $2, $3, $4, $5, TRUE, 'qr_scan', $6, $7
+    $1, $2, $3, $4, $5, 'qr_scan', $6, $7, $8
 ) ON CONFLICT (session_id, student_id) DO NOTHING
 `
 
@@ -104,6 +85,7 @@ type CreateAttendanceRecordQRParams struct {
 	WeekNumber  int16            `json:"week_number"`
 	ScannedAt   pgtype.Timestamp `json:"scanned_at"`
 	QrTimestamp pgtype.Int8      `json:"qr_timestamp"`
+	SessionType SessionTypeEnum  `json:"session_type"`
 }
 
 func (q *Queries) CreateAttendanceRecordQR(ctx context.Context, arg CreateAttendanceRecordQRParams) error {
@@ -115,6 +97,7 @@ func (q *Queries) CreateAttendanceRecordQR(ctx context.Context, arg CreateAttend
 		arg.WeekNumber,
 		arg.ScannedAt,
 		arg.QrTimestamp,
+		arg.SessionType,
 	)
 	return err
 }
@@ -127,14 +110,14 @@ SELECT
     ar.course_id,
     ar.semester,
     ar.week_number,
-    ar.is_present,
     ar.marked_via,
     ar.scanned_at,
     ar.qr_timestamp,
     ar.manually_marked_by,
     ar.manually_marked_at as marked_at,
     ar.manual_note,
-    ar.created_at
+    ar.created_at,
+    ar.session_type
 FROM attendance_records ar
 WHERE ar.session_id = $1
 ORDER BY ar.created_at DESC
@@ -147,7 +130,6 @@ type GetAttendanceRecordsBySessionRow struct {
 	CourseID         pgtype.UUID      `json:"course_id"`
 	Semester         string           `json:"semester"`
 	WeekNumber       int16            `json:"week_number"`
-	IsPresent        bool             `json:"is_present"`
 	MarkedVia        string           `json:"marked_via"`
 	ScannedAt        pgtype.Timestamp `json:"scanned_at"`
 	QrTimestamp      pgtype.Int8      `json:"qr_timestamp"`
@@ -155,6 +137,7 @@ type GetAttendanceRecordsBySessionRow struct {
 	MarkedAt         pgtype.Timestamp `json:"marked_at"`
 	ManualNote       pgtype.Text      `json:"manual_note"`
 	CreatedAt        pgtype.Timestamp `json:"created_at"`
+	SessionType      SessionTypeEnum  `json:"session_type"`
 }
 
 func (q *Queries) GetAttendanceRecordsBySession(ctx context.Context, sessionID pgtype.UUID) ([]GetAttendanceRecordsBySessionRow, error) {
@@ -173,7 +156,6 @@ func (q *Queries) GetAttendanceRecordsBySession(ctx context.Context, sessionID p
 			&i.CourseID,
 			&i.Semester,
 			&i.WeekNumber,
-			&i.IsPresent,
 			&i.MarkedVia,
 			&i.ScannedAt,
 			&i.QrTimestamp,
@@ -181,6 +163,7 @@ func (q *Queries) GetAttendanceRecordsBySession(ctx context.Context, sessionID p
 			&i.MarkedAt,
 			&i.ManualNote,
 			&i.CreatedAt,
+			&i.SessionType,
 		); err != nil {
 			return nil, err
 		}
@@ -198,12 +181,10 @@ SELECT
     s.student_number,
     s.first_name,
     s.last_name,
-    COUNT(*) FILTER (WHERE ar.is_present = TRUE) as present_count,
-    COUNT(*) FILTER (WHERE ar.is_present = FALSE) as absent_count,
-    ARRAY_AGG(ar.week_number ORDER BY ar.week_number) FILTER (WHERE ar.is_present = FALSE) as absent_weeks
+    COUNT(ar.id) as present_count
 FROM enrollments_cache e
 JOIN students_cache s ON e.student_id = s.id
-LEFT JOIN attendance_records ar ON ar.student_id = s.id AND ar.course_id = e.course_id
+LEFT JOIN attendance_records ar ON ar.student_id = s.id AND ar.course_id = e.course_id AND ar.semester = e.semester
 WHERE e.course_id = $1 AND e.semester = $2
 GROUP BY s.id, s.student_number, s.first_name, s.last_name
 ORDER BY s.student_number
@@ -220,8 +201,6 @@ type GetCourseAttendanceStatsRow struct {
 	FirstName     pgtype.Text `json:"first_name"`
 	LastName      pgtype.Text `json:"last_name"`
 	PresentCount  int64       `json:"present_count"`
-	AbsentCount   int64       `json:"absent_count"`
-	AbsentWeeks   interface{} `json:"absent_weeks"`
 }
 
 func (q *Queries) GetCourseAttendanceStats(ctx context.Context, arg GetCourseAttendanceStatsParams) ([]GetCourseAttendanceStatsRow, error) {
@@ -239,8 +218,61 @@ func (q *Queries) GetCourseAttendanceStats(ctx context.Context, arg GetCourseAtt
 			&i.FirstName,
 			&i.LastName,
 			&i.PresentCount,
-			&i.AbsentCount,
-			&i.AbsentWeeks,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getCourseAttendanceStatsByType = `-- name: GetCourseAttendanceStatsByType :many
+SELECT
+    s.id as student_id,
+    s.student_number,
+    s.first_name,
+    s.last_name,
+    COUNT(ar.id) as present_count
+FROM enrollments_cache e
+JOIN students_cache s ON e.student_id = s.id
+LEFT JOIN attendance_records ar ON ar.student_id = s.id AND ar.course_id = e.course_id AND ar.semester = e.semester AND ar.session_type = $3
+WHERE e.course_id = $1 AND e.semester = $2
+GROUP BY s.id, s.student_number, s.first_name, s.last_name
+ORDER BY s.student_number
+`
+
+type GetCourseAttendanceStatsByTypeParams struct {
+	CourseID    pgtype.UUID     `json:"course_id"`
+	Semester    string          `json:"semester"`
+	SessionType SessionTypeEnum `json:"session_type"`
+}
+
+type GetCourseAttendanceStatsByTypeRow struct {
+	StudentID     pgtype.UUID `json:"student_id"`
+	StudentNumber string      `json:"student_number"`
+	FirstName     pgtype.Text `json:"first_name"`
+	LastName      pgtype.Text `json:"last_name"`
+	PresentCount  int64       `json:"present_count"`
+}
+
+func (q *Queries) GetCourseAttendanceStatsByType(ctx context.Context, arg GetCourseAttendanceStatsByTypeParams) ([]GetCourseAttendanceStatsByTypeRow, error) {
+	rows, err := q.db.Query(ctx, getCourseAttendanceStatsByType, arg.CourseID, arg.Semester, arg.SessionType)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetCourseAttendanceStatsByTypeRow{}
+	for rows.Next() {
+		var i GetCourseAttendanceStatsByTypeRow
+		if err := rows.Scan(
+			&i.StudentID,
+			&i.StudentNumber,
+			&i.FirstName,
+			&i.LastName,
+			&i.PresentCount,
 		); err != nil {
 			return nil, err
 		}
@@ -259,19 +291,21 @@ SELECT
     s.first_name,
     s.last_name,
     s.email,
-    COUNT(*) FILTER (WHERE ar.is_present = TRUE) as present_count,
-    COUNT(*) FILTER (WHERE ar.is_present = FALSE) as absent_count
+    COUNT(ar.id) as present_count,
+    ($3::bigint - COUNT(ar.id))::bigint as absent_count
 FROM enrollments_cache e
 JOIN students_cache s ON e.student_id = s.id
 LEFT JOIN attendance_records ar ON ar.student_id = s.id AND ar.course_id = e.course_id AND ar.semester = e.semester
 WHERE e.course_id = $1 AND e.semester = $2
 GROUP BY s.id, s.student_number, s.first_name, s.last_name, s.email
-HAVING COUNT(*) FILTER (WHERE ar.is_present = FALSE) >= 4
+HAVING ($3::bigint - COUNT(ar.id)) > $4::bigint
 `
 
 type GetFailingStudentsByCourseParams struct {
-	CourseID pgtype.UUID `json:"course_id"`
-	Semester string      `json:"semester"`
+	CourseID           pgtype.UUID `json:"course_id"`
+	Semester           string      `json:"semester"`
+	TotalSessions      int64       `json:"total_sessions"`
+	MaxAllowedAbsences int64       `json:"max_allowed_absences"`
 }
 
 type GetFailingStudentsByCourseRow struct {
@@ -285,7 +319,12 @@ type GetFailingStudentsByCourseRow struct {
 }
 
 func (q *Queries) GetFailingStudentsByCourse(ctx context.Context, arg GetFailingStudentsByCourseParams) ([]GetFailingStudentsByCourseRow, error) {
-	rows, err := q.db.Query(ctx, getFailingStudentsByCourse, arg.CourseID, arg.Semester)
+	rows, err := q.db.Query(ctx, getFailingStudentsByCourse,
+		arg.CourseID,
+		arg.Semester,
+		arg.TotalSessions,
+		arg.MaxAllowedAbsences,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -293,6 +332,75 @@ func (q *Queries) GetFailingStudentsByCourse(ctx context.Context, arg GetFailing
 	items := []GetFailingStudentsByCourseRow{}
 	for rows.Next() {
 		var i GetFailingStudentsByCourseRow
+		if err := rows.Scan(
+			&i.StudentID,
+			&i.StudentNumber,
+			&i.FirstName,
+			&i.LastName,
+			&i.Email,
+			&i.PresentCount,
+			&i.AbsentCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getFailingStudentsByCourseByType = `-- name: GetFailingStudentsByCourseByType :many
+SELECT
+    s.id as student_id,
+    s.student_number,
+    s.first_name,
+    s.last_name,
+    s.email,
+    COUNT(ar.id) as present_count,
+    ($4::bigint - COUNT(ar.id))::bigint as absent_count
+FROM enrollments_cache e
+JOIN students_cache s ON e.student_id = s.id
+LEFT JOIN attendance_records ar ON ar.student_id = s.id AND ar.course_id = e.course_id AND ar.semester = e.semester AND ar.session_type = $3
+WHERE e.course_id = $1 AND e.semester = $2
+GROUP BY s.id, s.student_number, s.first_name, s.last_name, s.email
+HAVING COUNT(ar.id) < $5::bigint
+`
+
+type GetFailingStudentsByCourseByTypeParams struct {
+	CourseID              pgtype.UUID     `json:"course_id"`
+	Semester              string          `json:"semester"`
+	SessionType           SessionTypeEnum `json:"session_type"`
+	TotalSessions         int64           `json:"total_sessions"`
+	MinRequiredAttendance int64           `json:"min_required_attendance"`
+}
+
+type GetFailingStudentsByCourseByTypeRow struct {
+	StudentID     pgtype.UUID `json:"student_id"`
+	StudentNumber string      `json:"student_number"`
+	FirstName     pgtype.Text `json:"first_name"`
+	LastName      pgtype.Text `json:"last_name"`
+	Email         pgtype.Text `json:"email"`
+	PresentCount  int64       `json:"present_count"`
+	AbsentCount   int64       `json:"absent_count"`
+}
+
+func (q *Queries) GetFailingStudentsByCourseByType(ctx context.Context, arg GetFailingStudentsByCourseByTypeParams) ([]GetFailingStudentsByCourseByTypeRow, error) {
+	rows, err := q.db.Query(ctx, getFailingStudentsByCourseByType,
+		arg.CourseID,
+		arg.Semester,
+		arg.SessionType,
+		arg.TotalSessions,
+		arg.MinRequiredAttendance,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetFailingStudentsByCourseByTypeRow{}
+	for rows.Next() {
+		var i GetFailingStudentsByCourseByTypeRow
 		if err := rows.Scan(
 			&i.StudentID,
 			&i.StudentNumber,
@@ -338,39 +446,32 @@ func (q *Queries) GetMarkedStudentsBySession(ctx context.Context, sessionID pgty
 	return items, nil
 }
 
-const getSessionAttendanceCounts = `-- name: GetSessionAttendanceCounts :one
-SELECT
-    COUNT(*) FILTER (WHERE is_present = TRUE) as present_count,
-    COUNT(*) FILTER (WHERE is_present = FALSE) as absent_count
+const getSessionAttendanceCount = `-- name: GetSessionAttendanceCount :one
+SELECT COUNT(*) as present_count
 FROM attendance_records
 WHERE session_id = $1
 `
 
-type GetSessionAttendanceCountsRow struct {
-	PresentCount int64 `json:"present_count"`
-	AbsentCount  int64 `json:"absent_count"`
-}
-
-func (q *Queries) GetSessionAttendanceCounts(ctx context.Context, sessionID pgtype.UUID) (GetSessionAttendanceCountsRow, error) {
-	row := q.db.QueryRow(ctx, getSessionAttendanceCounts, sessionID)
-	var i GetSessionAttendanceCountsRow
-	err := row.Scan(&i.PresentCount, &i.AbsentCount)
-	return i, err
+func (q *Queries) GetSessionAttendanceCount(ctx context.Context, sessionID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, getSessionAttendanceCount, sessionID)
+	var present_count int64
+	err := row.Scan(&present_count)
+	return present_count, err
 }
 
 const getStudentAttendanceByCourse = `-- name: GetStudentAttendanceByCourse :many
 SELECT
     ar.week_number,
     ats.session_date,
-    ar.is_present,
     ar.marked_via,
     ar.manual_note,
     ar.scanned_at,
-    ar.manually_marked_at
+    ar.manually_marked_at,
+    ar.session_type
 FROM attendance_records ar
 JOIN attendance_sessions ats ON ar.session_id = ats.id
 WHERE ar.student_id = $1 AND ar.course_id = $2 AND ar.semester = $3
-ORDER BY ar.week_number ASC
+ORDER BY ar.week_number ASC, ar.session_type ASC
 `
 
 type GetStudentAttendanceByCourseParams struct {
@@ -382,11 +483,11 @@ type GetStudentAttendanceByCourseParams struct {
 type GetStudentAttendanceByCourseRow struct {
 	WeekNumber       int16            `json:"week_number"`
 	SessionDate      pgtype.Date      `json:"session_date"`
-	IsPresent        bool             `json:"is_present"`
 	MarkedVia        string           `json:"marked_via"`
 	ManualNote       pgtype.Text      `json:"manual_note"`
 	ScannedAt        pgtype.Timestamp `json:"scanned_at"`
 	ManuallyMarkedAt pgtype.Timestamp `json:"manually_marked_at"`
+	SessionType      SessionTypeEnum  `json:"session_type"`
 }
 
 func (q *Queries) GetStudentAttendanceByCourse(ctx context.Context, arg GetStudentAttendanceByCourseParams) ([]GetStudentAttendanceByCourseRow, error) {
@@ -401,11 +502,11 @@ func (q *Queries) GetStudentAttendanceByCourse(ctx context.Context, arg GetStude
 		if err := rows.Scan(
 			&i.WeekNumber,
 			&i.SessionDate,
-			&i.IsPresent,
 			&i.MarkedVia,
 			&i.ManualNote,
 			&i.ScannedAt,
 			&i.ManuallyMarkedAt,
+			&i.SessionType,
 		); err != nil {
 			return nil, err
 		}
@@ -415,4 +516,66 @@ func (q *Queries) GetStudentAttendanceByCourse(ctx context.Context, arg GetStude
 		return nil, err
 	}
 	return items, nil
+}
+
+const getStudentPresentCountByType = `-- name: GetStudentPresentCountByType :one
+SELECT COUNT(*) as present_count
+FROM attendance_records
+WHERE student_id = $1 AND course_id = $2 AND semester = $3 AND session_type = $4
+`
+
+type GetStudentPresentCountByTypeParams struct {
+	StudentID   pgtype.UUID     `json:"student_id"`
+	CourseID    pgtype.UUID     `json:"course_id"`
+	Semester    string          `json:"semester"`
+	SessionType SessionTypeEnum `json:"session_type"`
+}
+
+func (q *Queries) GetStudentPresentCountByType(ctx context.Context, arg GetStudentPresentCountByTypeParams) (int64, error) {
+	row := q.db.QueryRow(ctx, getStudentPresentCountByType,
+		arg.StudentID,
+		arg.CourseID,
+		arg.Semester,
+		arg.SessionType,
+	)
+	var present_count int64
+	err := row.Scan(&present_count)
+	return present_count, err
+}
+
+const getTotalSessionsByCourse = `-- name: GetTotalSessionsByCourse :one
+SELECT COUNT(*) as total_sessions
+FROM attendance_sessions
+WHERE course_id = $1 AND semester = $2
+`
+
+type GetTotalSessionsByCourseParams struct {
+	CourseID pgtype.UUID `json:"course_id"`
+	Semester string      `json:"semester"`
+}
+
+func (q *Queries) GetTotalSessionsByCourse(ctx context.Context, arg GetTotalSessionsByCourseParams) (int64, error) {
+	row := q.db.QueryRow(ctx, getTotalSessionsByCourse, arg.CourseID, arg.Semester)
+	var total_sessions int64
+	err := row.Scan(&total_sessions)
+	return total_sessions, err
+}
+
+const getTotalSessionsByCourseAndType = `-- name: GetTotalSessionsByCourseAndType :one
+SELECT COUNT(*) as total_sessions
+FROM attendance_sessions
+WHERE course_id = $1 AND semester = $2 AND session_type = $3
+`
+
+type GetTotalSessionsByCourseAndTypeParams struct {
+	CourseID    pgtype.UUID     `json:"course_id"`
+	Semester    string          `json:"semester"`
+	SessionType SessionTypeEnum `json:"session_type"`
+}
+
+func (q *Queries) GetTotalSessionsByCourseAndType(ctx context.Context, arg GetTotalSessionsByCourseAndTypeParams) (int64, error) {
+	row := q.db.QueryRow(ctx, getTotalSessionsByCourseAndType, arg.CourseID, arg.Semester, arg.SessionType)
+	var total_sessions int64
+	err := row.Scan(&total_sessions)
+	return total_sessions, err
 }

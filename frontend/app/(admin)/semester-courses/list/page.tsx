@@ -6,18 +6,6 @@ import { mockFaculties } from '@/mock_data/catalog';
 import type { Department, Faculty, SemesterCourse } from '@/lib/types';
 import { semesterApi } from '@/lib/api-client';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,7 +24,6 @@ import {
   GraduationCap,
   CalendarPlus,
   Trash2,
-  Pencil,
   Loader2,
 } from 'lucide-react';
 
@@ -61,9 +48,6 @@ const fetchSemesterCourses = async (semester: string, department?: string): Prom
   return response.data || [];
 };
 
-const updateSemesterCourse = async (semester: string, courseId: string, data: Partial<SemesterCourse>) => {
-  return semesterApi.put(`${semester}/courses/${courseId}`, { json: data }).json();
-};
 
 const deleteSemesterCourse = async (semester: string, courseId: string) => {
   return semesterApi.delete(`${semester}/courses/${courseId}`).json();
@@ -99,11 +83,6 @@ const dayMap: Record<string, string> = {
   friday: 'Cuma',
 };
 
-interface ScheduleSession {
-  day_of_week: string;
-  slot_numbers: number[];
-}
-
 // Schedule entry type
 interface ScheduleEntry {
   id: string;
@@ -114,7 +93,7 @@ interface ScheduleEntry {
   color: string;
 }
 
-// Course for edit/delete
+// Course for delete
 interface CourseInfo {
   id: string;
   course_code: string;
@@ -122,7 +101,6 @@ interface CourseInfo {
   instructor: string;
   classroom: string;
   class_level: number;
-  max_capacity: number;
 }
 
 // Color palette for courses - repeating pattern
@@ -221,16 +199,6 @@ export default function OpenedCoursesPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [courseToDelete, setCourseToDelete] = useState<CourseInfo | null>(null);
 
-  // Edit dialog state
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [courseToEdit, setCourseToEdit] = useState<CourseInfo | null>(null);
-  const [editForm, setEditForm] = useState({
-    instructor: '',
-    classroom: '',
-    max_capacity: 50,
-    schedule_sessions: [] as ScheduleSession[]
-  });
-
   // Mutation for deleting a course
   const deleteMutation = useMutation({
     mutationFn: (courseId: string) => deleteSemesterCourse(currentSemester, courseId),
@@ -243,22 +211,6 @@ export default function OpenedCoursesPage() {
     onError: (error) => {
       console.error('Ders silinirken hata:', error);
       alert('Ders silinirken bir hata oluştu!');
-    },
-  });
-
-  // Mutation for updating a course
-  const updateMutation = useMutation({
-    mutationFn: ({ courseId, data }: { courseId: string; data: Partial<SemesterCourse> }) =>
-      updateSemesterCourse(currentSemester, courseId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['semester-courses', currentSemester, selectedDepartment?.dept.name] });
-      setEditDialogOpen(false);
-      setCourseToEdit(null);
-      alert('Ders başarıyla güncellendi!');
-    },
-    onError: (error) => {
-      console.error('Ders güncellenirken hata:', error);
-      alert('Ders güncellenirken bir hata oluştu!');
     },
   });
 
@@ -275,58 +227,10 @@ export default function OpenedCoursesPage() {
     setSelectedDepartment({ dept, faculty });
   };
 
-  // Toggle schedule slot for edit form
-  const toggleEditScheduleSlot = (day: string, slot: number) => {
-    setEditForm(prev => {
-      const existingSession = prev.schedule_sessions.find(s => s.day_of_week === day);
-      if (existingSession) {
-        const hasSlot = existingSession.slot_numbers.includes(slot);
-        if (hasSlot) {
-          const newSlots = existingSession.slot_numbers.filter(s => s !== slot);
-          if (newSlots.length === 0) {
-            return { ...prev, schedule_sessions: prev.schedule_sessions.filter(s => s.day_of_week !== day) };
-          }
-          return { ...prev, schedule_sessions: prev.schedule_sessions.map(s =>
-            s.day_of_week === day ? { ...s, slot_numbers: newSlots } : s
-          ) };
-        } else {
-          return { ...prev, schedule_sessions: prev.schedule_sessions.map(s =>
-            s.day_of_week === day ? { ...s, slot_numbers: [...s.slot_numbers, slot].sort((a, b) => a - b) } : s
-          ) };
-        }
-      } else {
-        return { ...prev, schedule_sessions: [...prev.schedule_sessions, { day_of_week: day, slot_numbers: [slot] }] };
-      }
-    });
-  };
-
-  // Check if slot is selected in edit form
-  const isEditSlotSelected = (day: string, slot: number) => {
-    const session = editForm.schedule_sessions.find(s => s.day_of_week === day);
-    return session ? session.slot_numbers.includes(slot) : false;
-  };
-
   // Delete course
   const handleDeleteConfirm = async () => {
     if (!courseToDelete) return;
     deleteMutation.mutate(courseToDelete.id);
-  };
-
-  // Update course
-  const handleEditConfirm = async () => {
-    if (!courseToEdit) return;
-
-    const updateData: Partial<SemesterCourse> = {
-      instructor_fullname: editForm.instructor,
-      classroom_location: editForm.classroom,
-      max_capacity: editForm.max_capacity,
-      schedule_sessions: editForm.schedule_sessions.map(s => ({
-        day_of_week: s.day_of_week,
-        slot_numbers: s.slot_numbers,
-      })),
-    };
-
-    updateMutation.mutate({ courseId: courseToEdit.id, data: updateData });
   };
 
   // Faculty & Department List View (Accordion)
@@ -479,47 +383,8 @@ export default function OpenedCoursesPage() {
                               <td key={day.key} className="border dark:border-gray-600 p-1">
                                 {entry ? (
                                   <div className={`${entry.color} border rounded-md p-2 h-full min-h-[60px] text-xs relative group`}>
-                                    {/* Action buttons - appear on hover */}
-                                    <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setCourseToEdit({
-                                            id: entry.id,
-                                            course_code: entry.course_code,
-                                            course_name: entry.course_name,
-                                            instructor: entry.instructor,
-                                            classroom: entry.classroom,
-                                            class_level: classLevel,
-                                            max_capacity: 50,
-                                          });
-                                          // Find all slots for this course
-                                          const sessions: ScheduleSession[] = [];
-                                          daysOfWeek.forEach(d => {
-                                            const slotsForDay: number[] = [];
-                                            timeSlots.forEach(s => {
-                                              const dName = dayMap[d.key];
-                                              if (schedules[classLevel]?.[dName]?.[s.slot]?.id === entry.id) {
-                                                slotsForDay.push(s.slot);
-                                              }
-                                            });
-                                            if (slotsForDay.length > 0) {
-                                              sessions.push({ day_of_week: d.key, slot_numbers: slotsForDay });
-                                            }
-                                          });
-                                          setEditForm({
-                                            instructor: entry.instructor,
-                                            classroom: entry.classroom,
-                                            max_capacity: 50,
-                                            schedule_sessions: sessions,
-                                          });
-                                          setEditDialogOpen(true);
-                                        }}
-                                        className="p-1 bg-white/80 hover:bg-white rounded shadow-sm"
-                                        title="Düzenle"
-                                      >
-                                        <Pencil className="h-3 w-3 text-gray-600" />
-                                      </button>
+                                    {/* Action button - appears on hover */}
+                                    <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                       <button
                                         onClick={(e) => {
                                           e.stopPropagation();
@@ -530,7 +395,6 @@ export default function OpenedCoursesPage() {
                                             instructor: entry.instructor,
                                             classroom: entry.classroom,
                                             class_level: classLevel,
-                                            max_capacity: 50,
                                           });
                                           setDeleteDialogOpen(true);
                                         }}
@@ -594,112 +458,6 @@ export default function OpenedCoursesPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Edit Course Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Dersi Düzenle</DialogTitle>
-            <DialogDescription>
-              {courseToEdit?.course_code} - {courseToEdit?.course_name} ({courseToEdit?.class_level}. Sınıf)
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="instructor">Öğretim Üyesi</Label>
-              <Input
-                id="instructor"
-                value={editForm.instructor}
-                onChange={(e) => setEditForm({ ...editForm, instructor: e.target.value })}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="classroom">Derslik / Konum</Label>
-                <Input
-                  id="classroom"
-                  value={editForm.classroom}
-                  onChange={(e) => setEditForm({ ...editForm, classroom: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="max_capacity">Kontenjan</Label>
-                <Input
-                  id="max_capacity"
-                  type="number"
-                  min="1"
-                  max="500"
-                  value={editForm.max_capacity}
-                  onChange={(e) => setEditForm({ ...editForm, max_capacity: parseInt(e.target.value) || 50 })}
-                />
-              </div>
-            </div>
-
-            {/* Schedule Section - Checkbox Grid */}
-            <div className="border-t pt-4">
-              <Label className="text-base font-semibold">Ders Programı</Label>
-              <p className="text-sm text-muted-foreground mb-3">Dersin hangi gün ve saatlerde yapılacağını seçin</p>
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-sm">
-                  <thead>
-                    <tr>
-                      <th className="border dark:border-gray-700 p-2 bg-muted text-left font-medium">Saat</th>
-                      {daysOfWeek.map((day) => (
-                        <th key={day.key} className="border dark:border-gray-700 p-2 bg-muted text-center font-medium">
-                          {day.label}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {timeSlots.map((slot) => (
-                      <tr key={slot.slot}>
-                        <td className="border dark:border-gray-700 p-2 text-xs text-muted-foreground whitespace-nowrap">
-                          {slot.slot}. Ders<br />
-                          <span className="text-[10px]">{slot.time}</span>
-                        </td>
-                        {daysOfWeek.map((day) => (
-                          <td key={day.key} className="border dark:border-gray-700 p-1 text-center">
-                            <Checkbox
-                              checked={isEditSlotSelected(day.key, slot.slot)}
-                              onCheckedChange={() => toggleEditScheduleSlot(day.key, slot.slot)}
-                              className="h-5 w-5"
-                            />
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {/* Selected schedule summary */}
-              {editForm.schedule_sessions.length > 0 && (
-                <div className="mt-3 p-2 bg-muted/50 rounded-lg">
-                  <p className="text-xs font-medium">Seçilen: </p>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {editForm.schedule_sessions.map((session) => {
-                      const dayInfo = daysOfWeek.find(d => d.key === session.day_of_week);
-                      return (
-                        <Badge key={session.day_of_week} variant="secondary" className="text-xs">
-                          {dayInfo?.fullName || session.day_of_week}: {session.slot_numbers.join(', ')}. ders
-                        </Badge>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)} disabled={updateMutation.isPending}>
-              İptal
-            </Button>
-            <Button onClick={handleEditConfirm} disabled={updateMutation.isPending}>
-              {updateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Pencil className="h-4 w-4 mr-1" />}
-              Güncelle
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

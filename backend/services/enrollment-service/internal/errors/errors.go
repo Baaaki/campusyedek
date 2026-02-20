@@ -1,6 +1,17 @@
 package errors
 
-import "errors"
+import (
+	"errors"
+	"net/http"
+
+	sharedErrors "github.com/baaaki/mydreamcampus/shared/errors"
+)
+
+// Enrollment-specific AppErrors (with HTTP status for handler mapping)
+var (
+	ErrEnrollmentPeriodEnded   = sharedErrors.New("ENROLLMENT_PERIOD_ENDED", "enrollment period has ended for this semester", http.StatusForbidden)
+	ErrEnrollmentPeriodNotOpen = sharedErrors.New("ENROLLMENT_PERIOD_NOT_OPEN", "enrollment period has not started yet", http.StatusForbidden)
+)
 
 // Enrollment-specific errors
 var (

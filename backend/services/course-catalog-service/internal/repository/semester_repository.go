@@ -144,33 +144,6 @@ func (r *SemesterRepository) CreateSemesterCourse(ctx context.Context, params db
 	}, nil
 }
 
-// UpdateSemesterCourse updates a semester course
-func (r *SemesterRepository) UpdateSemesterCourse(ctx context.Context, params db.UpdateSemesterCourseParams) (db.SemesterCourse, error) {
-	row, err := r.queries.UpdateSemesterCourse(ctx, params)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return db.SemesterCourse{}, fmt.Errorf("%w: semester course not found for update", catalogErrors.ErrSemesterCourseNotFoundRepo)
-		}
-		return db.SemesterCourse{}, fmt.Errorf("%w: failed to update semester course: %v", sharedErrors.ErrQueryFailed, err)
-	}
-
-	return db.SemesterCourse{
-		ID:                 row.ID,
-		Semester:           row.Semester,
-		CourseCode:         row.CourseCode,
-		Credits:            row.Credits,
-		ClassLevel:         row.ClassLevel,
-		InstructorID:       row.InstructorID,
-		InstructorFullname: row.InstructorFullname,
-		ClassroomLocation:  row.ClassroomLocation,
-		MaxCapacity:        row.MaxCapacity,
-		AssessmentSchema:   row.AssessmentSchema,
-		Prerequisites:      row.Prerequisites,
-		CreatedAt:          row.CreatedAt,
-		UpdatedAt:          row.UpdatedAt,
-	}, nil
-}
-
 // DeleteSemesterCourse deletes a semester course
 func (r *SemesterRepository) DeleteSemesterCourse(ctx context.Context, id uuid.UUID) error {
 	err := r.queries.DeleteSemesterCourse(ctx, utils.UUIDToPgtype(id))

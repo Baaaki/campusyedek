@@ -14,16 +14,17 @@ import (
 const checkSessionExists = `-- name: CheckSessionExists :one
 SELECT COUNT(*) as count
 FROM attendance_sessions
-WHERE course_id = $1 AND week_number = $2
+WHERE course_id = $1 AND week_number = $2 AND session_type = $3
 `
 
 type CheckSessionExistsParams struct {
-	CourseID   pgtype.UUID `json:"course_id"`
-	WeekNumber int16       `json:"week_number"`
+	CourseID    pgtype.UUID     `json:"course_id"`
+	WeekNumber  int16           `json:"week_number"`
+	SessionType SessionTypeEnum `json:"session_type"`
 }
 
 func (q *Queries) CheckSessionExists(ctx context.Context, arg CheckSessionExistsParams) (int64, error) {
-	row := q.db.QueryRow(ctx, checkSessionExists, arg.CourseID, arg.WeekNumber)
+	row := q.db.QueryRow(ctx, checkSessionExists, arg.CourseID, arg.WeekNumber, arg.SessionType)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -32,10 +33,10 @@ func (q *Queries) CheckSessionExists(ctx context.Context, arg CheckSessionExists
 const createAttendanceSession = `-- name: CreateAttendanceSession :one
 INSERT INTO attendance_sessions (
     course_id, instructor_id, semester, week_number, session_date,
-    qr_secret, qr_rotation_interval, started_at, expires_at, is_active
+    qr_secret, qr_rotation_interval, started_at, expires_at, is_active, session_type
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, TRUE
-) RETURNING id, course_id, instructor_id, semester, week_number, session_date, qr_secret, qr_rotation_interval, started_at, expires_at, is_active, created_at
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, TRUE, $10
+) RETURNING id, course_id, instructor_id, semester, week_number, session_date, qr_secret, qr_rotation_interval, started_at, expires_at, is_active, created_at, session_type
 `
 
 type CreateAttendanceSessionParams struct {
@@ -48,6 +49,7 @@ type CreateAttendanceSessionParams struct {
 	QrRotationInterval pgtype.Int2      `json:"qr_rotation_interval"`
 	StartedAt          pgtype.Timestamp `json:"started_at"`
 	ExpiresAt          pgtype.Timestamp `json:"expires_at"`
+	SessionType        SessionTypeEnum  `json:"session_type"`
 }
 
 func (q *Queries) CreateAttendanceSession(ctx context.Context, arg CreateAttendanceSessionParams) (AttendanceSession, error) {
@@ -61,6 +63,7 @@ func (q *Queries) CreateAttendanceSession(ctx context.Context, arg CreateAttenda
 		arg.QrRotationInterval,
 		arg.StartedAt,
 		arg.ExpiresAt,
+		arg.SessionType,
 	)
 	var i AttendanceSession
 	err := row.Scan(
@@ -76,6 +79,7 @@ func (q *Queries) CreateAttendanceSession(ctx context.Context, arg CreateAttenda
 		&i.ExpiresAt,
 		&i.IsActive,
 		&i.CreatedAt,
+		&i.SessionType,
 	)
 	return i, err
 }
@@ -92,7 +96,7 @@ func (q *Queries) DeactivateSession(ctx context.Context, id pgtype.UUID) error {
 }
 
 const getActiveSessionByID = `-- name: GetActiveSessionByID :one
-SELECT id, course_id, instructor_id, semester, week_number, session_date, qr_secret, qr_rotation_interval, started_at, expires_at, is_active, created_at FROM attendance_sessions
+SELECT id, course_id, instructor_id, semester, week_number, session_date, qr_secret, qr_rotation_interval, started_at, expires_at, is_active, created_at, session_type FROM attendance_sessions
 WHERE id = $1 AND is_active = TRUE AND expires_at > NOW()
 LIMIT 1
 `
@@ -113,12 +117,13 @@ func (q *Queries) GetActiveSessionByID(ctx context.Context, id pgtype.UUID) (Att
 		&i.ExpiresAt,
 		&i.IsActive,
 		&i.CreatedAt,
+		&i.SessionType,
 	)
 	return i, err
 }
 
 const getExpiredSessions = `-- name: GetExpiredSessions :many
-SELECT id, course_id, instructor_id, semester, week_number, session_date, qr_secret, qr_rotation_interval, started_at, expires_at, is_active, created_at FROM attendance_sessions
+SELECT id, course_id, instructor_id, semester, week_number, session_date, qr_secret, qr_rotation_interval, started_at, expires_at, is_active, created_at, session_type FROM attendance_sessions
 WHERE is_active = TRUE AND expires_at < NOW()
 `
 
@@ -144,6 +149,7 @@ func (q *Queries) GetExpiredSessions(ctx context.Context) ([]AttendanceSession, 
 			&i.ExpiresAt,
 			&i.IsActive,
 			&i.CreatedAt,
+			&i.SessionType,
 		); err != nil {
 			return nil, err
 		}
@@ -156,7 +162,7 @@ func (q *Queries) GetExpiredSessions(ctx context.Context) ([]AttendanceSession, 
 }
 
 const getSessionByID = `-- name: GetSessionByID :one
-SELECT id, course_id, instructor_id, semester, week_number, session_date, qr_secret, qr_rotation_interval, started_at, expires_at, is_active, created_at FROM attendance_sessions
+SELECT id, course_id, instructor_id, semester, week_number, session_date, qr_secret, qr_rotation_interval, started_at, expires_at, is_active, created_at, session_type FROM attendance_sessions
 WHERE id = $1
 LIMIT 1
 `
@@ -177,6 +183,7 @@ func (q *Queries) GetSessionByID(ctx context.Context, id pgtype.UUID) (Attendanc
 		&i.ExpiresAt,
 		&i.IsActive,
 		&i.CreatedAt,
+		&i.SessionType,
 	)
 	return i, err
 }
@@ -188,10 +195,11 @@ SELECT
     session_date,
     is_active,
     started_at,
-    expires_at
+    expires_at,
+    session_type
 FROM attendance_sessions
 WHERE course_id = $1 AND semester = $2
-ORDER BY week_number ASC
+ORDER BY week_number ASC, session_type ASC
 `
 
 type GetSessionsByCourseParams struct {
@@ -206,6 +214,7 @@ type GetSessionsByCourseRow struct {
 	IsActive    pgtype.Bool      `json:"is_active"`
 	StartedAt   pgtype.Timestamp `json:"started_at"`
 	ExpiresAt   pgtype.Timestamp `json:"expires_at"`
+	SessionType SessionTypeEnum  `json:"session_type"`
 }
 
 func (q *Queries) GetSessionsByCourse(ctx context.Context, arg GetSessionsByCourseParams) ([]GetSessionsByCourseRow, error) {
@@ -224,6 +233,7 @@ func (q *Queries) GetSessionsByCourse(ctx context.Context, arg GetSessionsByCour
 			&i.IsActive,
 			&i.StartedAt,
 			&i.ExpiresAt,
+			&i.SessionType,
 		); err != nil {
 			return nil, err
 		}

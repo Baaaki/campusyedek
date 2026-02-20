@@ -33,9 +33,9 @@ JOIN cafeterias c ON r.cafeteria_id = c.id
 WHERE r.student_id = $1
   AND ($2::date IS NULL OR r.reservation_date >= $2)
   AND ($3::date IS NULL OR r.reservation_date <= $3)
-  AND ($4::reservation_status_enum IS NULL OR r.status = $4)
+  AND (sqlc.narg('status')::reservation_status_enum IS NULL OR r.status = sqlc.narg('status'))
 ORDER BY r.reservation_date DESC, r.meal_time ASC
-LIMIT NULLIF($5, 0) OFFSET $6;
+LIMIT NULLIF($4, 0) OFFSET $5;
 
 -- name: CountStudentReservationsFiltered :one
 SELECT COUNT(*) as total
@@ -43,7 +43,7 @@ FROM reservations r
 WHERE r.student_id = $1
   AND ($2::date IS NULL OR r.reservation_date >= $2)
   AND ($3::date IS NULL OR r.reservation_date <= $3)
-  AND ($4::reservation_status_enum IS NULL OR r.status = $4);
+  AND (sqlc.narg('status')::reservation_status_enum IS NULL OR r.status = sqlc.narg('status'));
 
 -- name: UpdateReservationByID :one
 UPDATE reservations

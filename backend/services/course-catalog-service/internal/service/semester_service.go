@@ -4,15 +4,19 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/baaaki/mydreamcampus/course-catalog-service/internal/db"
 	"github.com/baaaki/mydreamcampus/course-catalog-service/internal/dto"
 	catalogErrors "github.com/baaaki/mydreamcampus/course-catalog-service/internal/errors"
 	"github.com/baaaki/mydreamcampus/course-catalog-service/internal/repository"
+	"github.com/baaaki/mydreamcampus/shared/clock"
 	sharedErrors "github.com/baaaki/mydreamcampus/shared/errors"
 	"github.com/baaaki/mydreamcampus/shared/events"
 	"github.com/baaaki/mydreamcampus/shared/logger"
+	sharedRepo "github.com/baaaki/mydreamcampus/shared/repository"
+	"github.com/baaaki/mydreamcampus/shared/rules"
 	"github.com/baaaki/mydreamcampus/shared/utils"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -20,11 +24,12 @@ import (
 )
 
 type SemesterService struct {
-	catalogRepo   *repository.CatalogRepository
-	semesterRepo  *repository.SemesterRepository
-	scheduleRepo  *repository.ScheduleRepository
-	outboxRepo    *repository.OutboxRepository
-	staffClient   StaffClient
+	catalogRepo  *repository.CatalogRepository
+	semesterRepo *repository.SemesterRepository
+	scheduleRepo *repository.ScheduleRepository
+	outboxRepo   *repository.OutboxRepository
+	staffClient  StaffClient
+	periodRepo   *sharedRepo.SimplePeriodRepository
 }
 
 func NewSemesterService(
@@ -33,6 +38,7 @@ func NewSemesterService(
 	scheduleRepo *repository.ScheduleRepository,
 	outboxRepo *repository.OutboxRepository,
 	staffClient StaffClient,
+	periodRepo *sharedRepo.SimplePeriodRepository,
 ) *SemesterService {
 	return &SemesterService{
 		catalogRepo:  catalogRepo,
@@ -40,7 +46,47 @@ func NewSemesterService(
 		scheduleRepo: scheduleRepo,
 		outboxRepo:   outboxRepo,
 		staffClient:  staffClient,
+		periodRepo:   periodRepo,
 	}
+}
+
+// validateScheduleSessionTypes validates session types against catalog hours
+// If theoretical_hours == 0, theory sessions are not allowed
+// If lab_hours == 0, lab sessions are not allowed
+// Total theory slots must match theoretical_hours, total lab slots must match lab_hours
+func validateScheduleSessionTypes(sessions []dto.ScheduleSession, theoreticalHours, labHours int16) error {
+	var totalTheorySlots int16
+	var totalLabSlots int16
+
+	for _, session := range sessions {
+		if session.SessionType != "theory" && session.SessionType != "lab" {
+			return catalogErrors.ErrInvalidSessionType
+		}
+
+		slotCount := int16(len(session.SlotNumbers))
+
+		if session.SessionType == "theory" {
+			if theoreticalHours == 0 {
+				return catalogErrors.ErrTheoryHoursZero
+			}
+			totalTheorySlots += slotCount
+		} else {
+			if labHours == 0 {
+				return catalogErrors.ErrLabHoursZero
+			}
+			totalLabSlots += slotCount
+		}
+	}
+
+	// Validate slot counts match catalog hours
+	if theoreticalHours > 0 && totalTheorySlots != theoreticalHours {
+		return catalogErrors.ErrTheorySlotCountMismatch
+	}
+	if labHours > 0 && totalLabSlots != labHours {
+		return catalogErrors.ErrLabSlotCountMismatch
+	}
+
+	return nil
 }
 
 // CreateSemesterCourse creates a new semester course (manual course opening)
@@ -51,6 +97,24 @@ func (s *SemesterService) CreateSemesterCourse(ctx context.Context, semester str
 		zap.String("semester", semester),
 		zap.String("course_code", req.CourseCode),
 	)
+
+	// Validate semester format: YYYY-YYYY-Fall or YYYY-YYYY-Spring
+	if !isValidSemesterFormat(semester) {
+		serviceLogger.Warn("invalid semester format", zap.String("semester", semester))
+		return dto.SemesterCourseResponse{}, catalogErrors.ErrInvalidSemesterFormat
+	}
+
+	// Check deadline: is course creation period open?
+	period, periodErr := s.periodRepo.GetActivePeriodBySemester(ctx, semester)
+	if periodErr == nil {
+		check := rules.IsWithinPeriod(period.PeriodStart, period.PeriodEnd)
+		if !check.Allowed {
+			if clock.Now().Before(period.PeriodStart) {
+				return dto.SemesterCourseResponse{}, catalogErrors.ErrCourseCreationPeriodNotOpen
+			}
+			return dto.SemesterCourseResponse{}, catalogErrors.ErrCourseCreationPeriodEnded
+		}
+	}
 
 	// Validate course_code exists and is active
 	catalogCourse, err := s.catalogRepo.GetCourseByCourseCode(ctx, req.CourseCode)
@@ -77,6 +141,14 @@ func (s *SemesterService) CreateSemesterCourse(ctx context.Context, semester str
 		return dto.SemesterCourseResponse{}, catalogErrors.ErrCourseNotActive
 	}
 
+	// Check credits > 0 (semester_courses requires credits > 0)
+	if catalogCourse.Credits <= 0 {
+		serviceLogger.Warn("course has 0 credits in catalog",
+			zap.String("course_code", req.CourseCode),
+		)
+		return dto.SemesterCourseResponse{}, catalogErrors.ErrCourseCreditsZero
+	}
+
 	// Check class_level consistency
 	if catalogCourse.ClassLevel != req.ClassLevel {
 		serviceLogger.Warn("class level mismatch",
@@ -96,7 +168,7 @@ func (s *SemesterService) CreateSemesterCourse(ctx context.Context, semester str
 		return dto.SemesterCourseResponse{}, err
 	}
 
-	// Validate slot numbers
+	// Validate slot numbers and day of week
 	for _, session := range req.ScheduleSessions {
 		if err := ValidateSlotNumbers(session.SlotNumbers); err != nil {
 			return dto.SemesterCourseResponse{}, err
@@ -104,6 +176,11 @@ func (s *SemesterService) CreateSemesterCourse(ctx context.Context, semester str
 		if err := ValidateDayOfWeek(session.DayOfWeek); err != nil {
 			return dto.SemesterCourseResponse{}, err
 		}
+	}
+
+	// Validate session types against catalog hours
+	if err := validateScheduleSessionTypes(req.ScheduleSessions, catalogCourse.TheoreticalHours, catalogCourse.LabHours); err != nil {
+		return dto.SemesterCourseResponse{}, err
 	}
 
 	// Apply default assessment schema if not provided
@@ -120,7 +197,7 @@ func (s *SemesterService) CreateSemesterCourse(ctx context.Context, semester str
 	}
 
 	// Check instructor schedule conflict
-	if err := s.checkInstructorConflict(ctx, semester, req.InstructorID, req.ScheduleSessions, uuid.Nil); err != nil {
+	if err := s.checkInstructorConflict(ctx, semester, req.InstructorID, req.ScheduleSessions, uuid.Nil, catalogCourse.Department); err != nil {
 		return dto.SemesterCourseResponse{}, err
 	}
 
@@ -201,6 +278,7 @@ func (s *SemesterService) CreateSemesterCourse(ctx context.Context, semester str
 				SemesterCourseID: semesterCourse.ID,
 				DayOfWeek:        db.DayOfWeekEnum(session.DayOfWeek),
 				SlotNumber:       slotNumber,
+				SessionType:      db.ScheduleSessionTypeEnum(session.SessionType),
 			})
 		}
 	}
@@ -209,29 +287,29 @@ func (s *SemesterService) CreateSemesterCourse(ctx context.Context, semester str
 		return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
 	}
 
-	// prerequisites already parsed above (line 137)
+	// prerequisites already parsed above
 
 	// Create outbox event: course.semester.created
-	eventPayload := map[string]interface{}{
-		"event_id":           uuid.New().String(),
-		"event_type":         events.EventCourseSemesterCreated,
-		"timestamp":          time.Now().Format(time.RFC3339),
-		"semester_course_id": utils.PgtypeToUUIDString(semesterCourse.ID),
-		"semester":           semester,
-		"course_code":        req.CourseCode,
-		"course_name":        catalogCourse.Name,
-		"faculty":            catalogCourse.Faculty,
-		"department":         catalogCourse.Department,
-		"credits":            catalogCourse.Credits,
-		"class_level":        req.ClassLevel,
-		"course_type":        string(catalogCourse.CourseType),
-		"instructor_id":      req.InstructorID.String(),
+	eventPayload := map[string]any{
+		"event_id":            uuid.New().String(),
+		"event_type":          events.EventCourseSemesterCreated,
+		"timestamp":           clock.Now().Format(time.RFC3339),
+		"semester_course_id":  utils.PgtypeToUUIDString(semesterCourse.ID),
+		"semester":            semester,
+		"course_code":         req.CourseCode,
+		"course_name":         catalogCourse.Name,
+		"faculty":             catalogCourse.Faculty,
+		"department":          catalogCourse.Department,
+		"credits":             catalogCourse.Credits,
+		"class_level":         req.ClassLevel,
+		"course_type":         string(catalogCourse.CourseType),
+		"instructor_id":       req.InstructorID.String(),
 		"instructor_fullname": req.InstructorFullname,
-		"classroom_location": req.ClassroomLocation,
-		"max_capacity":       req.MaxCapacity,
-		"assessment_schema":  req.AssessmentSchema,
-		"prerequisites":      prerequisites,
-		"schedule_sessions":  req.ScheduleSessions,
+		"classroom_location":  req.ClassroomLocation,
+		"max_capacity":        req.MaxCapacity,
+		"assessment_schema":   req.AssessmentSchema,
+		"prerequisites":       prerequisites,
+		"schedule_sessions":   req.ScheduleSessions,
 	}
 
 	eventPayloadJSON, err := json.Marshal(eventPayload)
@@ -325,8 +403,8 @@ func (s *SemesterService) GetSemesterCourseByID(ctx context.Context, semester, c
 		return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
 	}
 
-	// Group schedule sessions by day
-	scheduleSessionsDTO := groupScheduleSessions(scheduleSessions)
+	// Group schedule sessions by day and session type
+	scheduleSessionsDTO := groupScheduleSessionsFromRows(scheduleSessions)
 
 	// Parse prerequisites from snapshot (not from catalog - historical data)
 	prerequisites, err := repository.JSONToPrerequisites(semesterCourse.Prerequisites)
@@ -417,7 +495,7 @@ func (s *SemesterService) ListSemesterCourses(ctx context.Context, semester stri
 	}
 
 	// Group schedule sessions by course ID
-	scheduleMap := make(map[uuid.UUID][]db.CourseScheduleSession)
+	scheduleMap := make(map[uuid.UUID][]db.GetScheduleSessionsByMultipleCourseIDsRow)
 	for _, session := range allScheduleSessions {
 		courseID := uuid.UUID(session.SemesterCourseID.Bytes)
 		scheduleMap[courseID] = append(scheduleMap[courseID], session)
@@ -432,7 +510,7 @@ func (s *SemesterService) ListSemesterCourses(ctx context.Context, semester stri
 		scheduleSessions := scheduleMap[courseID]
 
 		// Group schedule sessions
-		scheduleSessionsDTO := groupScheduleSessions(scheduleSessions)
+		scheduleSessionsDTO := groupScheduleSessionsFromMultiRows(scheduleSessions)
 
 		// Parse assessment schema
 		assessmentSchema, err := repository.JSONToAssessmentSchema(course.AssessmentSchema)
@@ -477,298 +555,6 @@ func (s *SemesterService) ListSemesterCourses(ctx context.Context, semester stri
 			TotalPages: totalPages,
 		},
 	}, nil
-}
-
-// UpdateSemesterCourse updates a semester course
-func (s *SemesterService) UpdateSemesterCourse(ctx context.Context, semester, courseID string, req dto.UpdateSemesterCourseRequest) (dto.SemesterCourseResponse, error) {
-	serviceLogger := logger.WithContextAndFields(ctx,
-		zap.String("service", "SemesterService"),
-		zap.String("method", "UpdateSemesterCourse"),
-		zap.String("semester", semester),
-		zap.String("course_id", courseID),
-	)
-
-	// Parse course ID
-	id, err := uuid.Parse(courseID)
-	if err != nil {
-		serviceLogger.Warn("invalid course ID format",
-			zap.Error(err),
-		)
-		return dto.SemesterCourseResponse{}, sharedErrors.ErrInvalidID
-	}
-
-	// Get existing semester course
-	existingCourse, err := s.semesterRepo.GetSemesterCourseByID(ctx, id, semester)
-	if err != nil {
-		if sharedErrors.Is(err, catalogErrors.ErrSemesterCourseNotFoundRepo) {
-			serviceLogger.Warn("semester course not found for update",
-				zap.Error(err),
-			)
-			return dto.SemesterCourseResponse{}, catalogErrors.ErrSemesterCourseNotFound
-		}
-
-		if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
-			return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
-		}
-
-		return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
-	}
-
-	// Get catalog course
-	catalogCourse, err := s.catalogRepo.GetCourseByCourseCode(ctx, existingCourse.CourseCode)
-	if err != nil {
-		if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
-			return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
-		}
-		return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
-	}
-
-	// Validate instructor if changed
-	var instructorFullname string
-	if req.InstructorID != nil {
-		instructor, err := s.staffClient.GetInstructor(ctx, *req.InstructorID, catalogCourse.Department)
-		if err != nil {
-			return dto.SemesterCourseResponse{}, err
-		}
-		instructorFullname = instructor.FullName
-	}
-
-	// Validate assessment schema if provided
-	if req.AssessmentSchema != nil {
-		if err := ValidateAssessmentSchema(*req.AssessmentSchema); err != nil {
-			return dto.SemesterCourseResponse{}, err
-		}
-	}
-
-	// Validate schedule sessions if provided
-	if req.ScheduleSessions != nil {
-		for _, session := range *req.ScheduleSessions {
-			if err := ValidateSlotNumbers(session.SlotNumbers); err != nil {
-				return dto.SemesterCourseResponse{}, err
-			}
-			if err := ValidateDayOfWeek(session.DayOfWeek); err != nil {
-				return dto.SemesterCourseResponse{}, err
-			}
-		}
-
-		// Check instructor conflict with new schedule
-		instructorID := uuid.UUID(existingCourse.InstructorID.Bytes)
-		if req.InstructorID != nil {
-			instructorID = *req.InstructorID
-		}
-
-		if err := s.checkInstructorConflict(ctx, semester, instructorID, *req.ScheduleSessions, id); err != nil {
-			return dto.SemesterCourseResponse{}, err
-		}
-	}
-
-	// Begin transaction
-	tx, err := s.outboxRepo.BeginTx(ctx)
-	if err != nil {
-		serviceLogger.Error("failed to begin transaction", zap.Error(err))
-		return dto.SemesterCourseResponse{}, catalogErrors.ErrTransactionFailed
-	}
-	defer tx.Rollback(ctx)
-
-	// Get transaction-aware repositories
-	semesterRepoTx := s.semesterRepo.WithTx(tx)
-	scheduleRepoTx := s.scheduleRepo.WithTx(tx)
-
-	// Build update params
-	params := db.UpdateSemesterCourseParams{
-		ID:                utils.UUIDToPgtype(id),
-		InstructorID:      utils.PointerUUIDToPgtype(req.InstructorID),
-		InstructorFullname: utils.PointerStringToPgText(&instructorFullname),
-		ClassroomLocation: utils.PointerStringToPgText(req.ClassroomLocation),
-		MaxCapacity: pgtype.Int2{
-			Int16: utils.Int16PointerValue(req.MaxCapacity),
-			Valid: req.MaxCapacity != nil,
-		},
-	}
-
-	// Convert assessment schema if provided
-	if req.AssessmentSchema != nil {
-		assessmentSchemaJSON, err := repository.AssessmentSchemaToJSON(*req.AssessmentSchema)
-		if err != nil {
-			serviceLogger.Error("failed to convert assessment schema to JSON",
-				zap.Error(err),
-			)
-			return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
-		}
-		params.AssessmentSchema = assessmentSchemaJSON
-	}
-
-	// Update semester course
-	updatedCourse, err := semesterRepoTx.UpdateSemesterCourse(ctx, params)
-	if err != nil {
-		if sharedErrors.Is(err, catalogErrors.ErrSemesterCourseNotFoundRepo) {
-			serviceLogger.Warn("semester course not found during update",
-				zap.Error(err),
-			)
-			return dto.SemesterCourseResponse{}, catalogErrors.ErrSemesterCourseNotFound
-		}
-
-		if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
-			return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
-		}
-
-		return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
-	}
-
-	// Update schedule sessions if provided
-	var scheduleSessionsDTO []dto.ScheduleSession
-	if req.ScheduleSessions != nil {
-		// Delete old sessions
-		if err := scheduleRepoTx.DeleteScheduleSessionsByCourseID(ctx, id); err != nil {
-			return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
-		}
-
-		// Create new sessions (bulk insert for performance)
-		var sessionParams []db.CreateScheduleSessionParams
-		for _, session := range *req.ScheduleSessions {
-			for _, slotNumber := range session.SlotNumbers {
-				sessionParams = append(sessionParams, db.CreateScheduleSessionParams{
-					SemesterCourseID: updatedCourse.ID,
-					DayOfWeek:        db.DayOfWeekEnum(session.DayOfWeek),
-					SlotNumber:       slotNumber,
-				})
-			}
-		}
-
-		if err := scheduleRepoTx.BulkCreateScheduleSessions(ctx, sessionParams); err != nil {
-			return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
-		}
-
-		scheduleSessionsDTO = *req.ScheduleSessions
-	} else {
-		// Get existing schedule sessions
-		scheduleSessions, err := s.scheduleRepo.GetScheduleSessionsByCourseID(ctx, id)
-		if err != nil {
-			if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
-				return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
-			}
-			return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
-		}
-		scheduleSessionsDTO = groupScheduleSessions(scheduleSessions)
-	}
-
-	// Parse prerequisites from snapshot (not from catalog - historical data)
-	prerequisites, err := repository.JSONToPrerequisites(updatedCourse.Prerequisites)
-	if err != nil {
-		serviceLogger.Error("failed to parse prerequisites from snapshot",
-			zap.Error(err),
-		)
-		prerequisites = []dto.Prerequisite{}
-	}
-
-	// Parse assessment schema
-	assessmentSchema, err := repository.JSONToAssessmentSchema(updatedCourse.AssessmentSchema)
-	if err != nil {
-		serviceLogger.Error("failed to parse assessment schema",
-			zap.Error(err),
-		)
-		return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
-	}
-
-	// Create outbox event: course.semester.updated
-	eventPayload := map[string]interface{}{
-		"event_id":           uuid.New().String(),
-		"event_type":         events.EventCourseSemesterUpdated,
-		"timestamp":          time.Now().Format(time.RFC3339),
-		"semester_course_id": courseID,
-		"semester":           semester,
-		"course_code":        updatedCourse.CourseCode,
-		"course_name":        catalogCourse.Name,
-		"faculty":            catalogCourse.Faculty,
-		"department":         catalogCourse.Department,
-		"credits":            updatedCourse.Credits,
-		"class_level":        updatedCourse.ClassLevel,
-		"course_type":        string(catalogCourse.CourseType),
-		"instructor_id":      utils.PgtypeToUUIDString(updatedCourse.InstructorID),
-		"instructor_fullname": updatedCourse.InstructorFullname,
-		"classroom_location": updatedCourse.ClassroomLocation,
-		"max_capacity":       updatedCourse.MaxCapacity,
-		"assessment_schema":  assessmentSchema,
-		"prerequisites":      prerequisites,
-		"schedule_sessions":  scheduleSessionsDTO,
-	}
-
-	eventPayloadJSON, err := json.Marshal(eventPayload)
-	if err != nil {
-		serviceLogger.Error("failed to marshal event payload",
-			zap.Error(err),
-		)
-		return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
-	}
-
-	outboxParams := db.CreateOutboxEventParams{
-		EventType:  events.EventCourseSemesterUpdated,
-		RoutingKey: events.EventCourseSemesterUpdated,
-		Payload:    eventPayloadJSON,
-	}
-
-	_, err = s.outboxRepo.CreateOutboxEventWithTx(ctx, tx, outboxParams)
-	if err != nil {
-		if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
-			return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
-		}
-		return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
-	}
-
-	// Create instructor.changed event if instructor changed
-	if req.InstructorID != nil {
-		instructorChangePayload := map[string]interface{}{
-			"event_id":                uuid.New().String(),
-			"event_type":              events.EventCourseInstructorChanged,
-			"timestamp":               time.Now().Format(time.RFC3339),
-			"semester_course_id":      courseID,
-			"semester":                semester,
-			"course_code":             updatedCourse.CourseCode,
-			"course_name":             catalogCourse.Name,
-			"old_instructor_id":       utils.PgtypeToUUIDString(existingCourse.InstructorID),
-			"old_instructor_fullname": existingCourse.InstructorFullname,
-			"new_instructor_id":       req.InstructorID.String(),
-			"new_instructor_fullname": instructorFullname,
-		}
-
-		instructorEventJSON, err := json.Marshal(instructorChangePayload)
-		if err != nil {
-			serviceLogger.Error("failed to marshal instructor change event",
-				zap.Error(err),
-			)
-			return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
-		}
-
-		instructorOutboxParams := db.CreateOutboxEventParams{
-			EventType:  events.EventCourseInstructorChanged,
-			RoutingKey: events.EventCourseInstructorChanged,
-			Payload:    instructorEventJSON,
-		}
-
-		_, err = s.outboxRepo.CreateOutboxEventWithTx(ctx, tx, instructorOutboxParams)
-		if err != nil {
-			if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
-				return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
-			}
-			return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
-		}
-	}
-
-	// Commit transaction
-	if err := tx.Commit(ctx); err != nil {
-		serviceLogger.Error("failed to commit transaction",
-			zap.Error(err),
-		)
-		return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, fmt.Errorf("transaction commit failed: %w", err))
-	}
-
-	serviceLogger.Info("semester course updated successfully",
-		zap.String("semester_course_id", courseID),
-		zap.Bool("instructor_changed", req.InstructorID != nil),
-		zap.Bool("schedule_changed", req.ScheduleSessions != nil),
-	)
-
-	return s.toSemesterCourseResponseWithPrerequisites(updatedCourse, catalogCourse.Name, scheduleSessionsDTO, prerequisites)
 }
 
 // DeleteSemesterCourse deletes a semester course
@@ -824,7 +610,7 @@ func (s *SemesterService) DeleteSemesterCourse(ctx context.Context, semester, co
 		return dto.DeleteSemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
 	}
 
-	scheduleSessionsDTO := groupScheduleSessions(scheduleSessions)
+	scheduleSessionsDTO := groupScheduleSessionsFromRows(scheduleSessions)
 
 	// Begin transaction
 	tx, err := s.outboxRepo.BeginTx(ctx)
@@ -838,10 +624,10 @@ func (s *SemesterService) DeleteSemesterCourse(ctx context.Context, semester, co
 	semesterRepoTx := s.semesterRepo.WithTx(tx)
 
 	// Create outbox event: course.semester.deleted
-	eventPayload := map[string]interface{}{
+	eventPayload := map[string]any{
 		"event_id":           uuid.New().String(),
 		"event_type":         events.EventCourseSemesterDeleted,
-		"timestamp":          time.Now().Format(time.RFC3339),
+		"timestamp":          clock.Now().Format(time.RFC3339),
 		"semester_course_id": courseID,
 		"semester":           semester,
 		"course_code":        existingCourse.CourseCode,
@@ -901,20 +687,17 @@ func (s *SemesterService) DeleteSemesterCourse(ctx context.Context, semester, co
 }
 
 // checkInstructorConflict checks if instructor has schedule conflict
-func (s *SemesterService) checkInstructorConflict(ctx context.Context, semester string, instructorID uuid.UUID, sessions []dto.ScheduleSession, excludeCourseID uuid.UUID) error {
-	// Extract all days and slots
-	var days []string
+// currentDepartment is used to detect cross-department conflicts and return a detailed error
+func (s *SemesterService) checkInstructorConflict(ctx context.Context, semester string, instructorID uuid.UUID, sessions []dto.ScheduleSession, excludeCourseID uuid.UUID, currentDepartment string) error {
+	// Build parallel arrays of (day, slot) pairs for tuple matching
+	var dayEnums []db.DayOfWeekEnum
 	var slots []int16
 
 	for _, session := range sessions {
-		days = append(days, session.DayOfWeek)
-		slots = append(slots, session.SlotNumbers...)
-	}
-
-	// Convert to DB enums
-	dayEnums := make([]db.DayOfWeekEnum, len(days))
-	for i, day := range days {
-		dayEnums[i] = db.DayOfWeekEnum(day)
+		for _, slotNumber := range session.SlotNumbers {
+			dayEnums = append(dayEnums, db.DayOfWeekEnum(session.DayOfWeek))
+			slots = append(slots, slotNumber)
+		}
 	}
 
 	params := db.CheckInstructorScheduleConflictParams{
@@ -933,6 +716,20 @@ func (s *SemesterService) checkInstructorConflict(ctx context.Context, semester 
 		return sharedErrors.Wrap(sharedErrors.ErrInternal, err)
 	}
 
+	// Check for cross-department conflict first
+	for _, c := range conflicts {
+		if c.Department != currentDepartment {
+			logger.Warn("instructor has cross-department schedule conflict",
+				zap.String("instructor_id", instructorID.String()),
+				zap.String("conflicting_course", c.CourseCode),
+				zap.String("conflicting_department", c.Department),
+				zap.String("current_department", currentDepartment),
+			)
+			return catalogErrors.NewScheduleConflictError(c.CourseCode, c.Department, string(c.DayOfWeek), c.SlotNumber)
+		}
+	}
+
+	// Same department conflict
 	if len(conflicts) > 0 {
 		logger.Warn("instructor has schedule conflict",
 			zap.String("instructor_id", instructorID.String()),
@@ -944,20 +741,54 @@ func (s *SemesterService) checkInstructorConflict(ctx context.Context, semester 
 	return nil
 }
 
-// groupScheduleSessions groups schedule sessions by day of week
-func groupScheduleSessions(sessions []db.CourseScheduleSession) []dto.ScheduleSession {
-	dayMap := make(map[string][]int16)
+// scheduleGroupKey is used as map key for grouping sessions by day + session_type
+type scheduleGroupKey struct {
+	DayOfWeek   string
+	SessionType string
+}
+
+// groupScheduleSessionsFromRows groups schedule sessions from GetScheduleSessionsByCourseIDRow by day and session type
+func groupScheduleSessionsFromRows(sessions []db.GetScheduleSessionsByCourseIDRow) []dto.ScheduleSession {
+	dayTypeMap := make(map[scheduleGroupKey][]int16)
 
 	for _, session := range sessions {
-		day := string(session.DayOfWeek)
-		dayMap[day] = append(dayMap[day], session.SlotNumber)
+		key := scheduleGroupKey{
+			DayOfWeek:   string(session.DayOfWeek),
+			SessionType: string(session.SessionType),
+		}
+		dayTypeMap[key] = append(dayTypeMap[key], session.SlotNumber)
 	}
 
 	var result []dto.ScheduleSession
-	for day, slots := range dayMap {
+	for key, slots := range dayTypeMap {
 		result = append(result, dto.ScheduleSession{
-			DayOfWeek:   day,
+			DayOfWeek:   key.DayOfWeek,
 			SlotNumbers: slots,
+			SessionType: key.SessionType,
+		})
+	}
+
+	return result
+}
+
+// groupScheduleSessionsFromMultiRows groups schedule sessions from GetScheduleSessionsByMultipleCourseIDsRow by day and session type
+func groupScheduleSessionsFromMultiRows(sessions []db.GetScheduleSessionsByMultipleCourseIDsRow) []dto.ScheduleSession {
+	dayTypeMap := make(map[scheduleGroupKey][]int16)
+
+	for _, session := range sessions {
+		key := scheduleGroupKey{
+			DayOfWeek:   string(session.DayOfWeek),
+			SessionType: string(session.SessionType),
+		}
+		dayTypeMap[key] = append(dayTypeMap[key], session.SlotNumber)
+	}
+
+	var result []dto.ScheduleSession
+	for key, slots := range dayTypeMap {
+		result = append(result, dto.ScheduleSession{
+			DayOfWeek:   key.DayOfWeek,
+			SlotNumbers: slots,
+			SessionType: key.SessionType,
 		})
 	}
 
@@ -1035,9 +866,10 @@ func (s *SemesterService) GetTeacherCourses(ctx context.Context, instructorID uu
 			}
 
 			scheduleSessions = append(scheduleSessions, dto.TeacherScheduleSession{
-				Day:  string(session.DayOfWeek),
-				Time: fmt.Sprintf("%02d:%02d-%02d:%02d", startHour, startMin, endHour, endMin),
-				Room: course.ClassroomLocation,
+				Day:         string(session.DayOfWeek),
+				Time:        fmt.Sprintf("%02d:%02d-%02d:%02d", startHour, startMin, endHour, endMin),
+				Room:        course.ClassroomLocation,
+				SessionType: string(session.SessionType),
 			})
 		}
 
@@ -1050,7 +882,7 @@ func (s *SemesterService) GetTeacherCourses(ctx context.Context, instructorID uu
 			Semester:          course.Semester,
 			Credits:           course.Credits,
 			TheoreticalHours:  course.TheoreticalHours,
-			PracticalHours:    course.PracticalHours,
+			LabHours:          course.LabHours,
 			ClassroomLocation: course.ClassroomLocation,
 			MaxCapacity:       course.MaxCapacity,
 			Schedule:          scheduleSessions,
@@ -1066,4 +898,12 @@ func (s *SemesterService) GetTeacherCourses(ctx context.Context, instructorID uu
 		TotalCourses: len(courseItems),
 		Courses:      courseItems,
 	}, nil
+}
+
+// semesterFormatRegex validates semester format: YYYY-YYYY-Fall or YYYY-YYYY-Spring
+var semesterFormatRegex = regexp.MustCompile(`^\d{4}-\d{4}-(Fall|Spring)$`)
+
+// isValidSemesterFormat checks if a semester string matches the expected format
+func isValidSemesterFormat(semester string) bool {
+	return semesterFormatRegex.MatchString(semester)
 }

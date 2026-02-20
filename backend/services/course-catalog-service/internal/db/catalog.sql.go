@@ -60,14 +60,14 @@ func (q *Queries) CountCourses(ctx context.Context, arg CountCoursesParams) (int
 const createCourse = `-- name: CreateCourse :one
 INSERT INTO course_catalog (
     course_code, name, faculty, department, offering_unit,
-    class_level, semester, credits, ects, theoretical_hours, practical_hours, lab_hours,
+    class_level, semester, credits, ects, theoretical_hours, lab_hours,
     course_type, course_category, education_level, teaching_type, language,
     prerequisites, coordinator, purpose, description, learning_outcomes,
     learning_outcomes_list, weekly_topics, recommended_sources, syllabus, status
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)
 RETURNING id, course_code, name, faculty, department, offering_unit,
-          class_level, semester, credits, ects, theoretical_hours, practical_hours, lab_hours,
+          class_level, semester, credits, ects, theoretical_hours, lab_hours,
           course_type, course_category, education_level, teaching_type, language,
           prerequisites, coordinator, purpose, description, learning_outcomes,
           learning_outcomes_list, weekly_topics, recommended_sources, syllabus,
@@ -85,7 +85,6 @@ type CreateCourseParams struct {
 	Credits              int16                   `json:"credits"`
 	Ects                 pgtype.Int2             `json:"ects"`
 	TheoreticalHours     int16                   `json:"theoretical_hours"`
-	PracticalHours       int16                   `json:"practical_hours"`
 	LabHours             int16                   `json:"lab_hours"`
 	CourseType           CourseTypeEnum          `json:"course_type"`
 	CourseCategory       CourseCategoryEnum      `json:"course_category"`
@@ -116,7 +115,6 @@ func (q *Queries) CreateCourse(ctx context.Context, arg CreateCourseParams) (Cou
 		arg.Credits,
 		arg.Ects,
 		arg.TheoreticalHours,
-		arg.PracticalHours,
 		arg.LabHours,
 		arg.CourseType,
 		arg.CourseCategory,
@@ -147,7 +145,6 @@ func (q *Queries) CreateCourse(ctx context.Context, arg CreateCourseParams) (Cou
 		&i.Credits,
 		&i.Ects,
 		&i.TheoreticalHours,
-		&i.PracticalHours,
 		&i.LabHours,
 		&i.CourseType,
 		&i.CourseCategory,
@@ -172,7 +169,7 @@ func (q *Queries) CreateCourse(ctx context.Context, arg CreateCourseParams) (Cou
 
 const getCourseByCourseCode = `-- name: GetCourseByCourseCode :one
 SELECT id, course_code, name, faculty, department, offering_unit,
-       class_level, semester, credits, ects, theoretical_hours, practical_hours, lab_hours,
+       class_level, semester, credits, ects, theoretical_hours, lab_hours,
        course_type, course_category, education_level, teaching_type, language,
        prerequisites, coordinator, purpose, description, learning_outcomes,
        learning_outcomes_list, weekly_topics, recommended_sources, syllabus,
@@ -197,7 +194,6 @@ func (q *Queries) GetCourseByCourseCode(ctx context.Context, courseCode string) 
 		&i.Credits,
 		&i.Ects,
 		&i.TheoreticalHours,
-		&i.PracticalHours,
 		&i.LabHours,
 		&i.CourseType,
 		&i.CourseCategory,
@@ -222,7 +218,7 @@ func (q *Queries) GetCourseByCourseCode(ctx context.Context, courseCode string) 
 
 const getCourseByID = `-- name: GetCourseByID :one
 SELECT id, course_code, name, faculty, department, offering_unit,
-       class_level, semester, credits, ects, theoretical_hours, practical_hours, lab_hours,
+       class_level, semester, credits, ects, theoretical_hours, lab_hours,
        course_type, course_category, education_level, teaching_type, language,
        prerequisites, coordinator, purpose, description, learning_outcomes,
        learning_outcomes_list, weekly_topics, recommended_sources, syllabus,
@@ -247,7 +243,6 @@ func (q *Queries) GetCourseByID(ctx context.Context, id pgtype.UUID) (CourseCata
 		&i.Credits,
 		&i.Ects,
 		&i.TheoreticalHours,
-		&i.PracticalHours,
 		&i.LabHours,
 		&i.CourseType,
 		&i.CourseCategory,
@@ -310,7 +305,7 @@ func (q *Queries) GetCoursesByIDs(ctx context.Context, dollar_1 []pgtype.UUID) (
 
 const listCourses = `-- name: ListCourses :many
 SELECT id, course_code, name, faculty, department, offering_unit,
-       class_level, semester, credits, ects, theoretical_hours, practical_hours, lab_hours,
+       class_level, semester, credits, ects, theoretical_hours, lab_hours,
        course_type, course_category, education_level, teaching_type, language,
        prerequisites, status
 FROM course_catalog
@@ -355,7 +350,6 @@ type ListCoursesRow struct {
 	Credits          int16                   `json:"credits"`
 	Ects             pgtype.Int2             `json:"ects"`
 	TheoreticalHours int16                   `json:"theoretical_hours"`
-	PracticalHours   int16                   `json:"practical_hours"`
 	LabHours         int16                   `json:"lab_hours"`
 	CourseType       CourseTypeEnum          `json:"course_type"`
 	CourseCategory   CourseCategoryEnum      `json:"course_category"`
@@ -400,7 +394,6 @@ func (q *Queries) ListCourses(ctx context.Context, arg ListCoursesParams) ([]Lis
 			&i.Credits,
 			&i.Ects,
 			&i.TheoreticalHours,
-			&i.PracticalHours,
 			&i.LabHours,
 			&i.CourseType,
 			&i.CourseCategory,
@@ -431,27 +424,26 @@ SET name = COALESCE($2, name),
     credits = COALESCE($8, credits),
     ects = COALESCE($9, ects),
     theoretical_hours = COALESCE($10, theoretical_hours),
-    practical_hours = COALESCE($11, practical_hours),
-    lab_hours = COALESCE($12, lab_hours),
-    course_type = COALESCE($13, course_type),
-    course_category = COALESCE($14, course_category),
-    education_level = COALESCE($15, education_level),
-    teaching_type = COALESCE($16, teaching_type),
-    language = COALESCE($17, language),
-    prerequisites = COALESCE($18, prerequisites),
-    coordinator = COALESCE($19, coordinator),
-    purpose = COALESCE($20, purpose),
-    description = COALESCE($21, description),
-    learning_outcomes = COALESCE($22, learning_outcomes),
-    learning_outcomes_list = COALESCE($23, learning_outcomes_list),
-    weekly_topics = COALESCE($24, weekly_topics),
-    recommended_sources = COALESCE($25, recommended_sources),
-    syllabus = COALESCE($26, syllabus),
-    status = COALESCE($27, status),
+    lab_hours = COALESCE($11, lab_hours),
+    course_type = COALESCE($12, course_type),
+    course_category = COALESCE($13, course_category),
+    education_level = COALESCE($14, education_level),
+    teaching_type = COALESCE($15, teaching_type),
+    language = COALESCE($16, language),
+    prerequisites = COALESCE($17, prerequisites),
+    coordinator = COALESCE($18, coordinator),
+    purpose = COALESCE($19, purpose),
+    description = COALESCE($20, description),
+    learning_outcomes = COALESCE($21, learning_outcomes),
+    learning_outcomes_list = COALESCE($22, learning_outcomes_list),
+    weekly_topics = COALESCE($23, weekly_topics),
+    recommended_sources = COALESCE($24, recommended_sources),
+    syllabus = COALESCE($25, syllabus),
+    status = COALESCE($26, status),
     updated_at = NOW()
 WHERE course_code = $1
 RETURNING id, course_code, name, faculty, department, offering_unit,
-          class_level, semester, credits, ects, theoretical_hours, practical_hours, lab_hours,
+          class_level, semester, credits, ects, theoretical_hours, lab_hours,
           course_type, course_category, education_level, teaching_type, language,
           prerequisites, coordinator, purpose, description, learning_outcomes,
           learning_outcomes_list, weekly_topics, recommended_sources, syllabus,
@@ -469,7 +461,6 @@ type UpdateCourseParams struct {
 	Credits              pgtype.Int2                 `json:"credits"`
 	Ects                 pgtype.Int2                 `json:"ects"`
 	TheoreticalHours     pgtype.Int2                 `json:"theoretical_hours"`
-	PracticalHours       pgtype.Int2                 `json:"practical_hours"`
 	LabHours             pgtype.Int2                 `json:"lab_hours"`
 	CourseType           NullCourseTypeEnum          `json:"course_type"`
 	CourseCategory       NullCourseCategoryEnum      `json:"course_category"`
@@ -500,7 +491,6 @@ func (q *Queries) UpdateCourse(ctx context.Context, arg UpdateCourseParams) (Cou
 		arg.Credits,
 		arg.Ects,
 		arg.TheoreticalHours,
-		arg.PracticalHours,
 		arg.LabHours,
 		arg.CourseType,
 		arg.CourseCategory,
@@ -531,7 +521,6 @@ func (q *Queries) UpdateCourse(ctx context.Context, arg UpdateCourseParams) (Cou
 		&i.Credits,
 		&i.Ects,
 		&i.TheoreticalHours,
-		&i.PracticalHours,
 		&i.LabHours,
 		&i.CourseType,
 		&i.CourseCategory,

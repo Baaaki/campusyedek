@@ -7,6 +7,7 @@ import (
 
 	"github.com/baaaki/mydreamcampus/enrollment-service/internal/db"
 	sharedErrors "github.com/baaaki/mydreamcampus/shared/errors"
+	"github.com/baaaki/mydreamcampus/shared/events"
 	"github.com/baaaki/mydreamcampus/shared/utils"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -31,7 +32,7 @@ func (r *EnrollmentRepository) CreateProgramWithCoursesAndEvent(
 	ctx context.Context,
 	programParams db.CreateEnrollmentProgramParams,
 	courseIDs []uuid.UUID,
-	eventPayload map[string]interface{},
+	eventPayload map[string]any,
 ) (db.EnrollmentProgram, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
@@ -87,7 +88,7 @@ func (r *EnrollmentRepository) CreateProgramWithCoursesAndEvent(
 	// Create outbox event
 	payload, _ := json.Marshal(eventPayload)
 	_, err = qtx.CreateOutboxEvent(ctx, db.CreateOutboxEventParams{
-		EventType:   "enrollment.program_submitted",
+		EventType:   events.EventEnrollmentProgramSubmitted,
 		AggregateID: program.ID,
 		Payload:     payload,
 	})
@@ -170,7 +171,7 @@ func (r *EnrollmentRepository) GetPendingProgramsByAdvisor(ctx context.Context, 
 func (r *EnrollmentRepository) ApproveProgramWithEvent(
 	ctx context.Context,
 	programID uuid.UUID,
-	eventPayload map[string]interface{},
+	eventPayload map[string]any,
 ) (db.EnrollmentProgram, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
@@ -195,7 +196,7 @@ func (r *EnrollmentRepository) ApproveProgramWithEvent(
 	// Create outbox event
 	payload, _ := json.Marshal(eventPayload)
 	_, err = qtx.CreateOutboxEvent(ctx, db.CreateOutboxEventParams{
-		EventType:   "enrollment.program_approved",
+		EventType:   events.EventEnrollmentProgramApproved,
 		AggregateID: utils.UUIDToPgtype(programID),
 		Payload:     payload,
 	})
@@ -216,7 +217,7 @@ func (r *EnrollmentRepository) RejectProgramWithEventAndLog(
 	programID uuid.UUID,
 	rejectionLogParams db.CreateRejectionLogParams,
 	courseIDs []uuid.UUID,
-	eventPayload map[string]interface{},
+	eventPayload map[string]any,
 ) error {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
@@ -249,7 +250,7 @@ func (r *EnrollmentRepository) RejectProgramWithEventAndLog(
 	// Create outbox event
 	payload, _ := json.Marshal(eventPayload)
 	_, err = qtx.CreateOutboxEvent(ctx, db.CreateOutboxEventParams{
-		EventType:   "enrollment.program_rejected",
+		EventType:   events.EventEnrollmentProgramRejected,
 		AggregateID: utils.UUIDToPgtype(programID),
 		Payload:     payload,
 	})
@@ -329,7 +330,7 @@ func (r *EnrollmentRepository) CancelProgramWithEvent(
 	ctx context.Context,
 	programID uuid.UUID,
 	courseIDs []uuid.UUID,
-	eventPayload map[string]interface{},
+	eventPayload map[string]any,
 ) error {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
@@ -356,7 +357,7 @@ func (r *EnrollmentRepository) CancelProgramWithEvent(
 	// Create outbox event
 	payload, _ := json.Marshal(eventPayload)
 	_, err = qtx.CreateOutboxEvent(ctx, db.CreateOutboxEventParams{
-		EventType:   "enrollment.program_cancelled",
+		EventType:   events.EventEnrollmentProgramCancelled,
 		AggregateID: utils.UUIDToPgtype(programID),
 		Payload:     payload,
 	})

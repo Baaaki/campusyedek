@@ -8,17 +8,17 @@ import (
 
 // Event represents a generic event structure
 type Event struct {
-	EventID   string                 `json:"event_id"`
-	EventType string                 `json:"event_type"`
-	Timestamp time.Time              `json:"timestamp"`
-	Data      map[string]interface{} `json:"data"`
+	EventID   string         `json:"event_id"`
+	EventType string         `json:"event_type"`
+	Timestamp time.Time      `json:"timestamp"`
+	Data      map[string]any `json:"data"`
 }
 
 // StudentCreatedEvent represents student.created event payload
 type StudentCreatedEvent struct {
-	EventID   string    `json:"event_id"`
-	EventType string    `json:"event_type"`
-	Timestamp time.Time `json:"timestamp"`
+	EventID   string             `json:"event_id"`
+	EventType string             `json:"event_type"`
+	Timestamp time.Time          `json:"timestamp"`
 	Data      StudentCreatedData `json:"data"`
 }
 
@@ -39,24 +39,24 @@ type StudentCreatedData struct {
 
 // StudentUpdatedEvent represents student.updated event payload
 type StudentUpdatedEvent struct {
-	EventID   string    `json:"event_id"`
-	EventType string    `json:"event_type"`
-	Timestamp time.Time `json:"timestamp"`
+	EventID   string             `json:"event_id"`
+	EventType string             `json:"event_type"`
+	Timestamp time.Time          `json:"timestamp"`
 	Data      StudentUpdatedData `json:"data"`
 }
 
 // StudentUpdatedData represents the data in student.updated event
 type StudentUpdatedData struct {
-	ID            uuid.UUID              `json:"id"`
-	StudentNumber string                 `json:"student_number"`
-	ChangedFields map[string]interface{} `json:"changed_fields"`
+	ID            uuid.UUID      `json:"id"`
+	StudentNumber string         `json:"student_number"`
+	ChangedFields map[string]any `json:"changed_fields"`
 }
 
 // StudentDeactivatedEvent represents student.deactivated event payload
 type StudentDeactivatedEvent struct {
-	EventID   string    `json:"event_id"`
-	EventType string    `json:"event_type"`
-	Timestamp time.Time `json:"timestamp"`
+	EventID   string                 `json:"event_id"`
+	EventType string                 `json:"event_type"`
+	Timestamp time.Time              `json:"timestamp"`
 	Data      StudentDeactivatedData `json:"data"`
 }
 
@@ -70,9 +70,9 @@ type StudentDeactivatedData struct {
 
 // StaffDeactivatedEvent represents staff.deactivated event payload (inbound)
 type StaffDeactivatedEvent struct {
-	EventID   string    `json:"event_id"`
-	EventType string    `json:"event_type"`
-	Timestamp time.Time `json:"timestamp"`
+	EventID   string               `json:"event_id"`
+	EventType string               `json:"event_type"`
+	Timestamp time.Time            `json:"timestamp"`
 	Data      StaffDeactivatedData `json:"data"`
 }
 

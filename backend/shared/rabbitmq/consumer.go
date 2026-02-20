@@ -199,7 +199,7 @@ func (c *Consumer) republishWithRetry(msg amqp.Delivery, retryCount int) {
 }
 
 // UnmarshalEvent unmarshals JSON event body
-func UnmarshalEvent(body []byte, v interface{}) error {
+func UnmarshalEvent(body []byte, v any) error {
 	if err := json.Unmarshal(body, v); err != nil {
 		return fmt.Errorf("failed to unmarshal event: %w", err)
 	}

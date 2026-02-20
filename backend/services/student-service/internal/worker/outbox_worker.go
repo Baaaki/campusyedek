@@ -84,7 +84,7 @@ func (w *OutboxWorker) processEvents(ctx context.Context) {
 		eventID := utils.PgtypeToUUIDString(event.ID)
 
 		// Parse payload to map for publishing
-		var payload map[string]interface{}
+		var payload map[string]any
 		if err := json.Unmarshal(event.Payload, &payload); err != nil {
 			logger.Error("failed to unmarshal event payload",
 				zap.Error(err),
@@ -99,7 +99,7 @@ func (w *OutboxWorker) processEvents(ctx context.Context) {
 		routingKey := w.getRoutingKey(event.EventType)
 
 		// Wrap payload with event metadata (required by auth service)
-		eventMessage := map[string]interface{}{
+		eventMessage := map[string]any{
 			"event_id":   eventID,
 			"event_type": event.EventType,
 			"timestamp":  event.CreatedAt.Time,

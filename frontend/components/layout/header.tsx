@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useTheme } from '@/components/providers/theme-provider';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,9 +13,33 @@ import {
 import { Moon, Sun, LogOut, User, Settings, Bell } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
+const roleTitles: Record<string, string> = {
+  admin: 'Admin Panel',
+  teacher: 'Akademisyen Paneli',
+  student: 'Ogrenci Paneli',
+};
+
+const roleLabels: Record<string, string> = {
+  admin: 'Admin',
+  teacher: 'Akademisyen',
+  student: 'Ogrenci',
+};
+
 export function Header() {
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
+  const [user, setUser] = useState<{ email: string; role: string } | null>(null);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('user');
+    if (stored) {
+      try {
+        setUser(JSON.parse(stored));
+      } catch {
+        // ignore parse errors
+      }
+    }
+  }, []);
 
   const handleLogout = () => {
     // Clear localStorage
@@ -30,13 +55,16 @@ export function Header() {
     router.push('/auth/login');
   };
 
+  const panelTitle = roleTitles[user?.role ?? ''] ?? 'Panel';
+  const roleLabel = roleLabels[user?.role ?? ''] ?? 'Kullanici';
+
   return (
     <header className="fixed top-0 right-0 left-52 z-30 h-16 border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 transition-colors">
       <div className="flex h-full items-center justify-between px-6">
         {/* Left side - Page title or breadcrumb can go here */}
         <div className="flex items-center gap-4">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Admin Panel
+            {panelTitle}
           </h2>
         </div>
 
@@ -72,8 +100,8 @@ export function Header() {
                   <User className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
                 </div>
                 <div className="text-left hidden sm:block">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">Admin</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">admin@deu.edu.tr</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">{roleLabel}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{user?.email ?? ''}</p>
                 </div>
               </Button>
             </DropdownMenuTrigger>

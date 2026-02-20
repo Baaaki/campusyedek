@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/baaaki/mydreamcampus/meal-service/internal/repository"
+	"github.com/baaaki/mydreamcampus/shared/clock"
 	"go.uber.org/zap"
 )
 
@@ -114,7 +115,7 @@ func (w *ReservationWorker) cleanupExpiredReservations(ctx context.Context) erro
 }
 
 func (w *ReservationWorker) getNext3AM() time.Time {
-	now := time.Now().In(time.FixedZone("UTC+3", 3*3600))
+	now := clock.Now().In(time.FixedZone("UTC+3", 3*3600))
 	next3AM := time.Date(now.Year(), now.Month(), now.Day(), 3, 0, 0, 0, now.Location())
 
 	// If it's already past 03:00 today, schedule for tomorrow

@@ -152,6 +152,17 @@ func (ns NullOutboxStatusEnum) Value() (driver.Value, error) {
 	return string(ns.OutboxStatusEnum), nil
 }
 
+type AcademicPeriod struct {
+	ID          uuid.UUID          `json:"id"`
+	Semester    string             `json:"semester"`
+	CourseID    pgtype.UUID        `json:"course_id"`
+	PeriodStart pgtype.Timestamptz `json:"period_start"`
+	PeriodEnd   pgtype.Timestamptz `json:"period_end"`
+	IsActive    pgtype.Bool        `json:"is_active"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
 type CoursesCache struct {
 	ID                 uuid.UUID        `json:"id"`
 	CourseCode         string           `json:"course_code"`

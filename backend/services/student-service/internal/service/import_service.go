@@ -172,7 +172,7 @@ func (s *ImportService) processImport(ctx context.Context, jobID uuid.UUID, stud
 	// Update job progress
 	errorsJSON := []byte("[]")
 	if len(allErrors) > 0 {
-		errorsJSON = []byte(fmt.Sprintf(`["%s"]`, strings.Join(allErrors, `","`)))
+		errorsJSON = fmt.Appendf(nil, `["%s"]`, strings.Join(allErrors, `","`))
 	}
 
 	if err := s.importRepo.UpdateImportJobProgress(ctx, db.UpdateImportJobProgressParams{

@@ -11,11 +11,11 @@ import (
 
 // Connection wraps RabbitMQ connection with auto-reconnect
 type Connection struct {
-	URL        string
-	conn       *amqp.Connection
-	channel    *amqp.Channel
-	closeChan  chan *amqp.Error
-	connected  bool
+	URL       string
+	conn      *amqp.Connection
+	channel   *amqp.Channel
+	closeChan chan *amqp.Error
+	connected bool
 }
 
 // NewConnection creates a new RabbitMQ connection with retry backoff
@@ -27,7 +27,7 @@ func NewConnection(url string) (*Connection, error) {
 
 	// Retry connection with backoff (max 5 attempts)
 	maxRetries := 5
-	for i := 0; i < maxRetries; i++ {
+	for i := range maxRetries {
 		if err := c.connect(); err != nil {
 			logger.Error("rabbitmq connection failed",
 				zap.Error(err),

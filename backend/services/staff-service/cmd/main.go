@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/baaaki/mydreamcampus/shared/database"
+	sharedHandler "github.com/baaaki/mydreamcampus/shared/handler"
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	sharedMiddleware "github.com/baaaki/mydreamcampus/shared/middleware"
 	"github.com/baaaki/mydreamcampus/shared/rabbitmq"
@@ -84,6 +85,7 @@ func main() {
 	// Initialize handlers
 	staffHandler := handler.NewStaffHandler(staffService)
 	teacherProfileHandler := handler.NewTeacherProfileHandler(teacherProfileService)
+	timeHandler := sharedHandler.NewTimeHandler()
 
 	// Initialize outbox worker
 	outboxWorker := worker.NewOutboxWorker(
@@ -100,7 +102,7 @@ func main() {
 	go outboxWorker.Start(ctx)
 
 	// Setup Gin router
-	router := setupRouter(staffHandler, teacherProfileHandler, cfg.Server.Environment)
+	router := setupRouter(staffHandler, teacherProfileHandler, timeHandler, cfg.Server.Environment)
 
 	// Start HTTP server
 	srv := &http.Server{
@@ -143,7 +145,7 @@ func main() {
 	logger.Info("server exited")
 }
 
-func setupRouter(staffHandler *handler.StaffHandler, teacherProfileHandler *handler.TeacherProfileHandler, env string) *gin.Engine {
+func setupRouter(staffHandler *handler.StaffHandler, teacherProfileHandler *handler.TeacherProfileHandler, timeHandler *sharedHandler.TimeHandler, env string) *gin.Engine {
 	if env == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -206,6 +208,14 @@ func setupRouter(staffHandler *handler.StaffHandler, teacherProfileHandler *hand
 		}
 	}
 
+	// Admin routes for Time Machine
+	timeAdmin := router.Group("/api/staff/admin")
+	timeAdmin.Use(sharedMiddleware.ExtractUserFromHeaders())
+	timeAdmin.Use(sharedMiddleware.RequireAdmin())
+	{
+		timeHandler.RegisterRoutes(timeAdmin)
+	}
+
 	return router
 }
 
@@ -228,6 +238,28 @@ func setupRabbitMQ(conn *rabbitmq.Connection) error {
 	logger.Info("RabbitMQ exchange declared",
 		zap.String("exchange", "staff.events"),
 	)
+
+	// Pre-declare downstream consumer queues so messages persist even when consumers are offline
+	publisher := rabbitmq.NewPublisher(conn)
+
+	downstreamBindings := []struct {
+		queue      string
+		exchange   string
+		routingKey string
+	}{
+		// auth-service queues
+		{"auth_events_queue", "staff.events", "staff.created"},
+		{"auth_events_queue", "staff.events", "staff.updated"},
+		{"auth_events_queue", "staff.events", "staff.deactivated"},
+	}
+
+	for _, b := range downstreamBindings {
+		if err := publisher.DeclareAndBindQueue(b.queue, b.exchange, b.routingKey); err != nil {
+			return fmt.Errorf("failed to declare downstream queue %s: %w", b.queue, err)
+		}
+	}
+
+	logger.Info("downstream consumer queues pre-declared")
 
 	return nil
 }

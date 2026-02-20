@@ -30,7 +30,7 @@ var (
 )
 
 // Helper function to make HTTP requests
-func makeRequest(t *testing.T, method, url string, body interface{}) (*http.Response, []byte) {
+func makeRequest(t *testing.T, method, url string, body any) (*http.Response, []byte) {
 	var reqBody io.Reader
 	if body != nil {
 		jsonData, err := json.Marshal(body)
@@ -62,7 +62,7 @@ func TestHealthCheck(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	var result map[string]interface{}
+	var result map[string]any
 	err := json.Unmarshal(body, &result)
 	require.NoError(t, err)
 
@@ -76,7 +76,7 @@ func TestHealthCheck(t *testing.T) {
 func TestCreateAdvisor(t *testing.T) {
 	// Generate unique email with timestamp
 	timestamp := time.Now().UnixNano()
-	reqBody := map[string]interface{}{
+	reqBody := map[string]any{
 		"email":           fmt.Sprintf("test.advisor.%d@university.edu.tr", timestamp),
 		"first_name":      "Test",
 		"last_name":       "Advisor",
@@ -94,13 +94,13 @@ func TestCreateAdvisor(t *testing.T) {
 		listResp, listBody := makeRequest(t, "GET", staffBaseURL+"/api/staff?page=1&limit=1", nil)
 		require.Equal(t, http.StatusOK, listResp.StatusCode)
 
-		var listResult map[string]interface{}
+		var listResult map[string]any
 		err := json.Unmarshal(listBody, &listResult)
 		require.NoError(t, err)
 
-		data := listResult["data"].([]interface{})
+		data := listResult["data"].([]any)
 		if len(data) > 0 {
-			first := data[0].(map[string]interface{})
+			first := data[0].(map[string]any)
 			testAdvisorID = first["id"].(string)
 			t.Logf("✅ Using Existing Advisor: ID=%s", testAdvisorID)
 			return
@@ -109,7 +109,7 @@ func TestCreateAdvisor(t *testing.T) {
 
 	assert.Equal(t, http.StatusCreated, resp.StatusCode)
 
-	var result map[string]interface{}
+	var result map[string]any
 	err := json.Unmarshal(body, &result)
 	require.NoError(t, err)
 
@@ -123,7 +123,7 @@ func TestCreateAdvisor(t *testing.T) {
 func TestCreateStudent(t *testing.T) {
 	require.NotEmpty(t, testAdvisorID, "Advisor must be created first")
 
-	reqBody := map[string]interface{}{
+	reqBody := map[string]any{
 		"student_number":  "TEST001",
 		"first_name":      "Integration",
 		"last_name":       "Test",
@@ -139,7 +139,7 @@ func TestCreateStudent(t *testing.T) {
 
 	assert.Equal(t, http.StatusCreated, resp.StatusCode)
 
-	var result map[string]interface{}
+	var result map[string]any
 	err := json.Unmarshal(body, &result)
 	require.NoError(t, err)
 
@@ -161,7 +161,7 @@ func TestGetStudentByID(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	var result map[string]interface{}
+	var result map[string]any
 	err := json.Unmarshal(body, &result)
 	require.NoError(t, err)
 
@@ -177,12 +177,12 @@ func TestListStudents(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	var result map[string]interface{}
+	var result map[string]any
 	err := json.Unmarshal(body, &result)
 	require.NoError(t, err)
 
-	data := result["data"].([]interface{})
-	pagination := result["pagination"].(map[string]interface{})
+	data := result["data"].([]any)
+	pagination := result["pagination"].(map[string]any)
 
 	assert.NotEmpty(t, data)
 	assert.Equal(t, float64(1), pagination["page"])
@@ -195,7 +195,7 @@ func TestListStudents(t *testing.T) {
 func TestUpdateStudent(t *testing.T) {
 	require.NotEmpty(t, testStudentID, "Student must be created first")
 
-	reqBody := map[string]interface{}{
+	reqBody := map[string]any{
 		"class_level": 2,
 		"status":      "active",
 	}
@@ -205,7 +205,7 @@ func TestUpdateStudent(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	var result map[string]interface{}
+	var result map[string]any
 	err := json.Unmarshal(body, &result)
 	require.NoError(t, err)
 
@@ -263,7 +263,7 @@ TEST%d3,Bulk3,Import3,bulk3.%d@university.edu.tr,Engineering,Electrical Engineer
 
 	assert.Equal(t, http.StatusAccepted, resp.StatusCode)
 
-	var result map[string]interface{}
+	var result map[string]any
 	err = json.Unmarshal(respBody, &result)
 	require.NoError(t, err)
 
@@ -287,7 +287,7 @@ func TestGetImportJobStatus(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	var result map[string]interface{}
+	var result map[string]any
 	err := json.Unmarshal(body, &result)
 	require.NoError(t, err)
 
@@ -310,12 +310,12 @@ func TestListImportJobs(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	var result map[string]interface{}
+	var result map[string]any
 	err := json.Unmarshal(body, &result)
 	require.NoError(t, err)
 
-	data := result["data"].([]interface{})
-	pagination := result["pagination"].(map[string]interface{})
+	data := result["data"].([]any)
+	pagination := result["pagination"].(map[string]any)
 
 	assert.NotEmpty(t, data)
 	assert.GreaterOrEqual(t, len(data), 1)
@@ -333,7 +333,7 @@ func TestDeleteStudent(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	var result map[string]interface{}
+	var result map[string]any
 	err := json.Unmarshal(body, &result)
 	require.NoError(t, err)
 

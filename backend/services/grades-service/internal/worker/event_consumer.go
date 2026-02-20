@@ -79,7 +79,7 @@ func (w *EventConsumer) Start(ctx context.Context) error {
 	if err := w.consumer.DeclareQueue(enrollmentQueue); err != nil {
 		return err
 	}
-	if err := w.consumer.BindQueue(enrollmentQueue, "enrollment.events", "enrollment.program_approved"); err != nil {
+	if err := w.consumer.BindQueue(enrollmentQueue, "enrollment.events", "enrollment.program.approved"); err != nil {
 		return err
 	}
 	if err := w.consumer.Consume(enrollmentQueue, w.handleEnrollmentEvent); err != nil {
@@ -358,6 +358,8 @@ func (w *EventConsumer) handleEnrollmentEvent(body []byte) error {
 	ctx := context.Background()
 
 	// Create registrations for each course
+	successCount := 0
+	var lastErr error
 	for _, courseID := range event.Data.CourseIDs {
 		_, err := w.regRepo.CreateRegistration(ctx, db.CreateRegistrationParams{
 			StudentID:          event.Data.StudentID,
@@ -371,9 +373,20 @@ func (w *EventConsumer) handleEnrollmentEvent(body []byte) error {
 				zap.String("student_id", event.Data.StudentID.String()),
 				zap.String("course_id", courseID.String()),
 			)
-			// Continue with other courses
+			lastErr = err
 			continue
 		}
+		successCount++
+	}
+
+	// If all registrations failed (e.g. FK constraint: student/course not in cache yet), requeue for retry
+	if successCount == 0 && lastErr != nil {
+		logger.Warn("all registrations failed, will retry",
+			zap.String("student_id", event.Data.StudentID.String()),
+			zap.Int("total_courses", len(event.Data.CourseIDs)),
+			zap.Error(lastErr),
+		)
+		return lastErr
 	}
 
 	return nil

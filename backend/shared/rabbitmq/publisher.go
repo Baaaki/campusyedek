@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/baaaki/mydreamcampus/shared/clock"
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"go.uber.org/zap"
@@ -37,7 +38,7 @@ func (p *Publisher) DeclareExchange(exchangeName string) error {
 }
 
 // Publish publishes a message to an exchange with routing key
-func (p *Publisher) Publish(ctx context.Context, exchangeName, routingKey string, payload interface{}) error {
+func (p *Publisher) Publish(ctx context.Context, exchangeName, routingKey string, payload any) error {
 	// Serialize payload to JSON
 	body, err := json.Marshal(payload)
 	if err != nil {
@@ -55,7 +56,7 @@ func (p *Publisher) Publish(ctx context.Context, exchangeName, routingKey string
 			ContentType:  "application/json",
 			Body:         body,
 			DeliveryMode: amqp.Persistent, // persist to disk
-			Timestamp:    time.Now(),
+			Timestamp:    clock.Now(),
 		},
 	)
 
@@ -77,10 +78,34 @@ func (p *Publisher) Publish(ctx context.Context, exchangeName, routingKey string
 	return nil
 }
 
+// DeclareAndBindQueue declares a durable queue and binds it to an exchange with routing key.
+// This ensures the queue exists before publishing, so messages are not lost when the consumer is offline.
+func (p *Publisher) DeclareAndBindQueue(queueName, exchangeName, routingKey string) error {
+	ch := p.conn.Channel()
+
+	_, err := ch.QueueDeclare(
+		queueName,
+		true,  // durable
+		false, // delete when unused
+		false, // exclusive
+		false, // no-wait
+		nil,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to declare queue %s: %w", queueName, err)
+	}
+
+	if err := ch.QueueBind(queueName, routingKey, exchangeName, false, nil); err != nil {
+		return fmt.Errorf("failed to bind queue %s to %s with key %s: %w", queueName, exchangeName, routingKey, err)
+	}
+
+	return nil
+}
+
 // PublishWithRetry publishes a message with retry logic
-func (p *Publisher) PublishWithRetry(ctx context.Context, exchangeName, routingKey string, payload interface{}, maxRetries int) error {
+func (p *Publisher) PublishWithRetry(ctx context.Context, exchangeName, routingKey string, payload any, maxRetries int) error {
 	var err error
-	for i := 0; i < maxRetries; i++ {
+	for i := range maxRetries {
 		err = p.Publish(ctx, exchangeName, routingKey, payload)
 		if err == nil {
 			return nil

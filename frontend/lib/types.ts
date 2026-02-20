@@ -140,16 +140,33 @@ export interface ScheduleSession {
   slot: number;
 }
 
+export interface CourseOffering {
+  id: string;
+  course_code: string;
+  course_name: string;
+  instructor: string;
+  classroom: string;
+  schedule: ScheduleSession[];
+}
+
 export interface AvailableCourse {
   id: string;
   course_code: string;
   course_name: string;
   credits: number;
-  schedule_sessions: ScheduleSessionDTO[];
+  schedule_sessions: AvailableCourseSlot[];
   max_capacity: number;
   current_enrollment: number;
   available_seats: number;
   instructor: string;
+}
+
+export interface AvailableCourseSlot {
+  day: number;
+  slot: number;
+  day_of_week?: string;
+  slot_numbers?: number[];
+  session_type?: 'theory' | 'lab';
 }
 
 export interface CourseBasic {
@@ -230,6 +247,7 @@ export interface QRPayload {
 export interface SessionListItem {
   session_id?: string;
   week_number: number;
+  session_type: string;
   session_date?: string;
   present_count?: number;
   absent_count?: number;
@@ -516,6 +534,7 @@ export interface PaginatedResponse<T> {
 export interface ScheduleSessionDTO {
   day_of_week: string; // 'monday', 'tuesday', etc.
   slot_numbers: number[]; // [1, 2] for 1st and 2nd slots
+  session_type: 'theory' | 'lab'; // required by backend
 }
 
 export interface AssessmentItem {
@@ -569,7 +588,7 @@ export interface TeacherCourse {
   semester: string;
   credits: number;
   theoretical_hours: number;
-  practical_hours: number;
+  lab_hours: number;
   classroom_location: string;
   max_capacity: number;
   schedule: TeacherScheduleSession[];
@@ -586,6 +605,7 @@ export interface CreateSessionRequest {
   course_id: string;
   week_number: number;
   duration_minutes: number;
+  session_type: 'theory' | 'lab';
 }
 
 export interface CreateSessionResponse {
@@ -594,6 +614,7 @@ export interface CreateSessionResponse {
   course_code: string;
   course_name: string;
   week_number: number;
+  session_type: string;
   session_date: string;
   qr_rotation_interval: number;
   started_at: string;
@@ -607,6 +628,7 @@ export interface SessionDetailsResponse {
   course_code: string;
   course_name: string;
   week_number: number;
+  session_type: string;
   session_date: string;
   semester: string;
   is_active: boolean;
@@ -692,4 +714,72 @@ export interface CloseSessionResponse {
     student_number: string;
     student_name: string;
   }[];
+}
+
+// System Management types (Time Machine & Academic Periods)
+export interface TimeStatus {
+  mode: 'real' | 'simulated';
+  current_time: string;
+  simulated_time: string | null;
+}
+
+export interface ServiceTimeStatus {
+  service: string;
+  label: string;
+  status: TimeStatus | null;
+  error: string | null;
+}
+
+// Grades service: has course_id for course-specific deadline overrides
+export interface AcademicPeriod {
+  id: string;
+  semester: string;
+  period_start: string;
+  period_end: string;
+  course_id: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// Catalog & Enrollment services: no course_id
+export interface SimplePeriod {
+  id: string;
+  semester: string;
+  period_start: string;
+  period_end: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreatePeriodRequest {
+  semester: string;
+  period_start: string;
+  period_end: string;
+  course_id?: string;
+}
+
+export interface SimpleCreatePeriodRequest {
+  semester: string;
+  period_start: string;
+  period_end: string;
+}
+
+export interface UpdatePeriodRequest {
+  period_end?: string;
+  is_active?: boolean;
+}
+
+// Meal service: closed days (holidays) instead of academic periods
+export interface ClosedDay {
+  id: string;
+  date: string;
+  reason: string;
+  created_at: string;
+}
+
+export interface CreateClosedDayRequest {
+  date: string;
+  reason: string;
 }

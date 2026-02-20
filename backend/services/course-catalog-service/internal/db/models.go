@@ -277,6 +277,48 @@ func (ns NullOutboxStatusEnum) Value() (driver.Value, error) {
 	return string(ns.OutboxStatusEnum), nil
 }
 
+type ScheduleSessionTypeEnum string
+
+const (
+	ScheduleSessionTypeEnumTheory ScheduleSessionTypeEnum = "theory"
+	ScheduleSessionTypeEnumLab    ScheduleSessionTypeEnum = "lab"
+)
+
+func (e *ScheduleSessionTypeEnum) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ScheduleSessionTypeEnum(s)
+	case string:
+		*e = ScheduleSessionTypeEnum(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ScheduleSessionTypeEnum: %T", src)
+	}
+	return nil
+}
+
+type NullScheduleSessionTypeEnum struct {
+	ScheduleSessionTypeEnum ScheduleSessionTypeEnum `json:"schedule_session_type_enum"`
+	Valid                   bool                    `json:"valid"` // Valid is true if ScheduleSessionTypeEnum is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullScheduleSessionTypeEnum) Scan(value interface{}) error {
+	if value == nil {
+		ns.ScheduleSessionTypeEnum, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ScheduleSessionTypeEnum.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullScheduleSessionTypeEnum) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ScheduleSessionTypeEnum), nil
+}
+
 type TeachingTypeEnum string
 
 const (
@@ -320,6 +362,16 @@ func (ns NullTeachingTypeEnum) Value() (driver.Value, error) {
 	return string(ns.TeachingTypeEnum), nil
 }
 
+type AcademicPeriod struct {
+	ID          pgtype.UUID        `json:"id"`
+	Semester    string             `json:"semester"`
+	PeriodStart pgtype.Timestamptz `json:"period_start"`
+	PeriodEnd   pgtype.Timestamptz `json:"period_end"`
+	IsActive    pgtype.Bool        `json:"is_active"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
 type CourseCatalog struct {
 	ID                   pgtype.UUID             `json:"id"`
 	CourseCode           string                  `json:"course_code"`
@@ -332,7 +384,6 @@ type CourseCatalog struct {
 	Credits              int16                   `json:"credits"`
 	Ects                 pgtype.Int2             `json:"ects"`
 	TheoreticalHours     int16                   `json:"theoretical_hours"`
-	PracticalHours       int16                   `json:"practical_hours"`
 	LabHours             int16                   `json:"lab_hours"`
 	CourseType           CourseTypeEnum          `json:"course_type"`
 	CourseCategory       CourseCategoryEnum      `json:"course_category"`
@@ -354,11 +405,12 @@ type CourseCatalog struct {
 }
 
 type CourseScheduleSession struct {
-	ID               pgtype.UUID      `json:"id"`
-	SemesterCourseID pgtype.UUID      `json:"semester_course_id"`
-	DayOfWeek        DayOfWeekEnum    `json:"day_of_week"`
-	SlotNumber       int16            `json:"slot_number"`
-	CreatedAt        pgtype.Timestamp `json:"created_at"`
+	ID               pgtype.UUID             `json:"id"`
+	SemesterCourseID pgtype.UUID             `json:"semester_course_id"`
+	DayOfWeek        DayOfWeekEnum           `json:"day_of_week"`
+	SlotNumber       int16                   `json:"slot_number"`
+	CreatedAt        pgtype.Timestamp        `json:"created_at"`
+	SessionType      ScheduleSessionTypeEnum `json:"session_type"`
 }
 
 type OutboxEvent struct {

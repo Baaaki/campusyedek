@@ -6,10 +6,11 @@ import (
 	"github.com/google/uuid"
 )
 
-// ScheduleSession represents a single schedule session (day + slot numbers)
+// ScheduleSession represents a single schedule session (day + slot numbers + session type)
 type ScheduleSession struct {
 	DayOfWeek   string  `json:"day_of_week"`
 	SlotNumbers []int16 `json:"slot_numbers"`
+	SessionType string  `json:"session_type" binding:"required,oneof=theory lab"` // "theory" or "lab"
 }
 
 // AssessmentItem represents a single assessment component
@@ -29,16 +30,6 @@ type CreateSemesterCourseRequest struct {
 	MaxCapacity        int16              `json:"max_capacity" binding:"required,min=1,max=1000"`
 	AssessmentSchema   []AssessmentItem   `json:"assessment_schema" binding:"required,min=1,dive"`
 	ScheduleSessions   []ScheduleSession  `json:"schedule_sessions" binding:"required,min=1,dive"`
-}
-
-// UpdateSemesterCourseRequest represents the request to update a semester course
-type UpdateSemesterCourseRequest struct {
-	InstructorID       *uuid.UUID         `json:"instructor_id" binding:"omitempty,uuid"`
-	InstructorFullname *string            `json:"instructor_fullname" binding:"omitempty,min=3,max=150"`
-	ClassroomLocation  *string            `json:"classroom_location" binding:"omitempty,min=3,max=100"`
-	MaxCapacity        *int16             `json:"max_capacity" binding:"omitempty,min=1,max=1000"`
-	AssessmentSchema   *[]AssessmentItem  `json:"assessment_schema" binding:"omitempty,min=1,dive"`
-	ScheduleSessions   *[]ScheduleSession `json:"schedule_sessions" binding:"omitempty,min=1,dive"`
 }
 
 // SemesterCourseResponse represents a semester course in API responses
@@ -102,9 +93,10 @@ type DeleteSemesterCourseResponse struct {
 
 // TeacherScheduleSession represents a schedule session for teacher's course
 type TeacherScheduleSession struct {
-	Day  string `json:"day"`
-	Time string `json:"time"`
-	Room string `json:"room"`
+	Day         string `json:"day"`
+	Time        string `json:"time"`
+	Room        string `json:"room"`
+	SessionType string `json:"session_type"` // "theory" or "lab"
 }
 
 // TeacherCourseItem represents a course item for teacher
@@ -117,7 +109,7 @@ type TeacherCourseItem struct {
 	Semester          string                   `json:"semester"`
 	Credits           int16                    `json:"credits"`
 	TheoreticalHours  int16                    `json:"theoretical_hours"`
-	PracticalHours    int16                    `json:"practical_hours"`
+	LabHours          int16                    `json:"lab_hours"`
 	ClassroomLocation string                   `json:"classroom_location"`
 	MaxCapacity       int16                    `json:"max_capacity"`
 	Schedule          []TeacherScheduleSession `json:"schedule"`

@@ -4,12 +4,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/baaaki/mydreamcampus/grades-service/internal/db"
 	"github.com/baaaki/mydreamcampus/grades-service/internal/repository"
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	"github.com/baaaki/mydreamcampus/shared/rabbitmq"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
 )
 
@@ -73,20 +71,11 @@ func (w *OutboxWorker) processBatch(ctx context.Context) {
 
 	for _, event := range events {
 		if err := w.processEvent(ctx, event.ID, event.EventType, event.RoutingKey, event.Payload); err != nil {
-			logger.Error("failed to process outbox event",
+			logger.Warn("failed to process outbox event, will retry on next poll",
 				zap.Error(err),
 				zap.String("event_id", event.ID.String()),
 				zap.String("event_type", event.EventType),
 			)
-
-			// Mark as failed
-			if err := w.outboxRepo.MarkOutboxEventFailed(ctx, db.MarkOutboxEventFailedParams{
-				ID:           event.ID,
-				ErrorMessage: pgtype.Text{String: err.Error(), Valid: true},
-			}); err != nil {
-				logger.Error("failed to mark outbox event as failed", zap.Error(err))
-			}
-
 			continue
 		}
 

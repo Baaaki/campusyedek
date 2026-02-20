@@ -15,9 +15,8 @@ import (
 
 var (
 	// QR Code errors (AppError for HTTP responses)
-	ErrInvalidQRCode    = sharedErrors.New("INVALID_QR_CODE", "QR kod geçersiz", http.StatusBadRequest)
-	ErrQRExpired        = sharedErrors.New("QR_EXPIRED", "QR kod süresi dolmuş", http.StatusBadRequest)
-	ErrSessionExpired   = sharedErrors.New("SESSION_EXPIRED", "Yoklama oturumu süresi dolmuş", http.StatusBadRequest)
+	ErrInvalidQRCode  = sharedErrors.New("INVALID_QR_CODE", "QR kod geçersiz", http.StatusBadRequest)
+	ErrSessionExpired = sharedErrors.New("SESSION_EXPIRED", "Yoklama oturumu süresi dolmuş", http.StatusBadRequest)
 	ErrSessionNotActive = sharedErrors.New("SESSION_NOT_ACTIVE", "Yoklama oturumu aktif değil", http.StatusBadRequest)
 
 	// Session errors (AppError for HTTP responses)
@@ -28,11 +27,12 @@ var (
 	// Student errors (AppError for HTTP responses)
 	ErrStudentNotFound    = sharedErrors.New("STUDENT_NOT_FOUND", "Öğrenci bulunamadı", http.StatusNotFound)
 	ErrStudentDeactivated = sharedErrors.New("STUDENT_DEACTIVATED", "Öğrenci deaktif edilmiş", http.StatusForbidden)
-	ErrNotEnrolled        = sharedErrors.New("NOT_ENROLLED", "Bu derse kayıtlı değilsiniz", http.StatusForbidden)
-	ErrAlreadyMarked      = sharedErrors.New("ALREADY_MARKED", "Bu dersin yoklamasında zaten varsınız", http.StatusConflict)
+	ErrNotEnrolled   = sharedErrors.New("NOT_ENROLLED", "Bu derse kayıtlı değilsiniz", http.StatusForbidden)
+	ErrAlreadyMarked = sharedErrors.New("ALREADY_MARKED", "Bu dersin yoklaması zaten alındı", http.StatusConflict)
 
 	// Course errors (AppError for HTTP responses)
-	ErrCourseNotFound = sharedErrors.New("COURSE_NOT_FOUND", "Ders bulunamadı", http.StatusNotFound)
+	ErrCourseNotFound    = sharedErrors.New("COURSE_NOT_FOUND", "Ders bulunamadı", http.StatusNotFound)
+	ErrLabNotAvailable   = sharedErrors.New("LAB_NOT_AVAILABLE", "Bu dersin uygulama (lab) saati bulunmamaktadır", http.StatusBadRequest)
 
 	// Authorization errors (AppError for HTTP responses)
 	ErrForbidden = sharedErrors.New("FORBIDDEN", "Bu işlem için yetkiniz yok", http.StatusForbidden)

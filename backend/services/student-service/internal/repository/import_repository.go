@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	sharedErrors "github.com/baaaki/mydreamcampus/shared/errors"
-	"github.com/baaaki/mydreamcampus/student-service/internal/db"
 	"github.com/baaaki/mydreamcampus/shared/utils"
+	"github.com/baaaki/mydreamcampus/student-service/internal/db"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -110,10 +110,10 @@ func (r *ImportRepository) BulkInsertStudents(ctx context.Context, students []db
 
 	// Prepare data for COPY
 	columns := []string{"student_number", "first_name", "last_name", "email", "faculty", "department", "enrollment_year", "class_level", "advisor_id"}
-	rows := make([][]interface{}, len(students))
+	rows := make([][]any, len(students))
 
 	for i, student := range students {
-		rows[i] = []interface{}{
+		rows[i] = []any{
 			student.StudentNumber,
 			student.FirstName,
 			student.LastName,

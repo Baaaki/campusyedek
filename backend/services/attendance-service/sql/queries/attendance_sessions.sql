@@ -1,9 +1,9 @@
 -- name: CreateAttendanceSession :one
 INSERT INTO attendance_sessions (
     course_id, instructor_id, semester, week_number, session_date,
-    qr_secret, qr_rotation_interval, started_at, expires_at, is_active
+    qr_secret, qr_rotation_interval, started_at, expires_at, is_active, session_type
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, TRUE
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, TRUE, $10
 ) RETURNING *;
 
 -- name: GetSessionByID :one
@@ -19,7 +19,7 @@ LIMIT 1;
 -- name: CheckSessionExists :one
 SELECT COUNT(*) as count
 FROM attendance_sessions
-WHERE course_id = $1 AND week_number = $2;
+WHERE course_id = $1 AND week_number = $2 AND session_type = $3;
 
 -- name: GetSessionsByCourse :many
 SELECT
@@ -28,10 +28,11 @@ SELECT
     session_date,
     is_active,
     started_at,
-    expires_at
+    expires_at,
+    session_type
 FROM attendance_sessions
 WHERE course_id = $1 AND semester = $2
-ORDER BY week_number ASC;
+ORDER BY week_number ASC, session_type ASC;
 
 -- name: DeactivateSession :exec
 UPDATE attendance_sessions

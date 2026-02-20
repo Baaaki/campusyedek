@@ -11,7 +11,7 @@ type BaseEvent struct {
 	EventID   uuid.UUID   `json:"event_id"`
 	EventType string      `json:"event_type"`
 	Timestamp time.Time   `json:"timestamp"`
-	Data      interface{} `json:"data"`
+	Data      any `json:"data"`
 }
 
 // =======================================
@@ -43,72 +43,78 @@ type StudentDeactivatedEventData struct {
 	StudentID uuid.UUID `json:"student_id"`
 }
 
+// ScheduleSessionInfo represents a schedule session from catalog events
+type ScheduleSessionInfo struct {
+	SessionType string `json:"session_type"`
+}
+
 // CourseSemesterCreatedEvent is consumed from course catalog service
+// Field names must match catalog service's flat event payload
 type CourseSemesterCreatedEventData struct {
-	CourseID          uuid.UUID `json:"course_id"`
-	CourseCode        string    `json:"course_code"`
-	CourseName        string    `json:"course_name"`
-	Credits           int16     `json:"credits"`
-	Semester          string    `json:"semester"`
-	Department        string    `json:"department"`
-	InstructorID      uuid.UUID `json:"instructor_id"`
-	InstructorName    string    `json:"instructor_name"`
-	TotalWeeks        int16     `json:"total_weeks"`
+	SemesterCourseID   uuid.UUID            `json:"semester_course_id"`
+	CourseCode         string               `json:"course_code"`
+	CourseName         string               `json:"course_name"`
+	Credits            int16                `json:"credits"`
+	Semester           string               `json:"semester"`
+	Department         string               `json:"department"`
+	InstructorID       uuid.UUID            `json:"instructor_id"`
+	InstructorFullname string               `json:"instructor_fullname"`
+	ScheduleSessions   []ScheduleSessionInfo `json:"schedule_sessions"`
 }
 
 // CourseSemesterUpdatedEvent is consumed from course catalog service
 type CourseSemesterUpdatedEventData struct {
-	CourseID          uuid.UUID `json:"course_id"`
-	CourseCode        string    `json:"course_code"`
-	CourseName        string    `json:"course_name"`
-	Credits           int16     `json:"credits"`
-	Semester          string    `json:"semester"`
-	Department        string    `json:"department"`
-	InstructorID      uuid.UUID `json:"instructor_id"`
-	InstructorName    string    `json:"instructor_name"`
-	TotalWeeks        int16     `json:"total_weeks"`
+	SemesterCourseID   uuid.UUID            `json:"semester_course_id"`
+	CourseCode         string               `json:"course_code"`
+	CourseName         string               `json:"course_name"`
+	Credits            int16                `json:"credits"`
+	Semester           string               `json:"semester"`
+	Department         string               `json:"department"`
+	InstructorID       uuid.UUID            `json:"instructor_id"`
+	InstructorFullname string               `json:"instructor_fullname"`
+	ScheduleSessions   []ScheduleSessionInfo `json:"schedule_sessions"`
 }
 
 // CourseSemesterDeletedEvent is consumed from course catalog service
 type CourseSemesterDeletedEventData struct {
-	CourseID   uuid.UUID `json:"course_id"`
-	CourseCode string    `json:"course_code"`
-	Semester   string    `json:"semester"`
+	SemesterCourseID uuid.UUID `json:"semester_course_id"`
+	CourseCode       string    `json:"course_code"`
+	Semester         string    `json:"semester"`
 }
 
-// EnrollmentCourseInfo represents a course in enrollment event
-type EnrollmentCourseInfo struct {
-	CourseID   uuid.UUID `json:"course_id"`
-	CourseCode string    `json:"course_code"`
-	CourseName string    `json:"course_name"`
-	Credits    int16     `json:"credits"`
-}
-
-// EnrollmentProgramApprovedEvent is consumed from enrollment service
+// EnrollmentProgramApprovedEventData is consumed from enrollment service
+// Wrapped in BaseEvent: { event_id, event_type, timestamp, data: { ... } }
 type EnrollmentProgramApprovedEventData struct {
-	ProgramID     uuid.UUID              `json:"program_id"`
-	StudentID     uuid.UUID              `json:"student_id"`
-	StudentNumber string                 `json:"student_number"`
-	StudentEmail  string                 `json:"student_email"`
-	Semester      string                 `json:"semester"`
-	Courses       []EnrollmentCourseInfo `json:"courses"`
+	ProgramID  uuid.UUID   `json:"program_id"`
+	StudentID  uuid.UUID   `json:"student_id"`
+	Semester   string      `json:"semester"`
+	CourseIDs  []uuid.UUID `json:"course_ids"`
+	ApprovedBy uuid.UUID   `json:"approved_by"`
 }
 
 // =======================================
 // PUBLISHED EVENTS
 // =======================================
 
+// AttendanceFailedTypeDetail contains attendance detail for a session type
+type AttendanceFailedTypeDetail struct {
+	TotalSessions int `json:"total_sessions"`
+	PresentCount  int `json:"present_count"`
+	AbsentCount   int `json:"absent_count"`
+	MinRequired   int `json:"min_required"`
+}
+
 // AttendanceSemesterFailedEventData is published when student fails due to attendance
 type AttendanceSemesterFailedEventData struct {
-	StudentID          uuid.UUID `json:"student_id"`
-	StudentNumber      string    `json:"student_number"`
-	StudentEmail       string    `json:"student_email"`
-	CourseID           uuid.UUID `json:"course_id"`
-	CourseCode         string    `json:"course_code"`
-	CourseName         string    `json:"course_name"`
-	Semester           string    `json:"semester"`
-	TotalWeeks         int16     `json:"total_weeks"`
-	PresentCount       int       `json:"present_count"`
-	AbsentCount        int       `json:"absent_count"`
-	MaxAllowedAbsences int       `json:"max_allowed_absences"`
+	StudentID     uuid.UUID                    `json:"student_id"`
+	StudentNumber string                       `json:"student_number"`
+	StudentEmail  string                       `json:"student_email"`
+	CourseID      uuid.UUID                    `json:"course_id"`
+	CourseCode    string                       `json:"course_code"`
+	CourseName    string                       `json:"course_name"`
+	Semester      string                       `json:"semester"`
+	TotalWeeks    int16                        `json:"total_weeks"`
+	FailedType    string                       `json:"failed_type"` // "theory", "lab", or "both"
+	Theory        *AttendanceFailedTypeDetail  `json:"theory,omitempty"`
+	Lab           *AttendanceFailedTypeDetail  `json:"lab,omitempty"`
 }

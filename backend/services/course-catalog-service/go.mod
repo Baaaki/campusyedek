@@ -1,6 +1,6 @@
 module github.com/baaaki/mydreamcampus/course-catalog-service
 
-go 1.25.1
+go 1.26
 
 require (
 	github.com/gin-gonic/gin v1.11.0

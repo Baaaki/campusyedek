@@ -142,6 +142,16 @@ func (ns NullEnrollmentStatusEnum) Value() (driver.Value, error) {
 	return string(ns.EnrollmentStatusEnum), nil
 }
 
+type AcademicPeriod struct {
+	ID          pgtype.UUID        `json:"id"`
+	Semester    string             `json:"semester"`
+	PeriodStart pgtype.Timestamptz `json:"period_start"`
+	PeriodEnd   pgtype.Timestamptz `json:"period_end"`
+	IsActive    pgtype.Bool        `json:"is_active"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
 type CourseSessionsCache struct {
 	ID         pgtype.UUID      `json:"id"`
 	CourseID   pgtype.UUID      `json:"course_id"`

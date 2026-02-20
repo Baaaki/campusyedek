@@ -2,6 +2,7 @@ package service
 
 import (
 	"math"
+	"slices"
 
 	"github.com/baaaki/mydreamcampus/grades-service/internal/db"
 )
@@ -106,21 +107,16 @@ func isPassing(gp db.GradePointEnum) bool {
 		db.GradePointEnum100, // DD is the minimum passing grade
 	}
 
-	for _, pg := range passingGrades {
-		if gp == pg {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(passingGrades, gp)
 }
 
 // Calculate class statistics (mean, stddev, min, max)
 type ClassStatistics struct {
-	Mean     float64
-	StdDev   float64
-	Min      float64
-	Max      float64
-	Count    int
+	Mean   float64
+	StdDev float64
+	Min    float64
+	Max    float64
+	Count  int
 }
 
 func calculateClassStatistics(averages []float64) ClassStatistics {
