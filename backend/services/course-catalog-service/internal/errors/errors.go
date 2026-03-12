@@ -78,6 +78,9 @@ var (
 	ErrAssessmentWeightNotHundred = sharedErrors.New("ASSESSMENT_WEIGHT_NOT_HUNDRED", "Assessment weights must sum to 100", http.StatusBadRequest)
 	ErrDuplicateAssessmentSlug   = sharedErrors.New("DUPLICATE_ASSESSMENT_SLUG", "Duplicate assessment slug", http.StatusBadRequest)
 
+	// Semester status errors (AppError for HTTP responses)
+	ErrSemesterNotActive = sharedErrors.New("SEMESTER_NOT_ACTIVE", "semester is not active — modifications are not allowed", http.StatusForbidden)
+
 	// Deadline errors (AppError for HTTP responses)
 	ErrCourseCreationPeriodEnded   = sharedErrors.New("COURSE_CREATION_PERIOD_ENDED", "course creation period has ended for this semester", http.StatusForbidden)
 	ErrCourseCreationPeriodNotOpen = sharedErrors.New("COURSE_CREATION_PERIOD_NOT_OPEN", "course creation period has not started yet", http.StatusForbidden)

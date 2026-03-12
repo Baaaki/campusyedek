@@ -53,6 +53,7 @@ type StudentDeactivatedEvent struct {
 type CourseSession struct {
 	DayOfWeek   string `json:"day_of_week"`
 	SlotNumbers []int  `json:"slot_numbers"`
+	SessionType string `json:"session_type"`
 }
 
 // PrerequisiteCourse represents a prerequisite course
@@ -75,7 +76,7 @@ type CourseSemesterCreatedEvent struct {
 	ClassLevel        int16                `json:"class_level"`
 	Semester          string               `json:"semester"`
 	InstructorID      *uuid.UUID           `json:"instructor_id"`
-	InstructorName    string               `json:"instructor_fullname"`
+	InstructorFullname string              `json:"instructor_fullname"`
 	ClassroomLocation string               `json:"classroom_location"`
 	MaxCapacity       int16                `json:"max_capacity"`
 	Prerequisites     []PrerequisiteCourse `json:"prerequisites"`
@@ -95,7 +96,7 @@ type CourseSemesterUpdatedEvent struct {
 	ClassLevel        int16                `json:"class_level"`
 	Semester          string               `json:"semester"`
 	InstructorID      *uuid.UUID           `json:"instructor_id"`
-	InstructorName    string               `json:"instructor_fullname"`
+	InstructorFullname string              `json:"instructor_fullname"`
 	ClassroomLocation string               `json:"classroom_location"`
 	MaxCapacity       int16                `json:"max_capacity"`
 	Prerequisites     []PrerequisiteCourse `json:"prerequisites"`

@@ -202,8 +202,8 @@ func (w *OutboxWorker) getRoutingKey(eventType string) string {
 		return events.RoutingKeyStudentCreated
 	case events.EventStudentUpdated:
 		return events.RoutingKeyStudentUpdated
-	case events.EventStudentDeleted:
-		return events.RoutingKeyStudentDeleted
+	case events.EventStudentDeactivated:
+		return events.RoutingKeyStudentDeactivated
 	default:
 		// Fallback to event type as routing key
 		return eventType

@@ -319,6 +319,49 @@ func (ns NullScheduleSessionTypeEnum) Value() (driver.Value, error) {
 	return string(ns.ScheduleSessionTypeEnum), nil
 }
 
+type SemesterStatus string
+
+const (
+	SemesterStatusPlanned   SemesterStatus = "planned"
+	SemesterStatusActive    SemesterStatus = "active"
+	SemesterStatusCompleted SemesterStatus = "completed"
+)
+
+func (e *SemesterStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = SemesterStatus(s)
+	case string:
+		*e = SemesterStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for SemesterStatus: %T", src)
+	}
+	return nil
+}
+
+type NullSemesterStatus struct {
+	SemesterStatus SemesterStatus `json:"semester_status"`
+	Valid          bool           `json:"valid"` // Valid is true if SemesterStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullSemesterStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.SemesterStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.SemesterStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullSemesterStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.SemesterStatus), nil
+}
+
 type TeachingTypeEnum string
 
 const (
@@ -370,6 +413,18 @@ type AcademicPeriod struct {
 	IsActive    pgtype.Bool        `json:"is_active"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+type AuditLog struct {
+	ID           pgtype.UUID        `json:"id"`
+	Timestamp    pgtype.Timestamptz `json:"timestamp"`
+	Service      string             `json:"service"`
+	ActorID      pgtype.UUID        `json:"actor_id"`
+	ActorRole    string             `json:"actor_role"`
+	Action       string             `json:"action"`
+	ResourceType string             `json:"resource_type"`
+	ResourceID   pgtype.UUID        `json:"resource_id"`
+	Details      []byte             `json:"details"`
 }
 
 type CourseCatalog struct {
@@ -424,6 +479,17 @@ type OutboxEvent struct {
 	CreatedAt    pgtype.Timestamp     `json:"created_at"`
 	ProcessedAt  pgtype.Timestamp     `json:"processed_at"`
 	ErrorMessage pgtype.Text          `json:"error_message"`
+}
+
+type Semester struct {
+	ID           pgtype.UUID        `json:"id"`
+	Name         string             `json:"name"`
+	Status       SemesterStatus     `json:"status"`
+	HardDeadline pgtype.Timestamptz `json:"hard_deadline"`
+	ActivatedAt  pgtype.Timestamptz `json:"activated_at"`
+	CompletedAt  pgtype.Timestamptz `json:"completed_at"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 }
 
 type SemesterCourse struct {

@@ -233,6 +233,27 @@ func PgTimestampToTime(t pgtype.Timestamp) time.Time {
 	return t.Time
 }
 
+// TimeToPgTimestamptz converts time.Time to pgtype.Timestamptz
+func TimeToPgTimestamptz(t time.Time) pgtype.Timestamptz {
+	return pgtype.Timestamptz{Time: t, Valid: true}
+}
+
+// PgTimestamptzToTime converts pgtype.Timestamptz to time.Time
+func PgTimestamptzToTime(t pgtype.Timestamptz) time.Time {
+	if !t.Valid {
+		return time.Time{}
+	}
+	return t.Time
+}
+
+// PgTimestamptzToTimePtr converts pgtype.Timestamptz to *time.Time
+func PgTimestamptzToTimePtr(t pgtype.Timestamptz) *time.Time {
+	if !t.Valid {
+		return nil
+	}
+	return &t.Time
+}
+
 // Aliases for consistency
 func UUIDToPgUUID(id uuid.UUID) pgtype.UUID {
 	return UUIDToPgtype(id)

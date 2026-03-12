@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/baaaki/mydreamcampus/grades-service/internal/dto"
@@ -61,7 +62,7 @@ func (h *GradeHandler) GetCourseStatus(c *gin.Context) {
 	}
 
 	// Parse course ID
-	courseIDStr := c.Param("courseId")
+	courseIDStr := c.Param("course_id")
 	courseID, err := uuid.Parse(courseIDStr)
 	if err != nil {
 		handlerLogger.Error("invalid course ID format", zap.Error(err))
@@ -118,7 +119,7 @@ func (h *GradeHandler) GetCourseStudents(c *gin.Context) {
 	}
 
 	// Parse course ID
-	courseIDStr := c.Param("courseId")
+	courseIDStr := c.Param("course_id")
 	courseID, err := uuid.Parse(courseIDStr)
 	if err != nil {
 		handlerLogger.Error("invalid course ID format", zap.Error(err))
@@ -175,7 +176,7 @@ func (h *GradeHandler) SubmitScore(c *gin.Context) {
 	}
 
 	// Parse course ID
-	courseIDStr := c.Param("courseId")
+	courseIDStr := c.Param("course_id")
 	courseID, err := uuid.Parse(courseIDStr)
 	if err != nil {
 		handlerLogger.Error("invalid course ID format", zap.Error(err))
@@ -245,7 +246,7 @@ func (h *GradeHandler) BulkSubmitScores(c *gin.Context) {
 	}
 
 	// Parse course ID
-	courseIDStr := c.Param("courseId")
+	courseIDStr := c.Param("course_id")
 	courseID, err := uuid.Parse(courseIDStr)
 	if err != nil {
 		handlerLogger.Error("invalid course ID format", zap.Error(err))
@@ -376,7 +377,7 @@ func (h *GradeHandler) GetTranscript(c *gin.Context) {
 	}
 
 	// Parse student ID
-	studentIDStr := c.Param("studentId")
+	studentIDStr := c.Param("student_id")
 	studentID, err := uuid.Parse(studentIDStr)
 	if err != nil {
 		handlerLogger.Error("invalid student ID format", zap.Error(err))
@@ -450,8 +451,12 @@ func (h *GradeHandler) ProcessAppeal(c *gin.Context) {
 		zap.Float64("new_score", req.NewScore),
 	)
 
+	// Add user_id to context for audit logging
+	userID, _ := c.Get("user_id")
+	ctx := context.WithValue(c.Request.Context(), "user_id", userID)
+
 	// Process appeal
-	result, err := h.gradeService.ProcessAppeal(c.Request.Context(), req)
+	result, err := h.gradeService.ProcessAppeal(ctx, req)
 	if err != nil {
 		handlerLogger.Error("failed to process appeal", zap.Error(err))
 		h.handleError(c, err)

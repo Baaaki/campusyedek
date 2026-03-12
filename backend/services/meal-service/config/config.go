@@ -14,11 +14,18 @@ type Config struct {
 	RabbitMQ       config.RabbitMQConfig
 	Redis          config.RedisConfig
 	JWT            config.JWTConfig
+	RateLimit      config.RateLimitConfig
 	Payment        PaymentConfig
 	QR             QRConfig
 	Reservation    ReservationConfig
 	MealTime       MealTimeConfig
 	Outbox         OutboxConfig
+	CatalogService CatalogServiceConfig
+}
+
+// CatalogServiceConfig holds configuration for Catalog Service integration
+type CatalogServiceConfig struct {
+	BaseURL string
 }
 
 // PaymentConfig holds payment service configuration (gRPC)
@@ -56,6 +63,9 @@ type OutboxConfig struct {
 func Load() (*Config, error) {
 	// Set common defaults using shared helper
 	config.SetCommonDefaults("meal", config.MealServicePort, config.MealDBPort)
+
+	// Set service-specific defaults
+	viper.SetDefault("CATALOG_SERVICE_URL", "http://localhost:"+config.CatalogServicePort)
 
 	// Set meal-specific defaults
 	setMealDefaults()
@@ -102,11 +112,15 @@ func Load() (*Config, error) {
 		RabbitMQ:    rabbitmq,
 		Redis:       redis,
 		JWT:         jwt,
+		RateLimit:   config.LoadRateLimitConfig(),
 		Payment:     payment,
 		QR:          qr,
 		Reservation: reservation,
 		MealTime:    mealTime,
 		Outbox:      outbox,
+		CatalogService: CatalogServiceConfig{
+			BaseURL: viper.GetString("CATALOG_SERVICE_URL"),
+		},
 	}
 
 	// Validate config

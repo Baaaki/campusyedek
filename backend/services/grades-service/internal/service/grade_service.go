@@ -10,6 +10,7 @@ import (
 	"github.com/baaaki/mydreamcampus/grades-service/internal/dto"
 	"github.com/baaaki/mydreamcampus/grades-service/internal/errors"
 	"github.com/baaaki/mydreamcampus/grades-service/internal/repository"
+	"github.com/baaaki/mydreamcampus/shared/audit"
 	"github.com/baaaki/mydreamcampus/shared/clock"
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	sharedRepo "github.com/baaaki/mydreamcampus/shared/repository"
@@ -32,6 +33,7 @@ type GradeService struct {
 	completedRepo    *repository.CompletedRepository
 	outboxRepo       *repository.OutboxRepository
 	periodRepo       *sharedRepo.PeriodRepository
+	auditLogger      audit.Logger
 }
 
 func NewGradeService(
@@ -42,6 +44,7 @@ func NewGradeService(
 	completedRepo *repository.CompletedRepository,
 	outboxRepo *repository.OutboxRepository,
 	periodRepo *sharedRepo.PeriodRepository,
+	auditLogger audit.Logger,
 ) *GradeService {
 	return &GradeService{
 		pool:             pool,
@@ -51,6 +54,7 @@ func NewGradeService(
 		completedRepo:    completedRepo,
 		outboxRepo:       outboxRepo,
 		periodRepo:       periodRepo,
+		auditLogger:      auditLogger,
 	}
 }
 
@@ -869,6 +873,32 @@ func (s *GradeService) ProcessAppeal(ctx context.Context, req dto.AppealScoreReq
 	if err != nil {
 		logger.Error("failed to update completed course after appeal", zap.Error(err))
 		return nil, err
+	}
+
+	// Audit log
+	if s.auditLogger != nil {
+		// Extract actor_id from context (set by handler)
+		actorID := ""
+		if v := ctx.Value("user_id"); v != nil {
+			actorID, _ = v.(string)
+		}
+		s.auditLogger.Log(ctx, audit.AuditEvent{
+			ActorID:      actorID,
+			ActorRole:    "admin",
+			Action:       "grade.appeal_processed",
+			ResourceType: "grade",
+			ResourceID:   req.CourseID.String(),
+			Details: map[string]any{
+				"student_id":      req.StudentID.String(),
+				"course_code":     completedCourse.CourseCode,
+				"slug":            req.Slug,
+				"old_score":       oldScore,
+				"new_score":       req.NewScore,
+				"old_grade_point": string(completedCourse.GradePoint),
+				"new_grade_point": string(newGradePoint),
+				"reason":          req.Reason,
+			},
+		})
 	}
 
 	logger.Info("appeal processed successfully",

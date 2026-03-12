@@ -12,8 +12,10 @@ type Config struct {
 	Server       config.ServerConfig
 	Database     config.DatabaseConfig
 	RabbitMQ     config.RabbitMQConfig
+	Redis        config.RedisConfig
 	JWT          config.JWTConfig
 	StaffService StaffServiceConfig
+	RateLimit    config.RateLimitConfig
 }
 
 // StaffServiceConfig holds configuration for Staff Service integration
@@ -35,7 +37,7 @@ func Load() (*Config, error) {
 	}
 
 	// Load common config using shared helper
-	server, database, rabbitmq, _, jwt := config.LoadCommonConfig()
+	server, database, rabbitmq, redis, jwt := config.LoadCommonConfig()
 
 	// Load service-specific config
 	staffService := StaffServiceConfig{
@@ -47,8 +49,10 @@ func Load() (*Config, error) {
 		Server:       server,
 		Database:     database,
 		RabbitMQ:     rabbitmq,
+		Redis:        redis,
 		JWT:          jwt,
 		StaffService: staffService,
+		RateLimit:    config.LoadRateLimitConfig(),
 	}
 
 	// Validate config

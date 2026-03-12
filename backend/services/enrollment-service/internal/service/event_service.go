@@ -212,7 +212,7 @@ func (s *EventService) HandleCourseSemesterCreated(ctx context.Context, event dt
 		ClassLevel:          utils.Int16ToPgtypeNullable(event.ClassLevel),
 		Semester:            event.Semester,
 		InstructorID:        utils.UUIDToPgtypeNullable(instructorID),
-		InstructorFullname:  utils.StringToPgText(event.InstructorName),
+		InstructorFullname:  utils.StringToPgText(event.InstructorFullname),
 		ClassroomLocation:   utils.StringToPgText(event.ClassroomLocation),
 		MaxCapacity:         event.MaxCapacity,
 		CurrentEnrollment:   pgtype.Int2{Int16: 0, Valid: true}, // Initial value

@@ -14,6 +14,7 @@ import (
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	sharedMiddleware "github.com/baaaki/mydreamcampus/shared/middleware"
 	"github.com/baaaki/mydreamcampus/shared/rabbitmq"
+	sharedRedis "github.com/baaaki/mydreamcampus/shared/redis"
 	"github.com/baaaki/mydreamcampus/student-service/config"
 	"github.com/baaaki/mydreamcampus/student-service/internal/handler"
 	"github.com/baaaki/mydreamcampus/student-service/internal/repository"
@@ -51,6 +52,26 @@ func main() {
 	defer pool.Close()
 
 	logger.Info("database connection established")
+
+	// Initialize Redis for rate limiting
+	redisClient, err := sharedRedis.NewClient(cfg.Redis.Addr, cfg.Redis.Password, cfg.Redis.DB)
+	if err != nil {
+		logger.Warn("Redis not available, rate limiting disabled", zap.Error(err))
+	} else {
+		defer redisClient.Close()
+		if cfg.RateLimit.Enabled {
+			rlConfig := sharedMiddleware.RateLimitConfig{
+				Enabled:     true,
+				ServiceName: "student",
+				IPLimit:     cfg.RateLimit.IPLimit,
+				IPWindow:   time.Duration(cfg.RateLimit.IPWindowSecs) * time.Second,
+				UserLimit:  cfg.RateLimit.UserLimit,
+				UserWindow: time.Duration(cfg.RateLimit.UserWindowSecs) * time.Second,
+			}
+			sharedMiddleware.SetRateLimiter(sharedMiddleware.NewRateLimiter(redisClient, rlConfig))
+			logger.Info("rate limiter configured")
+		}
+	}
 
 	// Initialize RabbitMQ
 	rabbitConn, err := rabbitmq.NewConnection(cfg.RabbitMQ.URL)
@@ -177,6 +198,7 @@ func setupRouter(studentHandler *handler.StudentHandler, timeHandler *sharedHand
 	router.Use(sharedMiddleware.Recovery())
 	router.Use(sharedMiddleware.CORS())
 	router.Use(sharedMiddleware.RequestLogger())
+	router.Use(sharedMiddleware.IPRateLimit())
 
 	// Health check
 	router.GET("/health", func(c *gin.Context) {
@@ -190,6 +212,7 @@ func setupRouter(studentHandler *handler.StudentHandler, timeHandler *sharedHand
 	// User info is extracted from X-User-* headers set by Traefik
 	api := router.Group("/api/students")
 	api.Use(sharedMiddleware.ExtractUserFromHeaders())
+	api.Use(sharedMiddleware.UserRateLimit())
 	{
 		// Read operations - any authenticated user
 		api.GET("", studentHandler.ListStudents)

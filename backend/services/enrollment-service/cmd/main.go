@@ -15,12 +15,14 @@ import (
 	"github.com/baaaki/mydreamcampus/enrollment-service/internal/service"
 	"github.com/baaaki/mydreamcampus/enrollment-service/internal/worker"
 	"github.com/baaaki/mydreamcampus/shared/database"
+	"github.com/baaaki/mydreamcampus/shared/audit"
 	sharedHandler "github.com/baaaki/mydreamcampus/shared/handler"
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	sharedMiddleware "github.com/baaaki/mydreamcampus/shared/middleware"
 	"github.com/baaaki/mydreamcampus/shared/rabbitmq"
 	sharedRedis "github.com/baaaki/mydreamcampus/shared/redis"
 	sharedRepo "github.com/baaaki/mydreamcampus/shared/repository"
+	"github.com/baaaki/mydreamcampus/shared/semester"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -142,12 +144,27 @@ func main() {
 		)
 	}
 
-	// Suppress unused variable warning
-	_ = redisClient
+	// Initialize rate limiter
+	if cfg.RateLimit.Enabled {
+		rlConfig := sharedMiddleware.RateLimitConfig{
+			Enabled:     true,
+			ServiceName: "enrollment",
+			IPLimit:     cfg.RateLimit.IPLimit,
+			IPWindow:   time.Duration(cfg.RateLimit.IPWindowSecs) * time.Second,
+			UserLimit:  cfg.RateLimit.UserLimit,
+			UserWindow: time.Duration(cfg.RateLimit.UserWindowSecs) * time.Second,
+		}
+		sharedMiddleware.SetRateLimiter(sharedMiddleware.NewRateLimiter(redisClient, rlConfig))
+		logger.Info("rate limiter configured")
+	}
+
+	// Initialize semester checker and audit logger (via catalog service HTTP)
+	semesterChecker := semester.NewHTTPChecker(cfg.CatalogService.BaseURL)
+	auditLogger := audit.NewHTTPLogger(cfg.CatalogService.BaseURL, "enrollment")
 
 	// Initialize shared handlers
 	timeHandler := sharedHandler.NewTimeHandler()
-	periodHandler := sharedHandler.NewSimplePeriodHandler(periodRepo)
+	periodHandler := sharedHandler.NewSimplePeriodHandler(periodRepo, semesterChecker, auditLogger)
 
 	// Setup Gin router
 	router := setupRouter(enrollmentHandler, timeHandler, periodHandler, cfg.Server.Environment)
@@ -204,6 +221,7 @@ func setupRouter(enrollmentHandler *handler.EnrollmentHandler, timeHandler *shar
 	router.Use(sharedMiddleware.Recovery())
 	router.Use(sharedMiddleware.CORS())
 	router.Use(sharedMiddleware.RequestLogger())
+	router.Use(sharedMiddleware.IPRateLimit())
 
 	// Health check
 	router.GET("/health", func(c *gin.Context) {
@@ -217,6 +235,7 @@ func setupRouter(enrollmentHandler *handler.EnrollmentHandler, timeHandler *shar
 	// User info is extracted from X-User-* headers set by Traefik
 	api := router.Group("/api/enrollment")
 	api.Use(sharedMiddleware.ExtractUserFromHeaders())
+	api.Use(sharedMiddleware.UserRateLimit())
 	{
 		// Student routes - students can view and manage their enrollments
 		student := api.Group("")

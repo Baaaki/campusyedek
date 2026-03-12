@@ -68,6 +68,29 @@ func main() {
 	sharedMiddleware.SetBlacklistChecker(redisClient)
 	logger.Info("JWT blacklist checker configured")
 
+	// Initialize rate limiter
+	if cfg.RateLimit.Enabled {
+		rlConfig := sharedMiddleware.RateLimitConfig{
+			Enabled:     true,
+			ServiceName: "auth",
+			IPLimit:  cfg.RateLimit.IPLimit,
+			IPWindow: time.Duration(cfg.RateLimit.IPWindowSecs) * time.Second,
+			UserLimit:  cfg.RateLimit.UserLimit,
+			UserWindow: time.Duration(cfg.RateLimit.UserWindowSecs) * time.Second,
+			EndpointLimits: map[string]sharedMiddleware.EndpointLimit{
+				"login":    {Limit: cfg.RateLimit.LoginLimit, Window: time.Duration(cfg.RateLimit.LoginWindowSecs) * time.Second},
+				"refresh":  {Limit: cfg.RateLimit.RefreshLimit, Window: time.Duration(cfg.RateLimit.RefreshWindowSecs) * time.Second},
+				"password": {Limit: cfg.RateLimit.PasswordLimit, Window: time.Duration(cfg.RateLimit.PasswordWindowSecs) * time.Second},
+			},
+		}
+		rateLimiter := sharedMiddleware.NewRateLimiter(redisClient, rlConfig)
+		sharedMiddleware.SetRateLimiter(rateLimiter)
+		logger.Info("rate limiter configured",
+			zap.Int("ip_limit", cfg.RateLimit.IPLimit),
+			zap.Int("user_limit", cfg.RateLimit.UserLimit),
+		)
+	}
+
 	// Initialize RabbitMQ
 	rabbitConn, err := rabbitmq.NewConnection(cfg.RabbitMQ.URL)
 	if err != nil {
@@ -185,6 +208,7 @@ func setupRouter(authHandler *handler.AuthHandler, timeHandler *sharedHandler.Ti
 	router.Use(sharedMiddleware.Recovery())
 	router.Use(sharedMiddleware.CORS())
 	router.Use(sharedMiddleware.RequestLogger())
+	router.Use(sharedMiddleware.IPRateLimit())
 
 	// Health check
 	router.GET("/health", func(c *gin.Context) {
@@ -198,16 +222,17 @@ func setupRouter(authHandler *handler.AuthHandler, timeHandler *sharedHandler.Ti
 	api := router.Group("/api/auth")
 	{
 		// Public routes (no auth required)
-		api.POST("/login", authHandler.Login)
-		api.POST("/refresh", authHandler.RefreshToken)
+		api.POST("/login", sharedMiddleware.EndpointRateLimit("login"), authHandler.Login)
+		api.POST("/refresh", sharedMiddleware.EndpointRateLimit("refresh"), authHandler.RefreshToken)
 
 		// Protected routes (JWT auth required)
 		protected := api.Group("")
 		protected.Use(sharedMiddleware.JWTAuth())
+		protected.Use(sharedMiddleware.UserRateLimit())
 		{
 			protected.POST("/logout", authHandler.Logout)
 			protected.POST("/logout-all", authHandler.LogoutAll)
-			protected.POST("/change-password", authHandler.ChangePassword)
+			protected.POST("/change-password", sharedMiddleware.EndpointRateLimit("password"), authHandler.ChangePassword)
 			protected.GET("/sessions", authHandler.GetSessions)
 			protected.DELETE("/sessions/:id", authHandler.DeleteSession)
 			// Traefik forward auth endpoint

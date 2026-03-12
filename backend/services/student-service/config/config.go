@@ -9,12 +9,13 @@ import (
 
 // Config holds all configuration for the student service
 type Config struct {
-	Server   config.ServerConfig
-	Database config.DatabaseConfig
-	RabbitMQ config.RabbitMQConfig
-	Redis    config.RedisConfig
-	JWT      config.JWTConfig
-	Services ServicesConfig
+	Server    config.ServerConfig
+	Database  config.DatabaseConfig
+	RabbitMQ  config.RabbitMQConfig
+	Redis     config.RedisConfig
+	JWT       config.JWTConfig
+	Services  ServicesConfig
+	RateLimit config.RateLimitConfig
 }
 
 // ServicesConfig holds external service URLs
@@ -48,6 +49,7 @@ func Load() (*Config, error) {
 		Services: ServicesConfig{
 			StaffServiceURL: viper.GetString("STAFF_SERVICE_URL"),
 		},
+		RateLimit: config.LoadRateLimitConfig(),
 	}
 
 	// Validate config

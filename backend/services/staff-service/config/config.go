@@ -8,11 +8,12 @@ import (
 
 // Config holds all configuration for the staff service
 type Config struct {
-	Server   config.ServerConfig
-	Database config.DatabaseConfig
-	RabbitMQ config.RabbitMQConfig
-	Redis    config.RedisConfig
-	JWT      config.JWTConfig
+	Server    config.ServerConfig
+	Database  config.DatabaseConfig
+	RabbitMQ  config.RabbitMQConfig
+	Redis     config.RedisConfig
+	JWT       config.JWTConfig
+	RateLimit config.RateLimitConfig
 }
 
 // Load reads configuration from .env file and environment variables
@@ -33,8 +34,9 @@ func Load() (*Config, error) {
 		Server:   server,
 		Database: database,
 		RabbitMQ: rabbitmq,
-		Redis:    redis,
-		JWT:      jwt,
+		Redis:     redis,
+		JWT:       jwt,
+		RateLimit: config.LoadRateLimitConfig(),
 	}
 
 	// Validate config

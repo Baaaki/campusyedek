@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/baaaki/mydreamcampus/shared/events"
 	sharedErrors "github.com/baaaki/mydreamcampus/shared/errors"
 	"github.com/baaaki/mydreamcampus/shared/utils"
 	"github.com/baaaki/mydreamcampus/student-service/internal/db"
@@ -404,8 +405,8 @@ func (r *StudentRepository) SoftDeleteStudentWithEvent(ctx context.Context, id u
 	// Create outbox event
 	payload, _ := json.Marshal(eventPayload)
 	_, err = qtx.CreateOutboxEvent(ctx, db.CreateOutboxEventParams{
-		EventType:  "student.deactivated",
-		RoutingKey: "student.deactivated",
+		EventType:  events.EventStudentDeactivated,
+		RoutingKey: events.RoutingKeyStudentDeactivated,
 		Payload:    payload,
 	})
 	if err != nil {

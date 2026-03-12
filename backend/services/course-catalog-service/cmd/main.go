@@ -19,6 +19,7 @@ import (
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	sharedMiddleware "github.com/baaaki/mydreamcampus/shared/middleware"
 	"github.com/baaaki/mydreamcampus/shared/rabbitmq"
+	sharedRedis "github.com/baaaki/mydreamcampus/shared/redis"
 	sharedRepo "github.com/baaaki/mydreamcampus/shared/repository"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -53,6 +54,26 @@ func main() {
 
 	logger.Info("database connection established")
 
+	// Initialize Redis for rate limiting
+	redisClient, err := sharedRedis.NewClient(cfg.Redis.Addr, cfg.Redis.Password, cfg.Redis.DB)
+	if err != nil {
+		logger.Warn("Redis not available, rate limiting disabled", zap.Error(err))
+	} else {
+		defer redisClient.Close()
+		if cfg.RateLimit.Enabled {
+			rlConfig := sharedMiddleware.RateLimitConfig{
+				Enabled:     true,
+				ServiceName: "catalog",
+				IPLimit:     cfg.RateLimit.IPLimit,
+				IPWindow:   time.Duration(cfg.RateLimit.IPWindowSecs) * time.Second,
+				UserLimit:  cfg.RateLimit.UserLimit,
+				UserWindow: time.Duration(cfg.RateLimit.UserWindowSecs) * time.Second,
+			}
+			sharedMiddleware.SetRateLimiter(sharedMiddleware.NewRateLimiter(redisClient, rlConfig))
+			logger.Info("rate limiter configured")
+		}
+	}
+
 	// Initialize RabbitMQ
 	rabbitConn, err := rabbitmq.NewConnection(cfg.RabbitMQ.URL)
 	if err != nil {
@@ -79,13 +100,26 @@ func main() {
 	semesterRepo := repository.NewSemesterRepository(pool)
 	scheduleRepo := repository.NewScheduleRepository(pool)
 	outboxRepo := repository.NewOutboxRepository(pool)
+	auditRepo := repository.NewAuditRepository(pool)
+
+	// Initialize audit logger (direct DB writer for catalog service)
+	catalogAuditLogger := service.NewDirectAuditLogger(auditRepo, "catalog")
+
+	// Initialize semester status repo (needs audit logger for auto-complete logging)
+	semesterStatusRepo := repository.NewSemesterStatusRepository(pool, catalogAuditLogger)
 
 	// Initialize shared repositories
 	periodRepo := sharedRepo.NewSimplePeriodRepository(pool)
 
 	// Initialize shared handlers
 	timeHandler := sharedHandler.NewTimeHandler()
-	periodHandler := sharedHandler.NewSimplePeriodHandler(periodRepo)
+	periodHandler := sharedHandler.NewSimplePeriodHandler(periodRepo, semesterStatusRepo, catalogAuditLogger)
+
+	// Initialize semester status handler
+	semesterStatusHandler := handler.NewSemesterStatusHandler(semesterStatusRepo, catalogAuditLogger)
+
+	// Initialize audit handler
+	auditHandler := handler.NewAuditHandler(auditRepo)
 
 	// Initialize staff client
 	staffClient := service.NewHTTPStaffClient(cfg.StaffService.BaseURL)
@@ -99,6 +133,7 @@ func main() {
 		outboxRepo,
 		staffClient,
 		periodRepo,
+		semesterStatusRepo,
 	)
 
 	// Initialize handlers
@@ -120,7 +155,7 @@ func main() {
 	go outboxWorker.Start(ctx)
 
 	// Setup Gin router
-	router := setupRouter(catalogHandler, semesterHandler, timeHandler, periodHandler, cfg.Server.Environment)
+	router := setupRouter(catalogHandler, semesterHandler, timeHandler, periodHandler, semesterStatusHandler, auditHandler, cfg.Server.Environment)
 
 	// Start HTTP server
 	srv := &http.Server{
@@ -163,7 +198,7 @@ func main() {
 	logger.Info("server exited")
 }
 
-func setupRouter(catalogHandler *handler.CatalogHandler, semesterHandler *handler.SemesterHandler, timeHandler *sharedHandler.TimeHandler, periodHandler *sharedHandler.SimplePeriodHandler, env string) *gin.Engine {
+func setupRouter(catalogHandler *handler.CatalogHandler, semesterHandler *handler.SemesterHandler, timeHandler *sharedHandler.TimeHandler, periodHandler *sharedHandler.SimplePeriodHandler, semesterStatusHandler *handler.SemesterStatusHandler, auditHandler *handler.AuditHandler, env string) *gin.Engine {
 	if env == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -174,6 +209,7 @@ func setupRouter(catalogHandler *handler.CatalogHandler, semesterHandler *handle
 	router.Use(sharedMiddleware.Recovery())
 	router.Use(sharedMiddleware.CORS())
 	router.Use(sharedMiddleware.RequestLogger())
+	router.Use(sharedMiddleware.IPRateLimit())
 
 	// Health check
 	router.GET("/health", func(c *gin.Context) {
@@ -199,6 +235,7 @@ func setupRouter(catalogHandler *handler.CatalogHandler, semesterHandler *handle
 		// User info is extracted from X-User-* headers set by Traefik forward-auth
 		protectedApi := api.Group("")
 		protectedApi.Use(sharedMiddleware.ExtractUserFromHeaders())
+		protectedApi.Use(sharedMiddleware.UserRateLimit())
 		{
 			// Catalog admin routes
 			catalogAdmin := protectedApi.Group("/catalog")
@@ -207,12 +244,14 @@ func setupRouter(catalogHandler *handler.CatalogHandler, semesterHandler *handle
 				catalogAdmin.PUT("/courses/:course_code", sharedMiddleware.RequireAdmin(), catalogHandler.UpdateCourse)
 			}
 
-			// Admin routes for Time Machine & Academic Periods
+			// Admin routes for Time Machine, Academic Periods, Semester Status & Audit Log
 			admin := protectedApi.Group("/catalog/admin")
 			admin.Use(sharedMiddleware.RequireAdmin())
 			{
 				timeHandler.RegisterRoutes(admin)
 				periodHandler.RegisterRoutes(admin)
+				semesterStatusHandler.RegisterRoutes(admin)
+				auditHandler.RegisterAdminRoutes(admin)
 			}
 
 			// Semester routes - all require authentication
@@ -233,6 +272,13 @@ func setupRouter(catalogHandler *handler.CatalogHandler, semesterHandler *handle
 					semesterCourses.DELETE("/:course_id", sharedMiddleware.RequireAdmin(), semesterHandler.DeleteSemesterCourse)
 				}
 			}
+		}
+
+		// ===== INTERNAL ROUTES (Service-to-service, no auth) =====
+		internal := api.Group("/catalog/internal")
+		{
+			semesterStatusHandler.RegisterInternalRoutes(internal)
+			auditHandler.RegisterInternalRoutes(internal)
 		}
 	}
 

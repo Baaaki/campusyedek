@@ -15,11 +15,14 @@ import (
 	"github.com/baaaki/mydreamcampus/grades-service/internal/service"
 	"github.com/baaaki/mydreamcampus/grades-service/internal/worker"
 	"github.com/baaaki/mydreamcampus/shared/database"
+	"github.com/baaaki/mydreamcampus/shared/audit"
 	sharedHandler "github.com/baaaki/mydreamcampus/shared/handler"
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	sharedMiddleware "github.com/baaaki/mydreamcampus/shared/middleware"
 	"github.com/baaaki/mydreamcampus/shared/rabbitmq"
+	sharedRedis "github.com/baaaki/mydreamcampus/shared/redis"
 	sharedRepo "github.com/baaaki/mydreamcampus/shared/repository"
+	"github.com/baaaki/mydreamcampus/shared/semester"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -51,6 +54,26 @@ func main() {
 
 	logger.Info("database connection established")
 
+	// Initialize Redis for rate limiting
+	redisClient, err := sharedRedis.NewClient(cfg.Redis.Addr, cfg.Redis.Password, cfg.Redis.DB)
+	if err != nil {
+		logger.Warn("Redis not available, rate limiting disabled", zap.Error(err))
+	} else {
+		defer redisClient.Close()
+		if cfg.RateLimit.Enabled {
+			rlConfig := sharedMiddleware.RateLimitConfig{
+				Enabled:     true,
+				ServiceName: "grades",
+				IPLimit:     cfg.RateLimit.IPLimit,
+				IPWindow:   time.Duration(cfg.RateLimit.IPWindowSecs) * time.Second,
+				UserLimit:  cfg.RateLimit.UserLimit,
+				UserWindow: time.Duration(cfg.RateLimit.UserWindowSecs) * time.Second,
+			}
+			sharedMiddleware.SetRateLimiter(sharedMiddleware.NewRateLimiter(redisClient, rlConfig))
+			logger.Info("rate limiter configured")
+		}
+	}
+
 	// Initialize RabbitMQ
 	rabbitConn, err := rabbitmq.NewConnection(cfg.RabbitMQ.URL)
 	if err != nil {
@@ -77,8 +100,12 @@ func main() {
 	outboxRepo := repository.NewOutboxRepository(pool)
 	periodRepo := sharedRepo.NewPeriodRepository(pool)
 
+	// Initialize semester checker and audit logger (via catalog service HTTP)
+	semesterChecker := semester.NewHTTPChecker(cfg.CatalogService.BaseURL)
+	auditLogger := audit.NewHTTPLogger(cfg.CatalogService.BaseURL, "grades")
+
 	// Initialize services
-	gradeService := service.NewGradeService(pool, cacheRepo, registrationRepo, scoreRepo, completedRepo, outboxRepo, periodRepo)
+	gradeService := service.NewGradeService(pool, cacheRepo, registrationRepo, scoreRepo, completedRepo, outboxRepo, periodRepo, auditLogger)
 	studentGradeService := service.NewStudentGradesService(cacheRepo, registrationRepo, scoreRepo, completedRepo)
 
 	// Initialize handlers
@@ -104,7 +131,7 @@ func main() {
 
 	// Initialize shared handlers
 	timeHandler := sharedHandler.NewTimeHandler()
-	periodHandler := sharedHandler.NewPeriodHandler(periodRepo)
+	periodHandler := sharedHandler.NewPeriodHandler(periodRepo, semesterChecker, auditLogger)
 
 	// Setup Gin router
 	router := setupRouter(gradeHandler, timeHandler, periodHandler, cfg)
@@ -155,6 +182,7 @@ func setupRouter(gradeHandler *handler.GradeHandler, timeHandler *sharedHandler.
 	router.Use(sharedMiddleware.Recovery())
 	router.Use(sharedMiddleware.CORS())
 	router.Use(sharedMiddleware.RequestLogger())
+	router.Use(sharedMiddleware.IPRateLimit())
 
 	// Health check
 	router.GET("/health", func(c *gin.Context) {
@@ -168,15 +196,16 @@ func setupRouter(gradeHandler *handler.GradeHandler, timeHandler *sharedHandler.
 	// User info is extracted from X-User-* headers set by Traefik
 	api := router.Group("/api/grades")
 	api.Use(sharedMiddleware.ExtractUserFromHeaders())
+	api.Use(sharedMiddleware.UserRateLimit())
 
 	// Teacher routes (require teacher or admin role)
 	teacher := api.Group("/course")
 	teacher.Use(sharedMiddleware.RequireTeacherOrAdmin())
 	{
-		teacher.GET("/:courseId/status", gradeHandler.GetCourseStatus)
-		teacher.GET("/:courseId/students", gradeHandler.GetCourseStudents)
-		teacher.POST("/:courseId/scores", gradeHandler.SubmitScore)
-		teacher.POST("/:courseId/scores/bulk", gradeHandler.BulkSubmitScores)
+		teacher.GET("/:course_id/status", gradeHandler.GetCourseStatus)
+		teacher.GET("/:course_id/students", gradeHandler.GetCourseStudents)
+		teacher.POST("/:course_id/scores", gradeHandler.SubmitScore)
+		teacher.POST("/:course_id/scores/bulk", gradeHandler.BulkSubmitScores)
 	}
 
 	// Student routes
@@ -188,7 +217,7 @@ func setupRouter(gradeHandler *handler.GradeHandler, timeHandler *sharedHandler.
 	// Transcript route (any authenticated user can access)
 	transcript := api.Group("/transcript")
 	{
-		transcript.GET("/:studentId", gradeHandler.GetTranscript)
+		transcript.GET("/:student_id", gradeHandler.GetTranscript)
 	}
 
 	// Admin routes (require admin role)

@@ -24,12 +24,13 @@ import (
 )
 
 type SemesterService struct {
-	catalogRepo  *repository.CatalogRepository
-	semesterRepo *repository.SemesterRepository
-	scheduleRepo *repository.ScheduleRepository
-	outboxRepo   *repository.OutboxRepository
-	staffClient  StaffClient
-	periodRepo   *sharedRepo.SimplePeriodRepository
+	catalogRepo        *repository.CatalogRepository
+	semesterRepo       *repository.SemesterRepository
+	scheduleRepo       *repository.ScheduleRepository
+	outboxRepo         *repository.OutboxRepository
+	staffClient        StaffClient
+	periodRepo         *sharedRepo.SimplePeriodRepository
+	semesterStatusRepo *repository.SemesterStatusRepository
 }
 
 func NewSemesterService(
@@ -39,14 +40,16 @@ func NewSemesterService(
 	outboxRepo *repository.OutboxRepository,
 	staffClient StaffClient,
 	periodRepo *sharedRepo.SimplePeriodRepository,
+	semesterStatusRepo *repository.SemesterStatusRepository,
 ) *SemesterService {
 	return &SemesterService{
-		catalogRepo:  catalogRepo,
-		semesterRepo: semesterRepo,
-		scheduleRepo: scheduleRepo,
-		outboxRepo:   outboxRepo,
-		staffClient:  staffClient,
-		periodRepo:   periodRepo,
+		catalogRepo:        catalogRepo,
+		semesterRepo:       semesterRepo,
+		scheduleRepo:       scheduleRepo,
+		outboxRepo:         outboxRepo,
+		staffClient:        staffClient,
+		periodRepo:         periodRepo,
+		semesterStatusRepo: semesterStatusRepo,
 	}
 }
 
@@ -102,6 +105,19 @@ func (s *SemesterService) CreateSemesterCourse(ctx context.Context, semester str
 	if !isValidSemesterFormat(semester) {
 		serviceLogger.Warn("invalid semester format", zap.String("semester", semester))
 		return dto.SemesterCourseResponse{}, catalogErrors.ErrInvalidSemesterFormat
+	}
+
+	// Check semester is active (zero trust: DB-enforced state machine)
+	if s.semesterStatusRepo != nil {
+		active, err := s.semesterStatusRepo.IsSemesterActive(ctx, semester)
+		if err != nil {
+			serviceLogger.Warn("semester status check failed, semester may not exist in status table",
+				zap.Error(err),
+			)
+		} else if !active {
+			serviceLogger.Warn("semester is not active", zap.String("semester", semester))
+			return dto.SemesterCourseResponse{}, catalogErrors.ErrSemesterNotActive
+		}
 	}
 
 	// Check deadline: is course creation period open?

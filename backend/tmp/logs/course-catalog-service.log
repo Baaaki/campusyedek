@@ -23,121 +23,567 @@ watching sql/queries
 !exclude tmp
 building...
 running...
-20:11:04.170	[34mINFO[0m	cmd/main.go:40	starting course-catalog-service	{"environment": "development", "port": "8004"}
-20:11:04.182	[34mINFO[0m	cmd/main.go:54	database connection established
-20:11:04.183	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
-20:11:04.185	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
-20:11:04.185	[34mINFO[0m	cmd/main.go:65	RabbitMQ connection established
-20:11:04.185	[34mINFO[0m	cmd/main.go:258	RabbitMQ exchange declared	{"exchange": "course.events"}
-20:11:04.188	[34mINFO[0m	cmd/main.go:288	downstream consumer queues pre-declared
+23:56:14.042	[34mINFO[0m	cmd/main.go:41	starting course-catalog-service	{"environment": "development", "port": "8004"}
+23:56:14.052	[34mINFO[0m	cmd/main.go:55	database connection established
+23:56:14.052	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+23:56:14.054	[34mINFO[0m	redis/redis.go:41	redis connection established
+23:56:14.054	[34mINFO[0m	cmd/main.go:73	rate limiter configured
+23:56:14.054	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+23:56:14.056	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+23:56:14.056	[34mINFO[0m	cmd/main.go:86	RabbitMQ connection established
+23:56:14.056	[34mINFO[0m	cmd/main.go:304	RabbitMQ exchange declared	{"exchange": "course.events"}
+23:56:14.058	[34mINFO[0m	cmd/main.go:334	downstream consumer queues pre-declared
 [GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
  - using env:	export GIN_MODE=release
  - using code:	gin.SetMode(gin.ReleaseMode)
 
-[GIN-debug] GET    /health                   --> main.setupRouter.func1 (4 handlers)
-[GIN-debug] GET    /api/catalog/courses      --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*CatalogHandler).ListCourses-fm (4 handlers)
-[GIN-debug] GET    /api/catalog/courses/:course_code --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*CatalogHandler).GetCourseByCourseCode-fm (4 handlers)
-[GIN-debug] POST   /api/catalog/courses      --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*CatalogHandler).CreateCourse-fm (6 handlers)
-[GIN-debug] PUT    /api/catalog/courses/:course_code --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*CatalogHandler).UpdateCourse-fm (6 handlers)
-[GIN-debug] POST   /api/catalog/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (6 handlers)
-[GIN-debug] POST   /api/catalog/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (6 handlers)
-[GIN-debug] GET    /api/catalog/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (6 handlers)
-[GIN-debug] POST   /api/catalog/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*SimplePeriodHandler).CreatePeriod-fm (6 handlers)
-[GIN-debug] GET    /api/catalog/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*SimplePeriodHandler).ListPeriods-fm (6 handlers)
-[GIN-debug] PUT    /api/catalog/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*SimplePeriodHandler).UpdatePeriod-fm (6 handlers)
-[GIN-debug] DELETE /api/catalog/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*SimplePeriodHandler).DeletePeriod-fm (6 handlers)
-[GIN-debug] GET    /api/semesters/teacher/courses --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*SemesterHandler).GetTeacherCourses-fm (6 handlers)
-[GIN-debug] GET    /api/semesters/:semester_id/courses --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*SemesterHandler).ListSemesterCourses-fm (5 handlers)
-[GIN-debug] GET    /api/semesters/:semester_id/courses/:course_id --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*SemesterHandler).GetSemesterCourseByID-fm (5 handlers)
-[GIN-debug] POST   /api/semesters/:semester_id/courses --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*SemesterHandler).CreateSemesterCourse-fm (6 handlers)
-[GIN-debug] DELETE /api/semesters/:semester_id/courses/:course_id --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*SemesterHandler).DeleteSemesterCourse-fm (6 handlers)
-20:11:04.188	[34mINFO[0m	worker/outbox_worker.go:39	starting outbox worker	{"interval": "5s", "batch_size": 10}
-20:11:04.188	[34mINFO[0m	cmd/main.go:133	server starting	{"port": "8004"}
-20:11:40.333	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:11:40.339	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "1d645719-c5d4-4374-8d49-92079b1bd381", "method": "GET", "path": "/api/catalog/admin/periods", "query": "", "status": 200, "duration": "6.410371ms", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:11:40.344	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:11:40.344	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "3adcd792-6443-4ba3-bc96-0a162fc329e6", "method": "GET", "path": "/api/catalog/admin/periods", "query": "", "status": 200, "duration": "415.861µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:14:23.801	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:14:23.804	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "59cfa3fa-3174-45ef-a5cd-ad1700554171", "method": "GET", "path": "/api/catalog/admin/periods", "query": "", "status": 200, "duration": "2.979064ms", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:14:23.806	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:14:23.806	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "323e8660-7061-458f-a20a-149d188f7ab6", "method": "GET", "path": "/api/catalog/admin/periods", "query": "", "status": 200, "duration": "189.586µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:21:35.974	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:21:35.975	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "e6d62456-000b-4354-a760-9fa2ac590e7f", "method": "GET", "path": "/api/catalog/admin/periods", "query": "", "status": 200, "duration": "626.737µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:21:35.978	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:21:35.978	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "ae13e127-ad25-4393-ad5f-9b7a47d8c95c", "method": "GET", "path": "/api/catalog/admin/periods", "query": "", "status": 200, "duration": "342.7µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:23:26.670	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:23:26.671	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "db8e167d-d7a8-495c-b7d9-70cbfe4e520e", "method": "GET", "path": "/api/catalog/admin/periods", "query": "", "status": 200, "duration": "604.507µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:23:26.673	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:23:26.674	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "a398b478-5df4-4ae3-828e-316893843427", "method": "GET", "path": "/api/catalog/admin/periods", "query": "", "status": 200, "duration": "352.529µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:23:50.024	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:23:50.025	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "2dc77c16-366f-461f-ab2f-097e04a05346", "method": "GET", "path": "/api/catalog/admin/time/status", "query": "", "status": 200, "duration": "122.954µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:23:50.028	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:23:50.028	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "24a57645-da21-4813-8ca3-fe6f321a1cdb", "method": "GET", "path": "/api/catalog/admin/time/status", "query": "", "status": 200, "duration": "51.022µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:24:51.782	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:24:51.782	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "1f93fa0b-e6c5-4015-9c9a-8c43300137f1", "method": "GET", "path": "/api/catalog/admin/time/status", "query": "", "status": 200, "duration": "63.292µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:26:44.806	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:26:44.807	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "db502a4c-fc96-4623-944f-12bd3490a182", "method": "GET", "path": "/api/catalog/admin/periods", "query": "", "status": 200, "duration": "457.342µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:26:44.812	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:26:44.812	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "906c8c85-f580-4f0f-9cdc-3eb5968b21c9", "method": "GET", "path": "/api/catalog/admin/periods", "query": "", "status": 200, "duration": "245.587µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:27:19.515	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:27:19.525	[34mINFO[0m	handler/simple_period_handler.go:72	academic period created	{"semester": "2025-2026-Spring", "period_id": "f35e5e8b-a7fd-4f97-81d0-0abde20283fa"}
-20:27:19.525	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "7aec58d2-a5f0-49e9-9f6c-a12ef3d9cd4c", "method": "POST", "path": "/api/catalog/admin/periods", "query": "", "status": 201, "duration": "9.834324ms", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:27:19.531	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:27:19.532	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "9859c6ee-3ef2-46fb-b6d0-2d96420873d6", "method": "GET", "path": "/api/catalog/admin/periods", "query": "", "status": 200, "duration": "393.071µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:27:59.256	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:27:59.257	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "e0e0cbe8-99f6-47f4-9782-48fea69eaa1e", "method": "GET", "path": "/api/catalog/admin/periods", "query": "", "status": 200, "duration": "515.565µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:27:59.261	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:27:59.262	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "3d94f898-b7d3-4826-b3e9-9eefe62c531d", "method": "GET", "path": "/api/catalog/admin/periods", "query": "", "status": 200, "duration": "375.41µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:28:00.953	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:28:00.963	[34mINFO[0m	handler/simple_period_handler.go:186	academic period deleted	{"period_id": "f35e5e8b-a7fd-4f97-81d0-0abde20283fa"}
-20:28:00.963	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "44846d72-2626-4f3b-bc85-cc3ca1b41758", "method": "DELETE", "path": "/api/catalog/admin/periods/f35e5e8b-a7fd-4f97-81d0-0abde20283fa", "query": "", "status": 200, "duration": "9.440322ms", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:28:00.968	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:28:00.969	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "073e9924-5ae4-4c00-8ef2-4710d7ec2afe", "method": "GET", "path": "/api/catalog/admin/periods", "query": "", "status": 200, "duration": "438.142µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:36:59.961	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:36:59.961	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "56302a4e-3eac-4659-a780-bf56d6a62a4b", "method": "GET", "path": "/api/catalog/admin/time/status", "query": "", "status": 200, "duration": "120.103µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:37:00.061	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:37:00.061	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "4f9f208e-340b-4099-aed8-1d4f223efc6d", "method": "GET", "path": "/api/catalog/admin/time/status", "query": "", "status": 200, "duration": "68.602µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:37:18.113	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:37:18.113	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "69ba1468-a9bb-41c5-a42d-e4ec2c4f3139", "method": "GET", "path": "/api/catalog/admin/time/status", "query": "", "status": 200, "duration": "99.873µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:37:18.161	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:37:18.161	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "31c00c57-55e8-4582-be0a-2ea18760f995", "method": "GET", "path": "/api/catalog/admin/time/status", "query": "", "status": 200, "duration": "53.722µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:37:52.598	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:37:52.598	[34mINFO[0m	handler/time_handler.go:61	clock reset to real time
-01:37:52.598	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "c6efbd9c-6d05-4612-86fc-327aded4e723", "method": "POST", "path": "/api/catalog/admin/time/reset", "query": "", "status": 200, "duration": "108.113µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:37:52.616	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:37:52.617	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "1fa2bafb-6ceb-42b9-a1d4-25872766fa4b", "method": "GET", "path": "/api/catalog/admin/time/status", "query": "", "status": 200, "duration": "70.182µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:39:44.770	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:39:44.770	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "a962bb65-623a-4ee0-a4c3-ec7b37a11401", "method": "GET", "path": "/api/catalog/admin/time/status", "query": "", "status": 200, "duration": "102.713µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:39:45.736	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:39:45.736	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "e4b9d884-49d7-431b-9d0d-a50dfdb377ef", "method": "GET", "path": "/api/catalog/admin/time/status", "query": "", "status": 200, "duration": "58.882µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:39:50.090	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:39:50.090	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "673aca1b-992d-45ef-965b-0ad7e2d0b025", "method": "GET", "path": "/api/catalog/admin/time/status", "query": "", "status": 200, "duration": "53.871µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:45:37.602	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:45:37.602	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "2dedfa4b-5da0-4066-81b1-51cc5199f0dd", "method": "GET", "path": "/api/catalog/admin/time/status", "query": "", "status": 200, "duration": "89.083µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:45:37.608	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:45:37.608	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "f4b82531-c4cd-4f1a-b1b6-debc5360df42", "method": "GET", "path": "/api/catalog/admin/time/status", "query": "", "status": 200, "duration": "48.351µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:46:31.364	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:46:31.365	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "844b622f-d7a8-4b19-92bc-dc5f0910a83c", "method": "GET", "path": "/api/catalog/admin/time/status", "query": "", "status": 200, "duration": "99.472µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:46:32.393	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:46:32.394	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "7bae1c54-40e6-4d52-bebc-be679df7a2ff", "method": "GET", "path": "/api/catalog/admin/time/status", "query": "", "status": 200, "duration": "69.452µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:47:36.525	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:47:36.525	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "13113777-819a-46d6-8da8-3d05f870718d", "method": "GET", "path": "/api/catalog/admin/time/status", "query": "", "status": 200, "duration": "105.492µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:47:38.149	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:47:38.149	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "3fd610e3-38ea-496c-8e94-830545c3ef2e", "method": "GET", "path": "/api/catalog/admin/time/status", "query": "", "status": 200, "duration": "57.482µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:47:47.384	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:47:47.384	[34mINFO[0m	handler/time_handler.go:46	clock switched to simulated mode	{"simulated_time": "09:15:08.000"}
-01:47:47.384	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "4870343c-1bc9-413f-91c1-315364ae4560", "method": "POST", "path": "/api/catalog/admin/time/simulate", "query": "", "status": 200, "duration": "226.295µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:47:47.399	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:47:47.399	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "ae03c50b-4a28-4e29-baa9-93f407727c59", "method": "GET", "path": "/api/catalog/admin/time/status", "query": "", "status": 200, "duration": "95.043µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:47:48.952	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:47:48.952	[34mINFO[0m	handler/time_handler.go:61	clock reset to real time
-01:47:48.952	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "aef5a15e-b58b-4cd9-947e-14f4803ee81f", "method": "POST", "path": "/api/catalog/admin/time/reset", "query": "", "status": 200, "duration": "100.073µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:47:48.967	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:47:48.967	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "914427d7-ebb2-4240-a1dd-cb29af1bd244", "method": "GET", "path": "/api/catalog/admin/time/status", "query": "", "status": 200, "duration": "98.592µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:47:53.277	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:47:53.277	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "b62f0290-8c71-4cbd-a81a-dc94f3ac46b5", "method": "GET", "path": "/api/catalog/admin/time/status", "query": "", "status": 200, "duration": "50.051µs", "ip": "172.18.0.1", "user_agent": "curl/8.5.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-02:02:07.537	[31mERROR[0m	rabbitmq/connection.go:94	rabbitmq connection lost	{"error": "Exception (320) Reason: \"CONNECTION_FORCED - broker forced connection closure with reason 'shutdown'\""}
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (5 handlers)
+[GIN-debug] GET    /api/catalog/courses      --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*CatalogHandler).ListCourses-fm (5 handlers)
+[GIN-debug] GET    /api/catalog/courses/:course_code --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*CatalogHandler).GetCourseByCourseCode-fm (5 handlers)
+[GIN-debug] POST   /api/catalog/courses      --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*CatalogHandler).CreateCourse-fm (8 handlers)
+[GIN-debug] PUT    /api/catalog/courses/:course_code --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*CatalogHandler).UpdateCourse-fm (8 handlers)
+[GIN-debug] POST   /api/catalog/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (8 handlers)
+[GIN-debug] POST   /api/catalog/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (8 handlers)
+[GIN-debug] GET    /api/catalog/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (8 handlers)
+[GIN-debug] POST   /api/catalog/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*SimplePeriodHandler).CreatePeriod-fm (8 handlers)
+[GIN-debug] GET    /api/catalog/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*SimplePeriodHandler).ListPeriods-fm (8 handlers)
+[GIN-debug] PUT    /api/catalog/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*SimplePeriodHandler).UpdatePeriod-fm (8 handlers)
+[GIN-debug] DELETE /api/catalog/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*SimplePeriodHandler).DeletePeriod-fm (8 handlers)
+[GIN-debug] POST   /api/catalog/admin/semesters --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*SemesterStatusHandler).CreateSemester-fm (8 handlers)
+[GIN-debug] GET    /api/catalog/admin/semesters --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*SemesterStatusHandler).ListSemesters-fm (8 handlers)
+[GIN-debug] GET    /api/catalog/admin/semesters/active --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*SemesterStatusHandler).GetActiveSemester-fm (8 handlers)
+[GIN-debug] PUT    /api/catalog/admin/semesters/:id/activate --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*SemesterStatusHandler).ActivateSemester-fm (8 handlers)
+[GIN-debug] PUT    /api/catalog/admin/semesters/:id/complete --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*SemesterStatusHandler).CompleteSemester-fm (8 handlers)
+23:56:14.058	[34mINFO[0m	worker/outbox_worker.go:39	starting outbox worker	{"interval": "5s", "batch_size": 10}
+[GIN-debug] GET    /api/catalog/admin/audit-log --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*AuditHandler).ListAuditLog-fm (8 handlers)
+[GIN-debug] GET    /api/semesters/teacher/courses --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*SemesterHandler).GetTeacherCourses-fm (8 handlers)
+[GIN-debug] GET    /api/semesters/:semester_id/courses --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*SemesterHandler).ListSemesterCourses-fm (7 handlers)
+[GIN-debug] GET    /api/semesters/:semester_id/courses/:course_id --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*SemesterHandler).GetSemesterCourseByID-fm (7 handlers)
+[GIN-debug] POST   /api/semesters/:semester_id/courses --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*SemesterHandler).CreateSemesterCourse-fm (8 handlers)
+[GIN-debug] DELETE /api/semesters/:semester_id/courses/:course_id --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*SemesterHandler).DeleteSemesterCourse-fm (8 handlers)
+[GIN-debug] GET    /api/catalog/internal/semesters/:name/status --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*SemesterStatusHandler).IsSemesterActive-fm (5 handlers)
+[GIN-debug] POST   /api/catalog/internal/audit-log --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*AuditHandler).CreateAuditLog-fm (5 handlers)
+23:56:14.058	[34mINFO[0m	cmd/main.go:168	server starting	{"port": "8004"}
+23:56:34.815	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+23:56:34.815	[33mWARN[0m	middleware/logger.go:58	http request - client error	{"request_id": "772266d6-6cb4-4298-b1dc-039f58d5ac37", "method": "GET", "path": "/api/catalog/admin/semesters/active", "query": "", "status": 404, "duration": "836.397µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:148.0) Gecko/20100101 Firefox/148.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+23:56:34.819	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+23:56:34.819	[33mWARN[0m	middleware/logger.go:58	http request - client error	{"request_id": "4a59a409-e702-4e26-89eb-1b2783e9289c", "method": "GET", "path": "/api/catalog/admin/semesters/active", "query": "", "status": 404, "duration": "740.204µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:148.0) Gecko/20100101 Firefox/148.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+23:56:38.915	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+23:56:38.916	[31mERROR[0m	handler/semester_status_handler.go:129	failed to list semesters	{"error": "ERROR: relation \"semesters\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*SemesterStatusHandler).ListSemesters
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/course-catalog-service/internal/handler/semester_status_handler.go:129
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.RequireAdmin.RequireRole.func11
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/rbac.go:30
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.UserRateLimit.func7
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/ratelimit.go:138
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.ExtractUserFromHeaders.func6
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/auth.go:228
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.IPRateLimit.func5
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/ratelimit.go:94
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.RequestLogger.func4
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/logger.go:25
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.CORS.func3
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/cors.go:26
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.Recovery.func2
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/recovery.go:40
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+github.com/gin-gonic/gin.(*Engine).handleHTTPRequest
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:689
+github.com/gin-gonic/gin.(*Engine).ServeHTTP
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:643
+net/http.serverHandler.ServeHTTP
+	/usr/local/go/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/usr/local/go/src/net/http/server.go:2073
+23:56:38.916	[31mERROR[0m	middleware/logger.go:56	http request - server error	{"request_id": "cdfb5c28-9300-4fbe-8695-0e1f1a8379a9", "method": "GET", "path": "/api/catalog/admin/semesters", "query": "", "status": 500, "duration": "1.037674ms", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:148.0) Gecko/20100101 Firefox/148.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+main.setupRouter.RequestLogger.func4
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/logger.go:56
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.CORS.func3
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/cors.go:26
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.Recovery.func2
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/recovery.go:40
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+github.com/gin-gonic/gin.(*Engine).handleHTTPRequest
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:689
+github.com/gin-gonic/gin.(*Engine).ServeHTTP
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:643
+net/http.serverHandler.ServeHTTP
+	/usr/local/go/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/usr/local/go/src/net/http/server.go:2073
+23:56:38.919	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+23:56:38.920	[31mERROR[0m	handler/semester_status_handler.go:129	failed to list semesters	{"error": "ERROR: relation \"semesters\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*SemesterStatusHandler).ListSemesters
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/course-catalog-service/internal/handler/semester_status_handler.go:129
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.RequireAdmin.RequireRole.func11
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/rbac.go:30
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.UserRateLimit.func7
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/ratelimit.go:138
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.ExtractUserFromHeaders.func6
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/auth.go:228
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.IPRateLimit.func5
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/ratelimit.go:94
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.RequestLogger.func4
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/logger.go:25
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.CORS.func3
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/cors.go:26
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.Recovery.func2
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/recovery.go:40
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+github.com/gin-gonic/gin.(*Engine).handleHTTPRequest
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:689
+github.com/gin-gonic/gin.(*Engine).ServeHTTP
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:643
+net/http.serverHandler.ServeHTTP
+	/usr/local/go/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/usr/local/go/src/net/http/server.go:2073
+23:56:38.920	[31mERROR[0m	middleware/logger.go:56	http request - server error	{"request_id": "1aaa4c6f-bb37-4470-b96d-e43cd8656c09", "method": "GET", "path": "/api/catalog/admin/semesters", "query": "", "status": 500, "duration": "782.365µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:148.0) Gecko/20100101 Firefox/148.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+main.setupRouter.RequestLogger.func4
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/logger.go:56
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.CORS.func3
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/cors.go:26
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.Recovery.func2
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/recovery.go:40
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+github.com/gin-gonic/gin.(*Engine).handleHTTPRequest
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:689
+github.com/gin-gonic/gin.(*Engine).ServeHTTP
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:643
+net/http.serverHandler.ServeHTTP
+	/usr/local/go/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/usr/local/go/src/net/http/server.go:2073
+23:56:42.108	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+23:56:42.109	[31mERROR[0m	handler/audit_handler.go:69	failed to list audit logs	{"error": "ERROR: relation \"audit_log\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*AuditHandler).ListAuditLog
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/course-catalog-service/internal/handler/audit_handler.go:69
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.RequireAdmin.RequireRole.func11
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/rbac.go:30
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.UserRateLimit.func7
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/ratelimit.go:138
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.ExtractUserFromHeaders.func6
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/auth.go:228
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.IPRateLimit.func5
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/ratelimit.go:94
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.RequestLogger.func4
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/logger.go:25
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.CORS.func3
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/cors.go:26
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.Recovery.func2
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/recovery.go:40
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+github.com/gin-gonic/gin.(*Engine).handleHTTPRequest
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:689
+github.com/gin-gonic/gin.(*Engine).ServeHTTP
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:643
+net/http.serverHandler.ServeHTTP
+	/usr/local/go/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/usr/local/go/src/net/http/server.go:2073
+23:56:42.109	[31mERROR[0m	middleware/logger.go:56	http request - server error	{"request_id": "0fb7fed4-436f-4e9f-8c32-d55196935af3", "method": "GET", "path": "/api/catalog/admin/audit-log", "query": "limit=20", "status": 500, "duration": "994.302µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:148.0) Gecko/20100101 Firefox/148.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+main.setupRouter.RequestLogger.func4
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/logger.go:56
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.CORS.func3
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/cors.go:26
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.Recovery.func2
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/recovery.go:40
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+github.com/gin-gonic/gin.(*Engine).handleHTTPRequest
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:689
+github.com/gin-gonic/gin.(*Engine).ServeHTTP
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:643
+net/http.serverHandler.ServeHTTP
+	/usr/local/go/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/usr/local/go/src/net/http/server.go:2073
+23:56:42.111	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+23:56:42.112	[31mERROR[0m	handler/audit_handler.go:69	failed to list audit logs	{"error": "ERROR: relation \"audit_log\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*AuditHandler).ListAuditLog
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/course-catalog-service/internal/handler/audit_handler.go:69
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.RequireAdmin.RequireRole.func11
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/rbac.go:30
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.UserRateLimit.func7
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/ratelimit.go:138
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.ExtractUserFromHeaders.func6
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/auth.go:228
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.IPRateLimit.func5
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/ratelimit.go:94
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.RequestLogger.func4
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/logger.go:25
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.CORS.func3
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/cors.go:26
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.Recovery.func2
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/recovery.go:40
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+github.com/gin-gonic/gin.(*Engine).handleHTTPRequest
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:689
+github.com/gin-gonic/gin.(*Engine).ServeHTTP
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:643
+net/http.serverHandler.ServeHTTP
+	/usr/local/go/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/usr/local/go/src/net/http/server.go:2073
+23:56:42.112	[31mERROR[0m	middleware/logger.go:56	http request - server error	{"request_id": "fa3e3042-5766-4d76-a718-55868235e822", "method": "GET", "path": "/api/catalog/admin/audit-log", "query": "limit=20", "status": 500, "duration": "614.49µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:148.0) Gecko/20100101 Firefox/148.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+main.setupRouter.RequestLogger.func4
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/logger.go:56
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.CORS.func3
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/cors.go:26
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.Recovery.func2
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/recovery.go:40
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+github.com/gin-gonic/gin.(*Engine).handleHTTPRequest
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:689
+github.com/gin-gonic/gin.(*Engine).ServeHTTP
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:643
+net/http.serverHandler.ServeHTTP
+	/usr/local/go/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/usr/local/go/src/net/http/server.go:2073
+23:56:43.776	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+23:56:43.776	[33mWARN[0m	middleware/logger.go:58	http request - client error	{"request_id": "95819d25-f6d7-4f91-8159-d5f3d8ae8bd6", "method": "GET", "path": "/api/catalog/admin/semesters/active", "query": "", "status": 404, "duration": "728.843µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:148.0) Gecko/20100101 Firefox/148.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+23:56:43.776	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+23:56:43.777	[33mWARN[0m	middleware/logger.go:58	http request - client error	{"request_id": "76deef0d-cdf7-448e-a554-024729efc7df", "method": "GET", "path": "/api/catalog/admin/semesters/active", "query": "", "status": 404, "duration": "581.658µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:148.0) Gecko/20100101 Firefox/148.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+23:56:53.376	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+23:56:53.377	[33mWARN[0m	middleware/logger.go:58	http request - client error	{"request_id": "3c536ff8-a5ef-4bed-886a-078c32028c3b", "method": "GET", "path": "/api/catalog/admin/semesters/active", "query": "", "status": 404, "duration": "828.877µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:148.0) Gecko/20100101 Firefox/148.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+23:56:56.685	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+23:56:56.685	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+23:56:56.685	[31mERROR[0m	handler/audit_handler.go:69	failed to list audit logs	{"error": "ERROR: relation \"audit_log\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*AuditHandler).ListAuditLog
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/course-catalog-service/internal/handler/audit_handler.go:69
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.RequireAdmin.RequireRole.func11
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/rbac.go:30
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.UserRateLimit.func7
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/ratelimit.go:138
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.ExtractUserFromHeaders.func6
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/auth.go:228
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.IPRateLimit.func5
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/ratelimit.go:94
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.RequestLogger.func4
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/logger.go:25
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.CORS.func3
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/cors.go:26
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.Recovery.func2
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/recovery.go:40
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+github.com/gin-gonic/gin.(*Engine).handleHTTPRequest
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:689
+github.com/gin-gonic/gin.(*Engine).ServeHTTP
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:643
+net/http.serverHandler.ServeHTTP
+	/usr/local/go/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/usr/local/go/src/net/http/server.go:2073
+23:56:56.685	[31mERROR[0m	middleware/logger.go:56	http request - server error	{"request_id": "5e467120-3138-432a-8ef7-e2ab813b825e", "method": "GET", "path": "/api/catalog/admin/audit-log", "query": "limit=20", "status": 500, "duration": "1.010613ms", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:148.0) Gecko/20100101 Firefox/148.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+main.setupRouter.RequestLogger.func4
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/logger.go:56
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.CORS.func3
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/cors.go:26
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.Recovery.func2
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/recovery.go:40
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+github.com/gin-gonic/gin.(*Engine).handleHTTPRequest
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:689
+github.com/gin-gonic/gin.(*Engine).ServeHTTP
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:643
+net/http.serverHandler.ServeHTTP
+	/usr/local/go/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/usr/local/go/src/net/http/server.go:2073
+23:56:56.685	[31mERROR[0m	handler/audit_handler.go:69	failed to list audit logs	{"error": "ERROR: relation \"audit_log\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*AuditHandler).ListAuditLog
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/course-catalog-service/internal/handler/audit_handler.go:69
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.RequireAdmin.RequireRole.func11
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/rbac.go:30
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.UserRateLimit.func7
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/ratelimit.go:138
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.ExtractUserFromHeaders.func6
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/auth.go:228
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.IPRateLimit.func5
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/ratelimit.go:94
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.RequestLogger.func4
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/logger.go:25
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.CORS.func3
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/cors.go:26
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.Recovery.func2
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/recovery.go:40
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+github.com/gin-gonic/gin.(*Engine).handleHTTPRequest
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:689
+github.com/gin-gonic/gin.(*Engine).ServeHTTP
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:643
+net/http.serverHandler.ServeHTTP
+	/usr/local/go/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/usr/local/go/src/net/http/server.go:2073
+23:56:56.686	[31mERROR[0m	middleware/logger.go:56	http request - server error	{"request_id": "a144d2fe-129a-454f-a344-6c06bc13ae37", "method": "GET", "path": "/api/catalog/admin/audit-log", "query": "limit=20", "status": 500, "duration": "1.134246ms", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:148.0) Gecko/20100101 Firefox/148.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+main.setupRouter.RequestLogger.func4
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/logger.go:56
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.CORS.func3
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/cors.go:26
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.Recovery.func2
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/recovery.go:40
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+github.com/gin-gonic/gin.(*Engine).handleHTTPRequest
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:689
+github.com/gin-gonic/gin.(*Engine).ServeHTTP
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:643
+net/http.serverHandler.ServeHTTP
+	/usr/local/go/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/usr/local/go/src/net/http/server.go:2073
+23:56:57.302	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+23:56:57.302	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+23:56:57.302	[31mERROR[0m	handler/semester_status_handler.go:129	failed to list semesters	{"error": "ERROR: relation \"semesters\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*SemesterStatusHandler).ListSemesters
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/course-catalog-service/internal/handler/semester_status_handler.go:129
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.RequireAdmin.RequireRole.func11
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/rbac.go:30
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.UserRateLimit.func7
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/ratelimit.go:138
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.ExtractUserFromHeaders.func6
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/auth.go:228
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.IPRateLimit.func5
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/ratelimit.go:94
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.RequestLogger.func4
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/logger.go:25
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.CORS.func3
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/cors.go:26
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.Recovery.func2
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/recovery.go:40
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+github.com/gin-gonic/gin.(*Engine).handleHTTPRequest
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:689
+github.com/gin-gonic/gin.(*Engine).ServeHTTP
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:643
+net/http.serverHandler.ServeHTTP
+	/usr/local/go/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/usr/local/go/src/net/http/server.go:2073
+23:56:57.302	[31mERROR[0m	middleware/logger.go:56	http request - server error	{"request_id": "b66007bd-62c5-4d5a-86d2-8ac0d36f4439", "method": "GET", "path": "/api/catalog/admin/semesters", "query": "", "status": 500, "duration": "691.912µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:148.0) Gecko/20100101 Firefox/148.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+main.setupRouter.RequestLogger.func4
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/logger.go:56
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.CORS.func3
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/cors.go:26
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.Recovery.func2
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/recovery.go:40
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+github.com/gin-gonic/gin.(*Engine).handleHTTPRequest
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:689
+github.com/gin-gonic/gin.(*Engine).ServeHTTP
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:643
+net/http.serverHandler.ServeHTTP
+	/usr/local/go/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/usr/local/go/src/net/http/server.go:2073
+23:56:57.302	[31mERROR[0m	handler/semester_status_handler.go:129	failed to list semesters	{"error": "ERROR: relation \"semesters\" does not exist (SQLSTATE 42P01)"}
+github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*SemesterStatusHandler).ListSemesters
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/services/course-catalog-service/internal/handler/semester_status_handler.go:129
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.RequireAdmin.RequireRole.func11
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/rbac.go:30
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.UserRateLimit.func7
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/ratelimit.go:138
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.ExtractUserFromHeaders.func6
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/auth.go:228
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.IPRateLimit.func5
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/ratelimit.go:94
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.RequestLogger.func4
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/logger.go:25
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.CORS.func3
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/cors.go:26
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.Recovery.func2
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/recovery.go:40
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+github.com/gin-gonic/gin.(*Engine).handleHTTPRequest
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:689
+github.com/gin-gonic/gin.(*Engine).ServeHTTP
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:643
+net/http.serverHandler.ServeHTTP
+	/usr/local/go/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/usr/local/go/src/net/http/server.go:2073
+23:56:57.302	[31mERROR[0m	middleware/logger.go:56	http request - server error	{"request_id": "d0722882-c2d7-4edd-beca-8d4aa0ea5153", "method": "GET", "path": "/api/catalog/admin/semesters", "query": "", "status": 500, "duration": "826.907µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:148.0) Gecko/20100101 Firefox/148.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+main.setupRouter.RequestLogger.func4
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/logger.go:56
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.CORS.func3
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/cors.go:26
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+main.setupRouter.Recovery.func2
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/recovery.go:40
+github.com/gin-gonic/gin.(*Context).Next
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
+github.com/gin-gonic/gin.(*Engine).handleHTTPRequest
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:689
+github.com/gin-gonic/gin.(*Engine).ServeHTTP
+	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:643
+net/http.serverHandler.ServeHTTP
+	/usr/local/go/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/usr/local/go/src/net/http/server.go:2073
+23:56:57.803	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+23:56:57.803	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+23:56:57.803	[33mWARN[0m	middleware/logger.go:58	http request - client error	{"request_id": "726eb90c-3c48-47cb-941a-87695082d526", "method": "GET", "path": "/api/catalog/admin/semesters/active", "query": "", "status": 404, "duration": "562.588µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:148.0) Gecko/20100101 Firefox/148.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+23:56:57.803	[33mWARN[0m	middleware/logger.go:58	http request - client error	{"request_id": "67cc6b52-9389-4803-984f-09bd54c2e5ad", "method": "GET", "path": "/api/catalog/admin/semesters/active", "query": "", "status": 404, "duration": "653.101µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:148.0) Gecko/20100101 Firefox/148.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+23:59:17.583	[31mERROR[0m	rabbitmq/connection.go:94	rabbitmq connection lost	{"error": "Exception (320) Reason: \"CONNECTION_FORCED - broker forced connection closure with reason 'shutdown'\""}
 github.com/baaaki/mydreamcampus/shared/rabbitmq.(*Connection).handleReconnect
 	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/rabbitmq/connection.go:94
-02:02:07.537	[34mINFO[0m	rabbitmq/connection.go:99	attempting to reconnect to rabbitmq...
+23:59:17.584	[34mINFO[0m	rabbitmq/connection.go:99	attempting to reconnect to rabbitmq...
 cleaning...

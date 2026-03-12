@@ -283,9 +283,24 @@ func (s *StudentService) UpdateStudent(ctx context.Context, id string, req dto.U
 	}
 
 	eventPayload := map[string]any{
-		"id":             id,
-		"student_number": "", // Will be filled from DB
-		"changed_fields": changedFields,
+		"id":              id,
+		"student_number":  currentStudent.StudentNumber,
+		"first_name":      currentStudent.FirstName,
+		"last_name":       currentStudent.LastName,
+		"email":           currentStudent.Email,
+		"faculty":         currentStudent.Faculty,
+		"department":      currentStudent.Department,
+		"enrollment_year": int(currentStudent.EnrollmentYear),
+		"class_level":     classLevel,
+		"advisor_id":      utils.PgtypeToUUIDString(currentStudent.AdvisorID),
+		"status":          utils.PgTextToString(currentStudent.Status),
+		"changed_fields":  changedFields,
+	}
+	if req.Status != nil {
+		eventPayload["status"] = *req.Status
+	}
+	if req.AdvisorID != nil {
+		eventPayload["advisor_id"] = req.AdvisorID.String()
 	}
 
 	student, err := s.studentRepo.UpdateStudentWithEvent(ctx, studentID, params, eventPayload)

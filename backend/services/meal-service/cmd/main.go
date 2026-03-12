@@ -15,10 +15,12 @@ import (
 	"github.com/baaaki/mydreamcampus/meal-service/internal/service"
 	"github.com/baaaki/mydreamcampus/meal-service/internal/worker"
 	sharedDB "github.com/baaaki/mydreamcampus/shared/database"
+	"github.com/baaaki/mydreamcampus/shared/audit"
 	sharedHandler "github.com/baaaki/mydreamcampus/shared/handler"
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	"github.com/baaaki/mydreamcampus/shared/middleware"
 	"github.com/baaaki/mydreamcampus/shared/rabbitmq"
+	sharedRedis "github.com/baaaki/mydreamcampus/shared/redis"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -50,6 +52,26 @@ func main() {
 
 	log.Info("connected to database")
 
+	// Initialize Redis for rate limiting
+	redisClient, err := sharedRedis.NewClient(cfg.Redis.Addr, cfg.Redis.Password, cfg.Redis.DB)
+	if err != nil {
+		log.Warn("Redis not available, rate limiting disabled", zap.Error(err))
+	} else {
+		defer redisClient.Close()
+		if cfg.RateLimit.Enabled {
+			rlConfig := middleware.RateLimitConfig{
+				Enabled:     true,
+				ServiceName: "meal",
+				IPLimit:     cfg.RateLimit.IPLimit,
+				IPWindow:   time.Duration(cfg.RateLimit.IPWindowSecs) * time.Second,
+				UserLimit:  cfg.RateLimit.UserLimit,
+				UserWindow: time.Duration(cfg.RateLimit.UserWindowSecs) * time.Second,
+			}
+			middleware.SetRateLimiter(middleware.NewRateLimiter(redisClient, rlConfig))
+			log.Info("rate limiter configured")
+		}
+	}
+
 	// Initialize repositories
 	cafeteriaRepo := repository.NewCafeteriaRepository(dbPool)
 	reservationRepo := repository.NewReservationRepository(dbPool)
@@ -80,9 +102,12 @@ func main() {
 	// Initialize closed days repository
 	closedDaysRepo := repository.NewClosedDaysRepository(dbPool)
 
+	// Initialize audit logger (via catalog service HTTP)
+	auditLogger := audit.NewHTTPLogger(cfg.CatalogService.BaseURL, "meal")
+
 	// Initialize shared handlers
 	timeHandler := sharedHandler.NewTimeHandler()
-	closedDaysHandler := handler.NewClosedDaysHandler(closedDaysRepo, log)
+	closedDaysHandler := handler.NewClosedDaysHandler(closedDaysRepo, log, auditLogger)
 
 	// Initialize services
 	cafeteriaService := service.NewCafeteriaService(cafeteriaRepo, log)
@@ -171,6 +196,7 @@ func setupRouter(cfg *config.Config, handler *handler.MealHandler, timeHandler *
 	router.Use(middleware.Recovery())
 	router.Use(middleware.RequestLogger())
 	router.Use(middleware.CORS())
+	router.Use(middleware.IPRateLimit())
 
 	// Health check
 	router.GET("/health", handler.Health)
@@ -185,6 +211,7 @@ func setupRouter(cfg *config.Config, handler *handler.MealHandler, timeHandler *
 		// User info is extracted from X-User-* headers set by Traefik
 		auth := api.Group("")
 		auth.Use(middleware.ExtractUserFromHeaders())
+		auth.Use(middleware.UserRateLimit())
 		{
 			// Cafeterias (all authenticated users can view)
 			auth.GET("/cafeterias", handler.GetCafeterias)

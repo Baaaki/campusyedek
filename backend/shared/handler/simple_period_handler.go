@@ -3,9 +3,11 @@ package handler
 import (
 	"net/http"
 
+	"github.com/baaaki/mydreamcampus/shared/audit"
 	"github.com/baaaki/mydreamcampus/shared/dto"
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	"github.com/baaaki/mydreamcampus/shared/repository"
+	"github.com/baaaki/mydreamcampus/shared/semester"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -15,11 +17,13 @@ import (
 // SimplePeriodHandler provides admin endpoints for managing academic periods
 // in services that don't need course-specific overrides (catalog, enrollment).
 type SimplePeriodHandler struct {
-	repo *repository.SimplePeriodRepository
+	repo            *repository.SimplePeriodRepository
+	semesterChecker semester.Checker
+	auditLogger     audit.Logger
 }
 
-func NewSimplePeriodHandler(repo *repository.SimplePeriodRepository) *SimplePeriodHandler {
-	return &SimplePeriodHandler{repo: repo}
+func NewSimplePeriodHandler(repo *repository.SimplePeriodRepository, checker semester.Checker, auditLogger audit.Logger) *SimplePeriodHandler {
+	return &SimplePeriodHandler{repo: repo, semesterChecker: checker, auditLogger: auditLogger}
 }
 
 // RegisterRoutes mounts period CRUD endpoints under the given router group.
@@ -54,6 +58,20 @@ func (h *SimplePeriodHandler) CreatePeriod(c *gin.Context) {
 		return
 	}
 
+	// Check semester is active
+	if h.semesterChecker != nil {
+		active, err := h.semesterChecker.IsSemesterActive(c.Request.Context(), req.Semester)
+		if err != nil {
+			logger.Warn("semester status check failed", zap.Error(err))
+		} else if !active {
+			c.JSON(http.StatusForbidden, gin.H{
+				"error": "semester is not active — modifications are not allowed",
+				"code":  "SEMESTER_NOT_ACTIVE",
+			})
+			return
+		}
+	}
+
 	period, err := h.repo.CreatePeriod(c.Request.Context(), repository.SimplePeriod{
 		Semester:    req.Semester,
 		PeriodStart: req.PeriodStart,
@@ -67,6 +85,23 @@ func (h *SimplePeriodHandler) CreatePeriod(c *gin.Context) {
 			"code":  "CONFLICT",
 		})
 		return
+	}
+
+	// Audit log
+	if h.auditLogger != nil {
+		actorID, _ := c.Get("user_id")
+		h.auditLogger.Log(c.Request.Context(), audit.AuditEvent{
+			ActorID:      actorID.(string),
+			ActorRole:    "admin",
+			Action:       "period.created",
+			ResourceType: "academic_period",
+			ResourceID:   period.ID.String(),
+			Details: map[string]any{
+				"semester":     req.Semester,
+				"period_start": req.PeriodStart.Format("2006-01-02T15:04:05Z07:00"),
+				"period_end":   req.PeriodEnd.Format("2006-01-02T15:04:05Z07:00"),
+			},
+		})
 	}
 
 	logger.Info("academic period created",
@@ -130,6 +165,32 @@ func (h *SimplePeriodHandler) UpdatePeriod(c *gin.Context) {
 		return
 	}
 
+	// Fetch existing period to check semester
+	existing, err := h.repo.GetPeriodByID(c.Request.Context(), id)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "period not found", "code": "NOT_FOUND"})
+			return
+		}
+		logger.Error("failed to get period", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get period", "code": "INTERNAL_ERROR"})
+		return
+	}
+
+	// Check semester is active
+	if h.semesterChecker != nil {
+		active, checkErr := h.semesterChecker.IsSemesterActive(c.Request.Context(), existing.Semester)
+		if checkErr != nil {
+			logger.Warn("semester status check failed", zap.Error(checkErr))
+		} else if !active {
+			c.JSON(http.StatusForbidden, gin.H{
+				"error": "semester is not active — modifications are not allowed",
+				"code":  "SEMESTER_NOT_ACTIVE",
+			})
+			return
+		}
+	}
+
 	period, err := h.repo.UpdatePeriod(c.Request.Context(), id, req.PeriodEnd, req.IsActive)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -145,6 +206,21 @@ func (h *SimplePeriodHandler) UpdatePeriod(c *gin.Context) {
 			"code":  "INTERNAL_ERROR",
 		})
 		return
+	}
+
+	// Audit log
+	if h.auditLogger != nil {
+		actorID, _ := c.Get("user_id")
+		h.auditLogger.Log(c.Request.Context(), audit.AuditEvent{
+			ActorID:      actorID.(string),
+			ActorRole:    "admin",
+			Action:       "period.updated",
+			ResourceType: "academic_period",
+			ResourceID:   id.String(),
+			Details: map[string]any{
+				"semester": existing.Semester,
+			},
+		})
 	}
 
 	logger.Info("academic period updated",
@@ -167,6 +243,32 @@ func (h *SimplePeriodHandler) DeletePeriod(c *gin.Context) {
 		return
 	}
 
+	// Fetch existing period to check semester
+	existing, err := h.repo.GetPeriodByID(c.Request.Context(), id)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "period not found", "code": "NOT_FOUND"})
+			return
+		}
+		logger.Error("failed to get period", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get period", "code": "INTERNAL_ERROR"})
+		return
+	}
+
+	// Check semester is active
+	if h.semesterChecker != nil {
+		active, checkErr := h.semesterChecker.IsSemesterActive(c.Request.Context(), existing.Semester)
+		if checkErr != nil {
+			logger.Warn("semester status check failed", zap.Error(checkErr))
+		} else if !active {
+			c.JSON(http.StatusForbidden, gin.H{
+				"error": "semester is not active — modifications are not allowed",
+				"code":  "SEMESTER_NOT_ACTIVE",
+			})
+			return
+		}
+	}
+
 	if err := h.repo.DeletePeriod(c.Request.Context(), id); err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{
@@ -181,6 +283,21 @@ func (h *SimplePeriodHandler) DeletePeriod(c *gin.Context) {
 			"code":  "INTERNAL_ERROR",
 		})
 		return
+	}
+
+	// Audit log
+	if h.auditLogger != nil {
+		actorID, _ := c.Get("user_id")
+		h.auditLogger.Log(c.Request.Context(), audit.AuditEvent{
+			ActorID:      actorID.(string),
+			ActorRole:    "admin",
+			Action:       "period.deleted",
+			ResourceType: "academic_period",
+			ResourceID:   id.String(),
+			Details: map[string]any{
+				"semester": existing.Semester,
+			},
+		})
 	}
 
 	logger.Info("academic period deleted",

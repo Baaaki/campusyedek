@@ -80,7 +80,7 @@ func (c *EventConsumer) handleMessage(ctx context.Context, msgBody []byte) error
 
 	// Route to appropriate handler using shared events constants
 	switch genericEvent.EventType {
-	case events.EventStaffDeleted:
+	case events.EventStaffDeactivated:
 		return c.handleStaffDeactivated(ctx, msgBody, genericEvent.EventID)
 	default:
 		logger.Warn("unknown event type",
@@ -143,7 +143,7 @@ func SetupStaffEventsQueue(conn *rabbitmq.Connection) error {
 	// Bind queue to staff.events exchange with staff.deleted routing key
 	err = channel.QueueBind(
 		events.QueueStudentStaffEvents, // queue name
-		events.RoutingKeyStaffDeleted,   // routing key
+		events.RoutingKeyStaffDeactivated, // routing key
 		"staff.events",                  // exchange
 		false,
 		nil,
@@ -154,7 +154,7 @@ func SetupStaffEventsQueue(conn *rabbitmq.Connection) error {
 
 	logger.Info("staff events queue setup completed",
 		zap.String("queue", events.QueueStudentStaffEvents),
-		zap.String("routing_key", events.RoutingKeyStaffDeleted),
+		zap.String("routing_key", events.RoutingKeyStaffDeactivated),
 	)
 
 	return nil

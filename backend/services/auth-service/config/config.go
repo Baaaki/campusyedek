@@ -9,13 +9,14 @@ import (
 
 // Config holds all configuration for the auth service
 type Config struct {
-	Server   config.ServerConfig
-	Database config.DatabaseConfig
-	RabbitMQ config.RabbitMQConfig
-	Redis    config.RedisConfig
-	JWT      JWTConfig
-	Admin    AdminConfig
-	Timeout  config.TimeoutConfig
+	Server    config.ServerConfig
+	Database  config.DatabaseConfig
+	RabbitMQ  config.RabbitMQConfig
+	Redis     config.RedisConfig
+	JWT       JWTConfig
+	Admin     AdminConfig
+	Timeout   config.TimeoutConfig
+	RateLimit config.RateLimitConfig
 }
 
 // JWTConfig holds JWT-related configuration (auth-specific with expiry times)
@@ -65,6 +66,7 @@ func Load() (*Config, error) {
 			Email:           viper.GetString("ADMIN_EMAIL"),
 			InitialPassword: viper.GetString("ADMIN_INITIAL_PASSWORD"),
 		},
+		RateLimit: config.LoadRateLimitConfig(),
 	}
 
 	// Validate config

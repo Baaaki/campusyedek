@@ -19,6 +19,7 @@ import (
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	sharedMiddleware "github.com/baaaki/mydreamcampus/shared/middleware"
 	"github.com/baaaki/mydreamcampus/shared/rabbitmq"
+	sharedRedis "github.com/baaaki/mydreamcampus/shared/redis"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
@@ -64,6 +65,26 @@ func main() {
 	}
 
 	logger.Info("Redis connection established")
+
+	// Initialize shared Redis client for rate limiting
+	sharedRedisClient, err := sharedRedis.NewClient(cfg.Redis.Addr, cfg.Redis.Password, cfg.Redis.DB)
+	if err != nil {
+		logger.Warn("shared Redis not available, rate limiting disabled", zap.Error(err))
+	} else {
+		defer sharedRedisClient.Close()
+		if cfg.RateLimit.Enabled {
+			rlConfig := sharedMiddleware.RateLimitConfig{
+				Enabled:     true,
+				ServiceName: "attendance",
+				IPLimit:     cfg.RateLimit.IPLimit,
+				IPWindow:   time.Duration(cfg.RateLimit.IPWindowSecs) * time.Second,
+				UserLimit:  cfg.RateLimit.UserLimit,
+				UserWindow: time.Duration(cfg.RateLimit.UserWindowSecs) * time.Second,
+			}
+			sharedMiddleware.SetRateLimiter(sharedMiddleware.NewRateLimiter(sharedRedisClient, rlConfig))
+			logger.Info("rate limiter configured")
+		}
+	}
 
 	// Initialize RabbitMQ
 	rabbitConn, err := rabbitmq.NewConnection(cfg.RabbitMQ.URL)
@@ -165,6 +186,7 @@ func setupRouter(cfg *config.Config, attendanceHandler *handler.AttendanceHandle
 	router.Use(gin.Recovery())
 	router.Use(sharedMiddleware.RequestLogger())
 	router.Use(sharedMiddleware.CORS())
+	router.Use(sharedMiddleware.IPRateLimit())
 
 	// Health check
 	router.GET("/health", func(c *gin.Context) {
@@ -175,6 +197,7 @@ func setupRouter(cfg *config.Config, attendanceHandler *handler.AttendanceHandle
 	// User info is extracted from X-User-* headers set by Traefik
 	api := router.Group("/api/attendance")
 	api.Use(sharedMiddleware.ExtractUserFromHeaders())
+	api.Use(sharedMiddleware.UserRateLimit())
 
 	// Student routes
 	api.POST("/scan", sharedMiddleware.RequireRole("student"), attendanceHandler.ScanQR)
@@ -182,13 +205,13 @@ func setupRouter(cfg *config.Config, attendanceHandler *handler.AttendanceHandle
 
 	// Instructor routes
 	api.POST("/sessions", sharedMiddleware.RequireRole("teacher"), attendanceHandler.CreateSession)
-	api.GET("/sessions/:sessionId", sharedMiddleware.RequireRole("teacher"), attendanceHandler.GetSessionDetails)
-	api.GET("/sessions/:sessionId/qr", sharedMiddleware.RequireRole("teacher"), attendanceHandler.GetQRCode)
-	api.GET("/sessions/:sessionId/records", sharedMiddleware.RequireRole("teacher"), attendanceHandler.GetSessionRecords)
-	api.GET("/sessions/:sessionId/students", sharedMiddleware.RequireRole("teacher"), attendanceHandler.GetSessionStudents)
-	api.POST("/sessions/:sessionId/manual", sharedMiddleware.RequireRole("teacher"), attendanceHandler.CreateManualAttendance)
-	api.POST("/sessions/:sessionId/close", sharedMiddleware.RequireRole("teacher"), attendanceHandler.CloseSession)
-	api.POST("/courses/:courseId/finalize", sharedMiddleware.RequireRole("teacher"), attendanceHandler.FinalizeAttendance)
+	api.GET("/sessions/:session_id", sharedMiddleware.RequireRole("teacher"), attendanceHandler.GetSessionDetails)
+	api.GET("/sessions/:session_id/qr", sharedMiddleware.RequireRole("teacher"), attendanceHandler.GetQRCode)
+	api.GET("/sessions/:session_id/records", sharedMiddleware.RequireRole("teacher"), attendanceHandler.GetSessionRecords)
+	api.GET("/sessions/:session_id/students", sharedMiddleware.RequireRole("teacher"), attendanceHandler.GetSessionStudents)
+	api.POST("/sessions/:session_id/manual", sharedMiddleware.RequireRole("teacher"), attendanceHandler.CreateManualAttendance)
+	api.POST("/sessions/:session_id/close", sharedMiddleware.RequireRole("teacher"), attendanceHandler.CloseSession)
+	api.POST("/courses/:course_id/finalize", sharedMiddleware.RequireRole("teacher"), attendanceHandler.FinalizeAttendance)
 
 	// Admin routes for Time Machine
 	admin := router.Group("/api/attendance/admin")

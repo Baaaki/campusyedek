@@ -8,14 +8,14 @@ package events
 const (
 	EventStaffCreated = "staff.created"
 	EventStaffUpdated = "staff.updated"
-	EventStaffDeleted = "staff.deleted"
+	EventStaffDeactivated = "staff.deactivated"
 )
 
 // Student Service Events
 const (
 	EventStudentCreated = "student.created"
 	EventStudentUpdated = "student.updated"
-	EventStudentDeleted = "student.deleted"
+	EventStudentDeactivated = "student.deactivated"
 )
 
 // Course Catalog Service Events
@@ -70,13 +70,13 @@ const (
 	// Staff events routing keys
 	RoutingKeyStaffCreated = "staff.created"
 	RoutingKeyStaffUpdated = "staff.updated"
-	RoutingKeyStaffDeleted = "staff.deleted"
+	RoutingKeyStaffDeactivated = "staff.deactivated"
 	RoutingKeyStaffAll     = "staff.*"
 
 	// Student events routing keys
 	RoutingKeyStudentCreated = "student.created"
 	RoutingKeyStudentUpdated = "student.updated"
-	RoutingKeyStudentDeleted = "student.deleted"
+	RoutingKeyStudentDeactivated = "student.deactivated"
 	RoutingKeyStudentAll     = "student.*"
 
 	// Course events routing keys

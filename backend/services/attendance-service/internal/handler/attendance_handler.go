@@ -154,7 +154,7 @@ func (h *AttendanceHandler) GetQRCode(c *gin.Context) {
 		zap.String("method", "GetQRCode"),
 	)
 
-	sessionID, err := uuid.Parse(c.Param("sessionId"))
+	sessionID, err := uuid.Parse(c.Param("session_id"))
 	if err != nil {
 		handlerLogger.Error("invalid session ID format", zap.Error(err))
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
@@ -204,7 +204,7 @@ func (h *AttendanceHandler) CreateManualAttendance(c *gin.Context) {
 		zap.String("method", "CreateManualAttendance"),
 	)
 
-	sessionID, err := uuid.Parse(c.Param("sessionId"))
+	sessionID, err := uuid.Parse(c.Param("session_id"))
 	if err != nil {
 		handlerLogger.Error("invalid session ID format", zap.Error(err))
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
@@ -263,7 +263,7 @@ func (h *AttendanceHandler) CloseSession(c *gin.Context) {
 		zap.String("method", "CloseSession"),
 	)
 
-	sessionID, err := uuid.Parse(c.Param("sessionId"))
+	sessionID, err := uuid.Parse(c.Param("session_id"))
 	if err != nil {
 		handlerLogger.Error("invalid session ID format", zap.Error(err))
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
@@ -355,7 +355,7 @@ func (h *AttendanceHandler) FinalizeAttendance(c *gin.Context) {
 		zap.String("method", "FinalizeAttendance"),
 	)
 
-	courseID, err := uuid.Parse(c.Param("courseId"))
+	courseID, err := uuid.Parse(c.Param("course_id"))
 	if err != nil {
 		handlerLogger.Error("invalid course ID format", zap.Error(err))
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
@@ -418,7 +418,7 @@ func (h *AttendanceHandler) GetSessionDetails(c *gin.Context) {
 		zap.String("method", "GetSessionDetails"),
 	)
 
-	sessionID, err := uuid.Parse(c.Param("sessionId"))
+	sessionID, err := uuid.Parse(c.Param("session_id"))
 	if err != nil {
 		handlerLogger.Error("invalid session ID format", zap.Error(err))
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
@@ -465,7 +465,7 @@ func (h *AttendanceHandler) GetSessionRecords(c *gin.Context) {
 		zap.String("method", "GetSessionRecords"),
 	)
 
-	sessionID, err := uuid.Parse(c.Param("sessionId"))
+	sessionID, err := uuid.Parse(c.Param("session_id"))
 	if err != nil {
 		handlerLogger.Error("invalid session ID format", zap.Error(err))
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
@@ -513,7 +513,7 @@ func (h *AttendanceHandler) GetSessionStudents(c *gin.Context) {
 		zap.String("method", "GetSessionStudents"),
 	)
 
-	sessionID, err := uuid.Parse(c.Param("sessionId"))
+	sessionID, err := uuid.Parse(c.Param("session_id"))
 	if err != nil {
 		handlerLogger.Error("invalid session ID format", zap.Error(err))
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{

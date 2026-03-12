@@ -6,18 +6,20 @@ import (
 
 	"github.com/baaaki/mydreamcampus/meal-service/internal/db"
 	"github.com/baaaki/mydreamcampus/meal-service/internal/repository"
+	"github.com/baaaki/mydreamcampus/shared/audit"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
 )
 
 type ClosedDaysHandler struct {
-	repo   *repository.ClosedDaysRepository
-	logger *zap.Logger
+	repo        *repository.ClosedDaysRepository
+	logger      *zap.Logger
+	auditLogger audit.Logger
 }
 
-func NewClosedDaysHandler(repo *repository.ClosedDaysRepository, logger *zap.Logger) *ClosedDaysHandler {
-	return &ClosedDaysHandler{repo: repo, logger: logger}
+func NewClosedDaysHandler(repo *repository.ClosedDaysRepository, logger *zap.Logger, auditLogger audit.Logger) *ClosedDaysHandler {
+	return &ClosedDaysHandler{repo: repo, logger: logger, auditLogger: auditLogger}
 }
 
 // RegisterRoutes mounts closed days endpoints under the given router group.
@@ -74,6 +76,22 @@ func (h *ClosedDaysHandler) CreateClosedDay(c *gin.Context) {
 			"code":  "CONFLICT",
 		})
 		return
+	}
+
+	// Audit log
+	if h.auditLogger != nil {
+		actorID, _ := c.Get("user_id")
+		h.auditLogger.Log(c.Request.Context(), audit.AuditEvent{
+			ActorID:      actorID.(string),
+			ActorRole:    "admin",
+			Action:       "closed_day.created",
+			ResourceType: "closed_day",
+			ResourceID:   closedDay.ID.String(),
+			Details: map[string]any{
+				"date":   req.Date,
+				"reason": req.Reason,
+			},
+		})
 	}
 
 	h.logger.Info("closed day created",
@@ -155,6 +173,18 @@ func (h *ClosedDaysHandler) DeleteClosedDay(c *gin.Context) {
 			"code":  "INTERNAL_ERROR",
 		})
 		return
+	}
+
+	// Audit log
+	if h.auditLogger != nil {
+		actorID, _ := c.Get("user_id")
+		h.auditLogger.Log(c.Request.Context(), audit.AuditEvent{
+			ActorID:      actorID.(string),
+			ActorRole:    "admin",
+			Action:       "closed_day.deleted",
+			ResourceType: "closed_day",
+			ResourceID:   idStr,
+		})
 	}
 
 	h.logger.Info("closed day deleted", zap.String("id", idStr))

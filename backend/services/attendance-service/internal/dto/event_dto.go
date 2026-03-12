@@ -18,9 +18,9 @@ type BaseEvent struct {
 // CONSUMED EVENTS
 // =======================================
 
-// StudentCreatedEvent is consumed from student service
+// StudentCreatedEventData is consumed from student service
 type StudentCreatedEventData struct {
-	StudentID     uuid.UUID `json:"student_id"`
+	StudentID     uuid.UUID `json:"id"`
 	StudentNumber string    `json:"student_number"`
 	FirstName     string    `json:"first_name"`
 	LastName      string    `json:"last_name"`
@@ -28,9 +28,9 @@ type StudentCreatedEventData struct {
 	Department    string    `json:"department"`
 }
 
-// StudentUpdatedEvent is consumed from student service
+// StudentUpdatedEventData is consumed from student service
 type StudentUpdatedEventData struct {
-	StudentID     uuid.UUID `json:"student_id"`
+	StudentID     uuid.UUID `json:"id"`
 	StudentNumber string    `json:"student_number"`
 	FirstName     string    `json:"first_name"`
 	LastName      string    `json:"last_name"`
@@ -38,9 +38,9 @@ type StudentUpdatedEventData struct {
 	Department    string    `json:"department"`
 }
 
-// StudentDeactivatedEvent is consumed from student service
+// StudentDeactivatedEventData is consumed from student service
 type StudentDeactivatedEventData struct {
-	StudentID uuid.UUID `json:"student_id"`
+	StudentID uuid.UUID `json:"id"`
 }
 
 // ScheduleSessionInfo represents a schedule session from catalog events

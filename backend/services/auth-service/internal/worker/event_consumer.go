@@ -59,7 +59,7 @@ func (w *EventConsumer) Start(ctx context.Context) error {
 			return w.handleStaffCreated(ctx, body)
 		case events.EventStudentUpdated, events.EventStaffUpdated:
 			return w.handleUserUpdated(ctx, body)
-		case events.EventStudentDeleted, events.EventStaffDeleted:
+		case events.EventStudentDeactivated, events.EventStaffDeactivated:
 			return w.handleUserDeactivated(ctx, body)
 		default:
 			logger.Warn("unknown event type",

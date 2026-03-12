@@ -116,7 +116,7 @@ func (c *EventConsumer) handleMessage(ctx context.Context, msgBody []byte) error
 		return c.handleStudentCreated(ctx, msgBody, genericEvent.EventID.String())
 	case events.EventStudentUpdated:
 		return c.handleStudentUpdated(ctx, msgBody, genericEvent.EventID.String())
-	case events.EventStudentDeleted:
+	case events.EventStudentDeactivated:
 		return c.handleStudentDeactivated(ctx, msgBody, genericEvent.EventID.String())
 
 	default:

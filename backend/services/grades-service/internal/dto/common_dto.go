@@ -13,8 +13,8 @@ type SuccessResponse struct {
 }
 
 type PaginationParams struct {
-	Page     int `form:"page" binding:"min=1"`
-	PageSize int `form:"page_size" binding:"min=1,max=100"`
+	Page  int `form:"page" binding:"min=1"`
+	Limit int `form:"limit" binding:"min=1,max=100"`
 }
 
 type PaginatedResponse struct {
@@ -24,8 +24,8 @@ type PaginatedResponse struct {
 
 type Pagination struct {
 	Page       int   `json:"page"`
-	PageSize   int   `json:"page_size"`
-	TotalItems int64 `json:"total_items"`
+	Limit      int   `json:"limit"`
+	Total      int64 `json:"total"`
 	TotalPages int   `json:"total_pages"`
 }
 

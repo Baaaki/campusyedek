@@ -22,131 +22,46 @@ watching sql/queries
 !exclude tmp
 building...
 running...
-20:11:04.694	[34mINFO[0m	cmd/main.go:41	starting enrollment-service	{"environment": "development", "port": "8005"}
-20:11:04.699	[34mINFO[0m	cmd/main.go:55	database connection established
-20:11:04.699	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
-20:11:04.700	[34mINFO[0m	redis/redis.go:41	redis connection established
-20:11:04.700	[34mINFO[0m	cmd/main.go:66	Redis connection established
-20:11:04.700	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
-20:11:04.702	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
-20:11:04.702	[34mINFO[0m	cmd/main.go:77	RabbitMQ connection established
-20:11:04.702	[34mINFO[0m	cmd/main.go:270	RabbitMQ exchange declared	{"exchange": "enrollment.events"}
-20:11:04.703	[34mINFO[0m	cmd/main.go:310	RabbitMQ queue bindings created	{"queue": "enrollment.events", "bindings": ["course.events", "student.events"]}
-20:11:04.704	[34mINFO[0m	cmd/main.go:335	downstream consumer queues pre-declared
-20:11:04.704	[34mINFO[0m	worker/event_consumer.go:58	starting event consumer
-20:11:04.704	[34mINFO[0m	worker/outbox_worker.go:39	starting outbox worker	{"interval": "5s", "batch_size": 10}
-20:11:04.704	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "enrollment.events"}
-20:11:04.704	[34mINFO[0m	worker/event_consumer.go:69	event consumer started successfully
+23:56:13.625	[34mINFO[0m	cmd/main.go:43	starting enrollment-service	{"environment": "development", "port": "8005"}
+23:56:13.633	[34mINFO[0m	cmd/main.go:57	database connection established
+23:56:13.633	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+23:56:13.636	[34mINFO[0m	redis/redis.go:41	redis connection established
+23:56:13.636	[34mINFO[0m	cmd/main.go:68	Redis connection established
+23:56:13.636	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+23:56:13.640	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+23:56:13.640	[34mINFO[0m	cmd/main.go:79	RabbitMQ connection established
+23:56:13.640	[34mINFO[0m	cmd/main.go:289	RabbitMQ exchange declared	{"exchange": "enrollment.events"}
+23:56:13.641	[34mINFO[0m	cmd/main.go:329	RabbitMQ queue bindings created	{"queue": "enrollment.events", "bindings": ["course.events", "student.events"]}
+23:56:13.642	[34mINFO[0m	cmd/main.go:354	downstream consumer queues pre-declared
+23:56:13.642	[34mINFO[0m	worker/event_consumer.go:58	starting event consumer
+23:56:13.642	[34mINFO[0m	worker/outbox_worker.go:39	starting outbox worker	{"interval": "5s", "batch_size": 10}
+23:56:13.643	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "enrollment.events"}
+23:56:13.643	[34mINFO[0m	worker/event_consumer.go:69	event consumer started successfully
+23:56:13.643	[34mINFO[0m	cmd/main.go:158	rate limiter configured
 [GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
  - using env:	export GIN_MODE=release
  - using code:	gin.SetMode(gin.ReleaseMode)
 
-[GIN-debug] GET    /health                   --> main.setupRouter.func1 (4 handlers)
-[GIN-debug] GET    /api/enrollment/available-courses --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).GetAvailableCourses-fm (6 handlers)
-[GIN-debug] POST   /api/enrollment/programs  --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).CreateEnrollmentProgram-fm (6 handlers)
-[GIN-debug] DELETE /api/enrollment/programs  --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).CancelMyEnrollment-fm (6 handlers)
-[GIN-debug] GET    /api/enrollment/my-enrollments --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).GetMyEnrollments-fm (6 handlers)
-[GIN-debug] GET    /api/enrollment/latest-rejection --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).GetLatestRejection-fm (6 handlers)
-[GIN-debug] GET    /api/enrollment/my-rejections --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).GetMyRejections-fm (6 handlers)
-[GIN-debug] GET    /api/enrollment/advisor/pending-programs --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).GetPendingProgramsByAdvisor-fm (6 handlers)
-[GIN-debug] POST   /api/enrollment/advisor/programs/:program_id/approve --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).ApproveEnrollmentProgram-fm (6 handlers)
-[GIN-debug] POST   /api/enrollment/advisor/programs/:program_id/reject --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).RejectEnrollmentProgram-fm (6 handlers)
-[GIN-debug] POST   /api/enrollment/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (6 handlers)
-[GIN-debug] POST   /api/enrollment/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (6 handlers)
-[GIN-debug] GET    /api/enrollment/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (6 handlers)
-[GIN-debug] POST   /api/enrollment/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*SimplePeriodHandler).CreatePeriod-fm (6 handlers)
-[GIN-debug] GET    /api/enrollment/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*SimplePeriodHandler).ListPeriods-fm (6 handlers)
-[GIN-debug] PUT    /api/enrollment/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*SimplePeriodHandler).UpdatePeriod-fm (6 handlers)
-[GIN-debug] DELETE /api/enrollment/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*SimplePeriodHandler).DeletePeriod-fm (6 handlers)
-20:11:04.704	[34mINFO[0m	cmd/main.go:163	server starting	{"port": "8005"}
-20:11:29.989	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:11:29.993	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "3b7d081c-87a0-4f7b-9138-e2ddaf5fd43a", "method": "GET", "path": "/api/enrollment/admin/periods", "query": "", "status": 200, "duration": "4.441695ms", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:11:29.996	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:11:29.996	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "d3219328-34be-4664-b3c4-feb5f2737f88", "method": "GET", "path": "/api/enrollment/admin/periods", "query": "", "status": 200, "duration": "488.684µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:14:23.147	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:14:23.147	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "321b9a9e-5efb-4b35-bd3c-e00a38a645de", "method": "GET", "path": "/api/enrollment/admin/periods", "query": "", "status": 200, "duration": "631.568µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:14:23.150	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:14:23.150	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "4c7be608-a123-4744-9ac6-943f9ffd4215", "method": "GET", "path": "/api/enrollment/admin/periods", "query": "", "status": 200, "duration": "300.168µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:21:34.270	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:21:34.271	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "c8987a21-32dd-4288-9075-e0b58da6eb78", "method": "GET", "path": "/api/enrollment/admin/periods", "query": "", "status": 200, "duration": "563.146µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:21:34.273	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:21:34.273	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "18b09f6e-36ad-467d-a9d6-e0dfd30394a5", "method": "GET", "path": "/api/enrollment/admin/periods", "query": "", "status": 200, "duration": "177.125µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:23:31.413	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:23:31.414	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "d0b65504-2eaf-42ed-8da7-95e454704e90", "method": "GET", "path": "/api/enrollment/admin/periods", "query": "", "status": 200, "duration": "638.968µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:23:31.416	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:23:31.417	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "bf1cebe0-a398-4335-9171-37e2d82d5b91", "method": "GET", "path": "/api/enrollment/admin/periods", "query": "", "status": 200, "duration": "358.24µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:23:50.024	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:23:50.024	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "723d2958-e318-4ea8-bed3-2bec115ddd25", "method": "GET", "path": "/api/enrollment/admin/time/status", "query": "", "status": 200, "duration": "130.973µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:23:50.028	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:23:50.028	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "9806a554-40ed-46a9-8e4a-272f49741cb4", "method": "GET", "path": "/api/enrollment/admin/time/status", "query": "", "status": 200, "duration": "65.761µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:24:51.782	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:24:51.782	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "ffaa6091-edc6-4749-9578-2d0e250fa034", "method": "GET", "path": "/api/enrollment/admin/time/status", "query": "", "status": 200, "duration": "87.952µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:27:23.942	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:27:23.942	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "364b9635-304f-43bd-ac9a-4951b9d11ee7", "method": "GET", "path": "/api/enrollment/admin/periods", "query": "", "status": 200, "duration": "332.999µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:27:23.944	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:27:23.944	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "32314cb5-15b8-494c-933f-138c550f194f", "method": "GET", "path": "/api/enrollment/admin/periods", "query": "", "status": 200, "duration": "145.184µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:27:34.370	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:27:34.381	[34mINFO[0m	handler/simple_period_handler.go:72	academic period created	{"semester": "2026-2027-Fall", "period_id": "bfd2c4d9-0e0e-4229-bb90-47f6250b4df8"}
-20:27:34.381	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "f9792c96-b517-400c-adf8-54c5b6d2a780", "method": "POST", "path": "/api/enrollment/admin/periods", "query": "", "status": 201, "duration": "11.262563ms", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:27:34.385	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:27:34.385	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "ebfd98b6-c18a-4e80-a88d-2028a5659672", "method": "GET", "path": "/api/enrollment/admin/periods", "query": "", "status": 200, "duration": "243.287µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:27:56.293	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:27:56.293	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "40572b39-0712-4f2d-b029-36db0f41a620", "method": "GET", "path": "/api/enrollment/admin/periods", "query": "", "status": 200, "duration": "620.497µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:27:56.297	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:27:56.297	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "9cdc499b-8969-43fb-87c3-1c16ac129662", "method": "GET", "path": "/api/enrollment/admin/periods", "query": "", "status": 200, "duration": "289.498µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:27:58.577	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:27:58.579	[34mINFO[0m	handler/simple_period_handler.go:186	academic period deleted	{"period_id": "bfd2c4d9-0e0e-4229-bb90-47f6250b4df8"}
-20:27:58.579	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "ce726205-8952-4e87-a912-78f4260d5401", "method": "DELETE", "path": "/api/enrollment/admin/periods/bfd2c4d9-0e0e-4229-bb90-47f6250b4df8", "query": "", "status": 200, "duration": "2.643784ms", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:27:58.584	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-20:27:58.584	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "e6187279-38f4-4a94-a126-6e748ad2558b", "method": "GET", "path": "/api/enrollment/admin/periods", "query": "", "status": 200, "duration": "288.788µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:36:59.957	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:36:59.957	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "8dd792dc-739b-400f-a455-304362890cf8", "method": "GET", "path": "/api/enrollment/admin/time/status", "query": "", "status": 200, "duration": "136.974µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:37:00.036	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:37:00.036	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "f6810862-bf2f-4aba-a1e3-3465f8cb38c5", "method": "GET", "path": "/api/enrollment/admin/time/status", "query": "", "status": 200, "duration": "59.832µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:37:18.111	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:37:18.112	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "6f2ee6f9-a857-422b-b00a-653abe2820df", "method": "GET", "path": "/api/enrollment/admin/time/status", "query": "", "status": 200, "duration": "83.752µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:37:18.123	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:37:18.123	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "2eda6b7c-2f07-4c3d-a2b6-054e8806182c", "method": "GET", "path": "/api/enrollment/admin/time/status", "query": "", "status": 200, "duration": "105.843µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:37:52.597	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:37:52.597	[34mINFO[0m	handler/time_handler.go:61	clock reset to real time
-01:37:52.597	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "10a2ffea-d2a4-4830-a89c-c1f6445160b8", "method": "POST", "path": "/api/enrollment/admin/time/reset", "query": "", "status": 200, "duration": "128.873µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:37:52.615	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:37:52.615	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "8854be90-39ba-4723-ae48-33e382d9640e", "method": "GET", "path": "/api/enrollment/admin/time/status", "query": "", "status": 200, "duration": "74.882µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:39:44.768	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:39:44.768	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "3bab0c49-351c-44b8-84c7-b5270cd5a993", "method": "GET", "path": "/api/enrollment/admin/time/status", "query": "", "status": 200, "duration": "76.173µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:39:45.735	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:39:45.735	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "125ce812-c25b-4849-8efe-cfa7412a745c", "method": "GET", "path": "/api/enrollment/admin/time/status", "query": "", "status": 200, "duration": "90.763µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:39:50.088	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:39:50.088	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "e1d83ff7-b630-41b1-94b7-48f09cdf2544", "method": "GET", "path": "/api/enrollment/admin/time/status", "query": "", "status": 200, "duration": "66.612µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:45:37.601	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:45:37.601	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "202777cd-cba6-49c8-9665-7c22d6905df0", "method": "GET", "path": "/api/enrollment/admin/time/status", "query": "", "status": 200, "duration": "66.692µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:45:37.608	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:45:37.608	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "1e8f48af-a360-42dc-baad-7f67d2376dbc", "method": "GET", "path": "/api/enrollment/admin/time/status", "query": "", "status": 200, "duration": "56.811µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:46:31.363	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:46:31.363	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "76b81ca8-4d05-4393-8255-ad3d6ed64c47", "method": "GET", "path": "/api/enrollment/admin/time/status", "query": "", "status": 200, "duration": "89.202µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:46:32.392	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:46:32.392	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "04be1ecd-5bfb-496a-b365-2579f30a4dc6", "method": "GET", "path": "/api/enrollment/admin/time/status", "query": "", "status": 200, "duration": "75.472µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:47:36.521	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:47:36.521	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "2ebd9ac0-b116-4e29-8591-20a5e5421fe7", "method": "GET", "path": "/api/enrollment/admin/time/status", "query": "", "status": 200, "duration": "94.992µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:47:38.148	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:47:38.148	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "222fd1bd-1f7b-41c8-89e2-5ac6c1a63859", "method": "GET", "path": "/api/enrollment/admin/time/status", "query": "", "status": 200, "duration": "58.921µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:47:47.382	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:47:47.383	[34mINFO[0m	handler/time_handler.go:46	clock switched to simulated mode	{"simulated_time": "09:15:08.000"}
-01:47:47.383	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "041d486c-8f81-4b1f-bb7e-d974c6136457", "method": "POST", "path": "/api/enrollment/admin/time/simulate", "query": "", "status": 200, "duration": "230.636µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:47:47.397	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:47:47.397	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "a1de5328-eb38-430e-94b1-bd8cd7586567", "method": "GET", "path": "/api/enrollment/admin/time/status", "query": "", "status": 200, "duration": "113.333µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:47:48.951	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:47:48.951	[34mINFO[0m	handler/time_handler.go:61	clock reset to real time
-01:47:48.951	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "74b18040-9e75-49f6-bb6a-93c351510d68", "method": "POST", "path": "/api/enrollment/admin/time/reset", "query": "", "status": 200, "duration": "126.644µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:47:48.965	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:47:48.965	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "4b49d86b-0bb1-4554-b8fd-7c712329bb4b", "method": "GET", "path": "/api/enrollment/admin/time/status", "query": "", "status": 200, "duration": "73.732µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:47:53.283	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-01:47:53.283	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "d2506e39-7c2d-4c48-97fc-470085ee1312", "method": "GET", "path": "/api/enrollment/admin/time/status", "query": "", "status": 200, "duration": "70.102µs", "ip": "172.18.0.1", "user_agent": "curl/8.5.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-02:02:07.537	[31mERROR[0m	rabbitmq/connection.go:94	rabbitmq connection lost	{"error": "Exception (320) Reason: \"CONNECTION_FORCED - broker forced connection closure with reason 'shutdown'\""}
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (5 handlers)
+[GIN-debug] GET    /api/enrollment/available-courses --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).GetAvailableCourses-fm (8 handlers)
+[GIN-debug] POST   /api/enrollment/programs  --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).CreateEnrollmentProgram-fm (8 handlers)
+[GIN-debug] DELETE /api/enrollment/programs  --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).CancelMyEnrollment-fm (8 handlers)
+[GIN-debug] GET    /api/enrollment/my-enrollments --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).GetMyEnrollments-fm (8 handlers)
+[GIN-debug] GET    /api/enrollment/latest-rejection --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).GetLatestRejection-fm (8 handlers)
+[GIN-debug] GET    /api/enrollment/my-rejections --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).GetMyRejections-fm (8 handlers)
+[GIN-debug] GET    /api/enrollment/advisor/pending-programs --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).GetPendingProgramsByAdvisor-fm (8 handlers)
+[GIN-debug] POST   /api/enrollment/advisor/programs/:program_id/approve --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).ApproveEnrollmentProgram-fm (8 handlers)
+[GIN-debug] POST   /api/enrollment/advisor/programs/:program_id/reject --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).RejectEnrollmentProgram-fm (8 handlers)
+[GIN-debug] POST   /api/enrollment/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (8 handlers)
+[GIN-debug] POST   /api/enrollment/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (8 handlers)
+[GIN-debug] GET    /api/enrollment/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (8 handlers)
+[GIN-debug] POST   /api/enrollment/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*SimplePeriodHandler).CreatePeriod-fm (8 handlers)
+[GIN-debug] GET    /api/enrollment/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*SimplePeriodHandler).ListPeriods-fm (8 handlers)
+[GIN-debug] PUT    /api/enrollment/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*SimplePeriodHandler).UpdatePeriod-fm (8 handlers)
+[GIN-debug] DELETE /api/enrollment/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*SimplePeriodHandler).DeletePeriod-fm (8 handlers)
+23:56:13.643	[34mINFO[0m	cmd/main.go:180	server starting	{"port": "8005"}
+23:59:17.583	[31mERROR[0m	rabbitmq/connection.go:94	rabbitmq connection lost	{"error": "Exception (320) Reason: \"CONNECTION_FORCED - broker forced connection closure with reason 'shutdown'\""}
 github.com/baaaki/mydreamcampus/shared/rabbitmq.(*Connection).handleReconnect
 	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/rabbitmq/connection.go:94
-02:02:07.538	[34mINFO[0m	rabbitmq/connection.go:99	attempting to reconnect to rabbitmq...
-02:02:07.543	[34mINFO[0m	cmd/main.go:178	shutting down server...
-02:02:07.543	[34mINFO[0m	cmd/main.go:193	server exited
-02:02:07.543	[34mINFO[0m	redis/redis.go:48	closing redis connection
+23:59:17.583	[34mINFO[0m	rabbitmq/connection.go:99	attempting to reconnect to rabbitmq...
 cleaning...

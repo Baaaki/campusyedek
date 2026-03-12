@@ -48,6 +48,21 @@ type JWTConfig struct {
 	Secret string `mapstructure:"JWT_SECRET"`
 }
 
+// RateLimitConfig represents rate limiting configuration
+type RateLimitConfig struct {
+	Enabled            bool `mapstructure:"RATE_LIMIT_ENABLED"`
+	IPLimit            int  `mapstructure:"RATE_LIMIT_IP_LIMIT"`
+	IPWindowSecs       int  `mapstructure:"RATE_LIMIT_IP_WINDOW_SECS"`
+	UserLimit          int  `mapstructure:"RATE_LIMIT_USER_LIMIT"`
+	UserWindowSecs     int  `mapstructure:"RATE_LIMIT_USER_WINDOW_SECS"`
+	LoginLimit         int  `mapstructure:"RATE_LIMIT_LOGIN_LIMIT"`
+	LoginWindowSecs    int  `mapstructure:"RATE_LIMIT_LOGIN_WINDOW_SECS"`
+	RefreshLimit       int  `mapstructure:"RATE_LIMIT_REFRESH_LIMIT"`
+	RefreshWindowSecs  int  `mapstructure:"RATE_LIMIT_REFRESH_WINDOW_SECS"`
+	PasswordLimit      int  `mapstructure:"RATE_LIMIT_PASSWORD_LIMIT"`
+	PasswordWindowSecs int  `mapstructure:"RATE_LIMIT_PASSWORD_WINDOW_SECS"`
+}
+
 // TimeoutConfig represents timeout and duration configuration
 type TimeoutConfig struct {
 	RequestTimeoutSeconds          int `mapstructure:"REQUEST_TIMEOUT_SECONDS"`

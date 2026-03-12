@@ -205,6 +205,7 @@ type AppealScoreRequest struct {
 	CourseID  uuid.UUID `json:"course_id" binding:"required"`
 	Slug      string    `json:"slug" binding:"required"`
 	NewScore  float64   `json:"new_score" binding:"required,min=0,max=100"`
+	Reason    string    `json:"reason" binding:"required,min=10"`
 }
 
 type AppealScoreResponse struct {

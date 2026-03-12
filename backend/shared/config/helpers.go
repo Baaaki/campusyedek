@@ -64,6 +64,19 @@ func SetCommonDefaults(serviceName, defaultPort, dbPort string) {
 	// JWT defaults
 	viper.SetDefault("JWT_SECRET", "change-this-secret-in-production")
 
+	// Rate limiting defaults
+	viper.SetDefault("RATE_LIMIT_ENABLED", true)
+	viper.SetDefault("RATE_LIMIT_IP_LIMIT", 100)
+	viper.SetDefault("RATE_LIMIT_IP_WINDOW_SECS", 60)
+	viper.SetDefault("RATE_LIMIT_USER_LIMIT", 200)
+	viper.SetDefault("RATE_LIMIT_USER_WINDOW_SECS", 60)
+	viper.SetDefault("RATE_LIMIT_LOGIN_LIMIT", 5)
+	viper.SetDefault("RATE_LIMIT_LOGIN_WINDOW_SECS", 60)
+	viper.SetDefault("RATE_LIMIT_REFRESH_LIMIT", 10)
+	viper.SetDefault("RATE_LIMIT_REFRESH_WINDOW_SECS", 60)
+	viper.SetDefault("RATE_LIMIT_PASSWORD_LIMIT", 3)
+	viper.SetDefault("RATE_LIMIT_PASSWORD_WINDOW_SECS", 300)
+
 	// Timeout defaults (in seconds)
 	viper.SetDefault("REQUEST_TIMEOUT_SECONDS", 10)
 	viper.SetDefault("SHUTDOWN_TIMEOUT_SECONDS", 5)
@@ -106,6 +119,24 @@ func LoadCommonConfig() (ServerConfig, DatabaseConfig, RabbitMQConfig, RedisConf
 	}
 
 	return server, database, rabbitmq, redis, jwt
+}
+
+// LoadRateLimitConfig loads rate limiting configuration from Viper.
+// This is a separate function to avoid breaking the LoadCommonConfig signature.
+func LoadRateLimitConfig() RateLimitConfig {
+	return RateLimitConfig{
+		Enabled:            viper.GetBool("RATE_LIMIT_ENABLED"),
+		IPLimit:            viper.GetInt("RATE_LIMIT_IP_LIMIT"),
+		IPWindowSecs:       viper.GetInt("RATE_LIMIT_IP_WINDOW_SECS"),
+		UserLimit:          viper.GetInt("RATE_LIMIT_USER_LIMIT"),
+		UserWindowSecs:     viper.GetInt("RATE_LIMIT_USER_WINDOW_SECS"),
+		LoginLimit:         viper.GetInt("RATE_LIMIT_LOGIN_LIMIT"),
+		LoginWindowSecs:    viper.GetInt("RATE_LIMIT_LOGIN_WINDOW_SECS"),
+		RefreshLimit:       viper.GetInt("RATE_LIMIT_REFRESH_LIMIT"),
+		RefreshWindowSecs:  viper.GetInt("RATE_LIMIT_REFRESH_WINDOW_SECS"),
+		PasswordLimit:      viper.GetInt("RATE_LIMIT_PASSWORD_LIMIT"),
+		PasswordWindowSecs: viper.GetInt("RATE_LIMIT_PASSWORD_WINDOW_SECS"),
+	}
 }
 
 // ValidateCommonConfig validates common configuration fields

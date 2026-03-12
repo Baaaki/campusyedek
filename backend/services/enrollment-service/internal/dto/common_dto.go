@@ -4,6 +4,7 @@ package dto
 type ScheduleSession struct {
 	DayOfWeek   string `json:"day_of_week"`
 	SlotNumbers []int  `json:"slot_numbers"`
+	SessionType string `json:"session_type"`
 }
 
 // CourseBasic represents basic course information
@@ -18,15 +19,15 @@ type CourseBasic struct {
 
 // PaginationRequest represents pagination parameters
 type PaginationRequest struct {
-	Page     int `json:"page" form:"page"`
-	PageSize int `json:"page_size" form:"page_size"`
+	Page  int `json:"page" form:"page"`
+	Limit int `json:"limit" form:"limit"`
 }
 
 // PaginationResponse represents pagination metadata
 type PaginationResponse struct {
 	Page       int `json:"page"`
-	PageSize   int `json:"page_size"`
-	TotalItems int `json:"total_items"`
+	Limit      int `json:"limit"`
+	Total      int `json:"total"`
 	TotalPages int `json:"total_pages"`
 }
 

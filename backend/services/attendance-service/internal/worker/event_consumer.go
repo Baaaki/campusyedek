@@ -105,13 +105,22 @@ func (w *EventConsumer) handleMessage(body []byte) error {
 }
 
 func (w *EventConsumer) handleStudentCreated(ctx context.Context, body []byte, eventID uuid.UUID) error {
+	// Two-step unwrap: BaseEvent wraps the actual data in "data" field
+	var baseEvent dto.BaseEvent
+	if err := json.Unmarshal(body, &baseEvent); err != nil {
+		return err
+	}
+	dataBytes, err := json.Marshal(baseEvent.Data)
+	if err != nil {
+		return err
+	}
 	var eventData dto.StudentCreatedEventData
-	if err := json.Unmarshal(body, &eventData); err != nil {
+	if err := json.Unmarshal(dataBytes, &eventData); err != nil {
 		return err
 	}
 
 	// Upsert student to cache
-	err := w.cacheRepo.UpsertStudentCache(ctx, db.UpsertStudentCacheParams{
+	err = w.cacheRepo.UpsertStudentCache(ctx, db.UpsertStudentCacheParams{
 		ID:            utils.UUIDToPgUUID(eventData.StudentID),
 		StudentNumber: eventData.StudentNumber,
 		FirstName:     utils.StringToPgText(eventData.FirstName),
@@ -134,13 +143,22 @@ func (w *EventConsumer) handleStudentCreated(ctx context.Context, body []byte, e
 }
 
 func (w *EventConsumer) handleStudentUpdated(ctx context.Context, body []byte, eventID uuid.UUID) error {
+	// Two-step unwrap: BaseEvent wraps the actual data in "data" field
+	var baseEvent dto.BaseEvent
+	if err := json.Unmarshal(body, &baseEvent); err != nil {
+		return err
+	}
+	dataBytes, err := json.Marshal(baseEvent.Data)
+	if err != nil {
+		return err
+	}
 	var eventData dto.StudentUpdatedEventData
-	if err := json.Unmarshal(body, &eventData); err != nil {
+	if err := json.Unmarshal(dataBytes, &eventData); err != nil {
 		return err
 	}
 
 	// Upsert student to cache
-	err := w.cacheRepo.UpsertStudentCache(ctx, db.UpsertStudentCacheParams{
+	err = w.cacheRepo.UpsertStudentCache(ctx, db.UpsertStudentCacheParams{
 		ID:            utils.UUIDToPgUUID(eventData.StudentID),
 		StudentNumber: eventData.StudentNumber,
 		FirstName:     utils.StringToPgText(eventData.FirstName),
@@ -163,8 +181,17 @@ func (w *EventConsumer) handleStudentUpdated(ctx context.Context, body []byte, e
 }
 
 func (w *EventConsumer) handleStudentDeactivated(ctx context.Context, body []byte, eventID uuid.UUID) error {
+	// Two-step unwrap: BaseEvent wraps the actual data in "data" field
+	var baseEvent dto.BaseEvent
+	if err := json.Unmarshal(body, &baseEvent); err != nil {
+		return err
+	}
+	dataBytes, err := json.Marshal(baseEvent.Data)
+	if err != nil {
+		return err
+	}
 	var eventData dto.StudentDeactivatedEventData
-	if err := json.Unmarshal(body, &eventData); err != nil {
+	if err := json.Unmarshal(dataBytes, &eventData); err != nil {
 		return err
 	}
 

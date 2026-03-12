@@ -221,8 +221,8 @@ func (s *EnrollmentService) GetMyRejections(ctx context.Context, studentID uuid.
 		Rejections: rejectionsDTO,
 		Pagination: dto.PaginationResponse{
 			Page:       1,
-			PageSize:   len(rejectionsDTO),
-			TotalItems: len(rejectionsDTO),
+			Limit:      len(rejectionsDTO),
+			Total:      len(rejectionsDTO),
 			TotalPages: 1,
 		},
 	}, nil
