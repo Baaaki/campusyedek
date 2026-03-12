@@ -10,7 +10,7 @@ A full-stack university management platform built with microservices architectur
                  ----------------+----------------
                  |               |               |
             Frontend        Mobile App      Backend Services
-           (Next.js)      (React Native)    (9 Go Services)
+         (React+Vite)    (React Native)    (9 Go Services)
                                                  |
                           +-----------+-----------+-----------+
                           |           |           |           |
@@ -30,7 +30,7 @@ A full-stack university management platform built with microservices architectur
 | attendance | 8006 | QR-based session tracking, attendance finalization |
 | grades | 8007 | Score entry, GPA calculation, transcript generation |
 | meal | 8008 | Cafeteria menus, meal reservations, QR validation |
-| payment | gRPC | Payment processing (internal service) |
+| payment | 50051 (gRPC) | Payment processing (internal service) |
 
 ## Tech Stack
 
@@ -40,11 +40,13 @@ A full-stack university management platform built with microservices architectur
 - JWT + Argon2, Zap structured logging
 
 **Frontend**
-- Next.js 16, React 19, Tailwind CSS v4, shadcn/ui
+- React 19, Vite, Tailwind CSS v4, shadcn/ui
 - TanStack React Query, React Hook Form + Zod
+- React Router v7, ky HTTP client
 
 **Mobile**
 - React Native 0.81, Expo 54, Expo Router
+- TanStack React Query, Axios, expo-secure-store
 
 **Infrastructure**
 - Docker Compose, Traefik v3.2
@@ -66,11 +68,13 @@ A full-stack university management platform built with microservices architectur
 mydreamcampus/
 ├── backend/
 │   ├── services/           # 9 microservices (each with cmd/, internal/, sql/)
-│   └── shared/             # Common packages: middleware, rabbitmq, redis, utils, logger
-├── frontend/               # Next.js web application
+│   ├── shared/             # Common packages: middleware, rabbitmq, redis, utils, logger
+│   ├── infrastructure/     # Docker Compose, Traefik, Grafana, Loki configs
+│   ├── docs/               # Service API documentation
+│   └── go.work             # Go workspace
+├── frontend/               # React + Vite web application
 ├── mobile/                 # React Native (Expo) mobile app
-├── infrastructure/         # Docker Compose, Traefik, Grafana, Loki configs
-└── docs/                   # Technical documentation
+└── old-frontend/           # Eski Next.js frontend (deprecated)
 ```
 
 ## Running Locally
@@ -79,7 +83,7 @@ mydreamcampus/
 # 1. Infrastructure (PostgreSQL, RabbitMQ, Redis, Traefik)
 cd backend/infrastructure && make up
 
-# 2. Backend (starts all 9 services with hot-reload)
+# 2. Backend (starts all services with hot-reload)
 cd backend && make dev
 
 # 3. Frontend
