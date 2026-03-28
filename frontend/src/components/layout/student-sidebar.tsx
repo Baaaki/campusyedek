@@ -125,7 +125,7 @@ export function StudentSidebar() {
                         {item.children.map((child) => (
                           <li key={child.href}>
                             <Link
-                              href={child.href}
+                              to={child.href}
                               className={cn(
                                 'block rounded-lg px-3 py-2 text-sm transition-colors',
                                 isActive(child.href)
@@ -142,7 +142,7 @@ export function StudentSidebar() {
                   </>
                 ) : (
                   <Link
-                    href={item.href!}
+                    to={item.href!}
                     className={cn(
                       'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
                       isActive(item.href!)

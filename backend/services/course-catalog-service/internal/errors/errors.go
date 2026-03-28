@@ -80,6 +80,12 @@ var (
 
 	// Semester status errors (AppError for HTTP responses)
 	ErrSemesterNotActive = sharedErrors.New("SEMESTER_NOT_ACTIVE", "semester is not active — modifications are not allowed", http.StatusForbidden)
+	// IMPORTANT: "semester_courses" (courses offered this semester) vs "course_catalog" (all courses ever defined).
+	// semester_courses: FROZEN once semester is activated. No add/remove/modify — not even admin.
+	// course_catalog: can be modified anytime, independent of semesters.
+	// See: docs/semester-wizard-plan.md "Iki Katmanli Degismezlik Modeli"
+	ErrSemesterCourseFrozen = sharedErrors.New("SEMESTER_COURSE_FROZEN", "semester course offerings are frozen after activation — no modifications allowed", http.StatusForbidden)
+	ErrSemesterNotPlanned   = sharedErrors.New("SEMESTER_NOT_PLANNED", "semester courses can only be modified while semester is in 'planned' status", http.StatusForbidden)
 
 	// Deadline errors (AppError for HTTP responses)
 	ErrCourseCreationPeriodEnded   = sharedErrors.New("COURSE_CREATION_PERIOD_ENDED", "course creation period has ended for this semester", http.StatusForbidden)

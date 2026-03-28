@@ -22,46 +22,47 @@ watching sql/queries
 !exclude tmp
 building...
 running...
-23:56:13.625	[34mINFO[0m	cmd/main.go:43	starting enrollment-service	{"environment": "development", "port": "8005"}
-23:56:13.633	[34mINFO[0m	cmd/main.go:57	database connection established
-23:56:13.633	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
-23:56:13.636	[34mINFO[0m	redis/redis.go:41	redis connection established
-23:56:13.636	[34mINFO[0m	cmd/main.go:68	Redis connection established
-23:56:13.636	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
-23:56:13.640	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
-23:56:13.640	[34mINFO[0m	cmd/main.go:79	RabbitMQ connection established
-23:56:13.640	[34mINFO[0m	cmd/main.go:289	RabbitMQ exchange declared	{"exchange": "enrollment.events"}
-23:56:13.641	[34mINFO[0m	cmd/main.go:329	RabbitMQ queue bindings created	{"queue": "enrollment.events", "bindings": ["course.events", "student.events"]}
-23:56:13.642	[34mINFO[0m	cmd/main.go:354	downstream consumer queues pre-declared
-23:56:13.642	[34mINFO[0m	worker/event_consumer.go:58	starting event consumer
-23:56:13.642	[34mINFO[0m	worker/outbox_worker.go:39	starting outbox worker	{"interval": "5s", "batch_size": 10}
-23:56:13.643	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "enrollment.events"}
-23:56:13.643	[34mINFO[0m	worker/event_consumer.go:69	event consumer started successfully
-23:56:13.643	[34mINFO[0m	cmd/main.go:158	rate limiter configured
+10:31:48.388	[34mINFO[0m	cmd/main.go:43	starting enrollment-service	{"environment": "development", "port": "8005"}
+10:31:48.400	[34mINFO[0m	cmd/main.go:57	database connection established
+10:31:48.400	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+10:31:48.403	[34mINFO[0m	redis/redis.go:41	redis connection established
+10:31:48.403	[34mINFO[0m	cmd/main.go:68	Redis connection established
+10:31:48.405	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+10:31:48.407	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+10:31:48.407	[34mINFO[0m	cmd/main.go:79	RabbitMQ connection established
+10:31:48.407	[34mINFO[0m	cmd/main.go:299	RabbitMQ exchange declared	{"exchange": "enrollment.events"}
+10:31:48.420	[34mINFO[0m	cmd/main.go:339	RabbitMQ queue bindings created	{"queue": "enrollment.events", "bindings": ["course.events", "student.events"]}
+10:31:48.432	[34mINFO[0m	cmd/main.go:364	downstream consumer queues pre-declared
+10:31:48.432	[34mINFO[0m	worker/event_consumer.go:58	starting event consumer
+10:31:48.432	[34mINFO[0m	worker/outbox_worker.go:39	starting outbox worker	{"interval": "5s", "batch_size": 10}
+10:31:48.432	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "enrollment.events"}
+10:31:48.432	[34mINFO[0m	worker/event_consumer.go:69	event consumer started successfully
+10:31:48.432	[34mINFO[0m	cmd/main.go:158	rate limiter configured
 [GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
  - using env:	export GIN_MODE=release
  - using code:	gin.SetMode(gin.ReleaseMode)
 
-[GIN-debug] GET    /health                   --> main.setupRouter.func1 (5 handlers)
-[GIN-debug] GET    /api/enrollment/available-courses --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).GetAvailableCourses-fm (8 handlers)
-[GIN-debug] POST   /api/enrollment/programs  --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).CreateEnrollmentProgram-fm (8 handlers)
-[GIN-debug] DELETE /api/enrollment/programs  --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).CancelMyEnrollment-fm (8 handlers)
-[GIN-debug] GET    /api/enrollment/my-enrollments --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).GetMyEnrollments-fm (8 handlers)
-[GIN-debug] GET    /api/enrollment/latest-rejection --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).GetLatestRejection-fm (8 handlers)
-[GIN-debug] GET    /api/enrollment/my-rejections --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).GetMyRejections-fm (8 handlers)
-[GIN-debug] GET    /api/enrollment/advisor/pending-programs --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).GetPendingProgramsByAdvisor-fm (8 handlers)
-[GIN-debug] POST   /api/enrollment/advisor/programs/:program_id/approve --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).ApproveEnrollmentProgram-fm (8 handlers)
-[GIN-debug] POST   /api/enrollment/advisor/programs/:program_id/reject --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).RejectEnrollmentProgram-fm (8 handlers)
-[GIN-debug] POST   /api/enrollment/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (8 handlers)
-[GIN-debug] POST   /api/enrollment/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (8 handlers)
-[GIN-debug] GET    /api/enrollment/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (8 handlers)
-[GIN-debug] POST   /api/enrollment/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*SimplePeriodHandler).CreatePeriod-fm (8 handlers)
-[GIN-debug] GET    /api/enrollment/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*SimplePeriodHandler).ListPeriods-fm (8 handlers)
-[GIN-debug] PUT    /api/enrollment/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*SimplePeriodHandler).UpdatePeriod-fm (8 handlers)
-[GIN-debug] DELETE /api/enrollment/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*SimplePeriodHandler).DeletePeriod-fm (8 handlers)
-23:56:13.643	[34mINFO[0m	cmd/main.go:180	server starting	{"port": "8005"}
-23:59:17.583	[31mERROR[0m	rabbitmq/connection.go:94	rabbitmq connection lost	{"error": "Exception (320) Reason: \"CONNECTION_FORCED - broker forced connection closure with reason 'shutdown'\""}
-github.com/baaaki/mydreamcampus/shared/rabbitmq.(*Connection).handleReconnect
-	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/rabbitmq/connection.go:94
-23:59:17.583	[34mINFO[0m	rabbitmq/connection.go:99	attempting to reconnect to rabbitmq...
-cleaning...
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (6 handlers)
+[GIN-debug] GET    /api/enrollment/available-courses --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).GetAvailableCourses-fm (10 handlers)
+[GIN-debug] POST   /api/enrollment/programs  --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).CreateEnrollmentProgram-fm (10 handlers)
+[GIN-debug] DELETE /api/enrollment/programs  --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).CancelMyEnrollment-fm (10 handlers)
+[GIN-debug] GET    /api/enrollment/my-enrollments --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).GetMyEnrollments-fm (10 handlers)
+[GIN-debug] GET    /api/enrollment/latest-rejection --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).GetLatestRejection-fm (10 handlers)
+[GIN-debug] GET    /api/enrollment/my-rejections --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).GetMyRejections-fm (10 handlers)
+[GIN-debug] GET    /api/enrollment/advisor/pending-programs --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).GetPendingProgramsByAdvisor-fm (10 handlers)
+[GIN-debug] POST   /api/enrollment/advisor/programs/:program_id/approve --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).ApproveEnrollmentProgram-fm (10 handlers)
+[GIN-debug] POST   /api/enrollment/advisor/programs/:program_id/reject --> github.com/baaaki/mydreamcampus/enrollment-service/internal/handler.(*EnrollmentHandler).RejectEnrollmentProgram-fm (10 handlers)
+[GIN-debug] POST   /api/enrollment/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (10 handlers)
+[GIN-debug] POST   /api/enrollment/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (10 handlers)
+[GIN-debug] GET    /api/enrollment/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (10 handlers)
+[GIN-debug] POST   /api/enrollment/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*SimplePeriodHandler).CreatePeriod-fm (10 handlers)
+[GIN-debug] GET    /api/enrollment/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*SimplePeriodHandler).ListPeriods-fm (10 handlers)
+[GIN-debug] PUT    /api/enrollment/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*SimplePeriodHandler).UpdatePeriod-fm (10 handlers)
+[GIN-debug] DELETE /api/enrollment/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*SimplePeriodHandler).DeletePeriod-fm (10 handlers)
+[GIN-debug] POST   /api/enrollment/internal/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandler).CreatePeriod-fm (7 handlers)
+10:31:48.432	[34mINFO[0m	cmd/main.go:181	server starting	{"port": "8005"}
+10:32:53.449	[35mDEBUG[0m	rabbitmq/consumer.go:71	message received	{"queue": "enrollment.events", "routing_key": "course.semester.created", "body_size": 776}
+10:32:53.449	[34mINFO[0m	worker/event_consumer.go:75	received event
+10:32:53.457	[34mINFO[0m	worker/event_consumer.go:140	processing course.semester.created event	{"event_id": "8082c8e0-3af5-4809-9846-754d700d6b90", "course_id": "019d335c-2663-763f-bd50-54f164a0afec"}
+10:32:53.472	[34mINFO[0m	worker/event_consumer.go:145	course semester created event processed successfully	{"service": "EventService", "method": "HandleCourseSemesterCreated", "event_id": "8082c8e0-3af5-4809-9846-754d700d6b90", "semester_course_id": "019d335c-2663-763f-bd50-54f164a0afec"}
+10:32:53.472	[34mINFO[0m	worker/event_consumer.go:154	course.semester.created event processed successfully	{"event_id": "8082c8e0-3af5-4809-9846-754d700d6b90"}

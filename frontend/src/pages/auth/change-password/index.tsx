@@ -34,8 +34,8 @@ export default function ChangePasswordPage() {
 
       alert("Şifreniz başarıyla değiştirildi. Lütfen tekrar giriş yapın.");
 
-      // Clear token and redirect to login
-      localStorage.removeItem("access_token");
+      // Clear UI state and redirect to login
+      // httpOnly cookies are managed by the backend
       localStorage.removeItem("user");
       navigate("/auth/login");
     } catch (err: any) {

@@ -37,6 +37,11 @@ var (
 	// Authorization errors (AppError for HTTP responses)
 	ErrForbidden = sharedErrors.New("FORBIDDEN", "Bu işlem için yetkiniz yok", http.StatusForbidden)
 
+	// Semester enforcement errors
+	ErrSemesterEnded       = sharedErrors.New("SEMESTER_ENDED", "Dönem sona ermiştir — değişiklik yapılamaz", http.StatusForbidden)
+	ErrPeriodNotStarted    = sharedErrors.New("PERIOD_NOT_STARTED", "Yoklama dönemi henüz başlamadı", http.StatusForbidden)
+	ErrPeriodEnded         = sharedErrors.New("PERIOD_ENDED", "Yoklama dönemi sona ermiştir", http.StatusForbidden)
+
 	// Repository-specific sentinel errors (for internal use)
 	ErrSessionNotFoundRepo = sharedErrors.ErrNotFoundRepo
 	ErrStudentNotFoundRepo = sharedErrors.ErrNotFoundRepo

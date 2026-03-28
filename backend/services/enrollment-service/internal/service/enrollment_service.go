@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/baaaki/mydreamcampus/enrollment-service/internal/db"
 	"github.com/baaaki/mydreamcampus/enrollment-service/internal/dto"
@@ -158,22 +159,36 @@ func (s *EnrollmentService) CreateEnrollmentProgram(ctx context.Context, req dto
 		return dto.EnrollmentProgramResponse{}, serviceErrors.ErrNoCourses
 	}
 
-	// Check enrollment period deadline
+	// Enrollment uses STRICT period lock — different from grades/attendance.
+	// Period inside: only students can enroll. Period outside: NOBODY can modify (admin included).
+	// No hard_deadline check needed — period is the only lock.
+	// Why no admin override? Enrollment is the student's own responsibility.
+	// Admin should not add/remove courses on behalf of students.
+	// See: docs/semester-wizard-plan.md "Ders Kayit (Enrollment) Icin: Siki Period Kilidi"
+	var periodStart, periodEnd *time.Time
 	period, periodErr := s.periodRepo.GetActivePeriodBySemester(ctx, req.Semester)
 	if periodErr == nil {
-		check := rules.IsWithinPeriod(period.PeriodStart, period.PeriodEnd)
-		if !check.Allowed {
-			serviceLogger.Warn("enrollment period check failed",
-				zap.String("reason", check.Reason),
-				zap.Time("deadline", check.EffectiveDeadline),
-			)
-			if check.Reason == "period has not started yet" {
-				return dto.EnrollmentProgramResponse{}, serviceErrors.ErrEnrollmentPeriodNotOpen
-			}
+		periodStart = &period.PeriodStart
+		periodEnd = &period.PeriodEnd
+	}
+
+	enrollCheck := rules.CanEnrollInSemester(rules.EnrollmentParams{
+		PeriodStart: periodStart,
+		PeriodEnd:   periodEnd,
+	})
+	if !enrollCheck.Allowed {
+		serviceLogger.Warn("enrollment period check failed",
+			zap.String("reason", enrollCheck.Reason),
+		)
+		switch enrollCheck.Reason {
+		case "enrollment_not_configured":
+			return dto.EnrollmentProgramResponse{}, serviceErrors.ErrEnrollmentPeriodNotOpen
+		case "enrollment_not_started":
+			return dto.EnrollmentProgramResponse{}, serviceErrors.ErrEnrollmentPeriodNotOpen
+		default:
 			return dto.EnrollmentProgramResponse{}, serviceErrors.ErrEnrollmentPeriodEnded
 		}
 	}
-	// If no period defined, enrollment is allowed (no deadline enforced)
 
 	// Get student from cache
 	student, err := s.studentRepo.GetStudentByID(ctx, req.StudentID)
@@ -388,6 +403,29 @@ func (s *EnrollmentService) CancelMyEnrollment(ctx context.Context, studentID uu
 		zap.String("student_id", studentID.String()),
 		zap.String("semester", semester),
 	)
+
+	// Strict period lock — same as CreateEnrollmentProgram
+	var periodStart, periodEnd *time.Time
+	period, periodErr := s.periodRepo.GetActivePeriodBySemester(ctx, semester)
+	if periodErr == nil {
+		periodStart = &period.PeriodStart
+		periodEnd = &period.PeriodEnd
+	}
+	enrollCheck := rules.CanEnrollInSemester(rules.EnrollmentParams{
+		PeriodStart: periodStart,
+		PeriodEnd:   periodEnd,
+	})
+	if !enrollCheck.Allowed {
+		serviceLogger.Warn("enrollment period check failed for cancel",
+			zap.String("reason", enrollCheck.Reason),
+		)
+		switch enrollCheck.Reason {
+		case "enrollment_not_configured", "enrollment_not_started":
+			return serviceErrors.ErrEnrollmentPeriodNotOpen
+		default:
+			return serviceErrors.ErrEnrollmentPeriodEnded
+		}
+	}
 
 	// Get existing enrollment program
 	existingProgram, err := s.enrollmentRepo.GetEnrollmentProgramByStudentAndSemester(ctx, studentID, semester)

@@ -12,6 +12,7 @@ type GradeEditParams struct {
 	GlobalDeadline   time.Time  // Global grading period end date
 	OverrideDeadline *time.Time // Course-specific override (nullable)
 	IsAdminAction    bool       // Whether the caller is an admin
+	HardDeadline     *time.Time // Semester hard deadline — absolute lock (nil = no hard deadline)
 }
 
 // GradeEditResult contains the decision and reasoning.
@@ -21,11 +22,17 @@ type GradeEditResult struct {
 	EffectiveDeadline time.Time `json:"effective_deadline"`
 }
 
-// CanEditGrade determines whether a grade can be modified based on the 3-layer lock model.
+// CanEditGrade determines whether a grade can be modified based on the 4-layer lock model.
 //
+// IMPORTANT: hard_deadline check MUST come before admin bypass.
+// Previous behavior allowed admin to bypass everything -- this was a security gap
+// where admin could modify grades even after semester completion.
+// See: docs/semester-wizard-plan.md "3 Katmanli Enforcement"
+//
+// Layer 0: Semester hard_deadline — absolute lock for everyone (including admin)
 // Layer 1: Score-level lock (is_locked) — only admin can bypass
 // Layer 2: Time-based deadline — effective deadline = max(global, override)
-// Layer 3: Admin override — admins bypass all checks
+// Layer 3: Admin override — admins bypass score lock + period checks (but NOT hard_deadline)
 func CanEditGrade(params GradeEditParams) GradeEditResult {
 	// Calculate effective deadline
 	effectiveDeadline := params.GlobalDeadline
@@ -33,11 +40,22 @@ func CanEditGrade(params GradeEditParams) GradeEditResult {
 		effectiveDeadline = *params.OverrideDeadline
 	}
 
-	// Admins bypass all checks
+	now := clock.Now()
+
+	// Layer 0: Semester hard_deadline — absolute lock, nobody can bypass
+	if params.HardDeadline != nil && now.After(*params.HardDeadline) {
+		return GradeEditResult{
+			Allowed:           false,
+			Reason:            "semester hard deadline has passed — no modifications allowed",
+			EffectiveDeadline: effectiveDeadline,
+		}
+	}
+
+	// Layer 3 (early): Admins bypass score lock + period checks
 	if params.IsAdminAction {
 		return GradeEditResult{
 			Allowed:           true,
-			Reason:            "admin action — all checks bypassed",
+			Reason:            "admin action — score lock and period checks bypassed",
 			EffectiveDeadline: effectiveDeadline,
 		}
 	}
@@ -52,7 +70,6 @@ func CanEditGrade(params GradeEditParams) GradeEditResult {
 	}
 
 	// Layer 2: Time-based deadline
-	now := clock.Now()
 	if now.After(effectiveDeadline) {
 		return GradeEditResult{
 			Allowed:           false,

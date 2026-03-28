@@ -14,8 +14,9 @@ import (
 	"github.com/baaaki/mydreamcampus/grades-service/internal/repository"
 	"github.com/baaaki/mydreamcampus/grades-service/internal/service"
 	"github.com/baaaki/mydreamcampus/grades-service/internal/worker"
-	"github.com/baaaki/mydreamcampus/shared/database"
 	"github.com/baaaki/mydreamcampus/shared/audit"
+	"github.com/baaaki/mydreamcampus/shared/client"
+	"github.com/baaaki/mydreamcampus/shared/database"
 	sharedHandler "github.com/baaaki/mydreamcampus/shared/handler"
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	sharedMiddleware "github.com/baaaki/mydreamcampus/shared/middleware"
@@ -100,12 +101,13 @@ func main() {
 	outboxRepo := repository.NewOutboxRepository(pool)
 	periodRepo := sharedRepo.NewPeriodRepository(pool)
 
-	// Initialize semester checker and audit logger (via catalog service HTTP)
+	// Initialize semester checker, semester client and audit logger (via catalog service HTTP)
 	semesterChecker := semester.NewHTTPChecker(cfg.CatalogService.BaseURL)
+	semesterClient := client.NewSemesterClient(cfg.CatalogService.BaseURL)
 	auditLogger := audit.NewHTTPLogger(cfg.CatalogService.BaseURL, "grades")
 
 	// Initialize services
-	gradeService := service.NewGradeService(pool, cacheRepo, registrationRepo, scoreRepo, completedRepo, outboxRepo, periodRepo, auditLogger)
+	gradeService := service.NewGradeService(pool, cacheRepo, registrationRepo, scoreRepo, completedRepo, outboxRepo, periodRepo, auditLogger, semesterClient)
 	studentGradeService := service.NewStudentGradesService(cacheRepo, registrationRepo, scoreRepo, completedRepo)
 
 	// Initialize handlers
@@ -132,9 +134,10 @@ func main() {
 	// Initialize shared handlers
 	timeHandler := sharedHandler.NewTimeHandler()
 	periodHandler := sharedHandler.NewPeriodHandler(periodRepo, semesterChecker, auditLogger)
+	internalPeriodHandler := sharedHandler.NewInternalPeriodHandlerFull(periodRepo)
 
 	// Setup Gin router
-	router := setupRouter(gradeHandler, timeHandler, periodHandler, cfg)
+	router := setupRouter(gradeHandler, timeHandler, periodHandler, internalPeriodHandler, cfg)
 
 	// Start HTTP server
 	srv := &http.Server{
@@ -171,7 +174,7 @@ func main() {
 	logger.Info("server exited")
 }
 
-func setupRouter(gradeHandler *handler.GradeHandler, timeHandler *sharedHandler.TimeHandler, periodHandler *sharedHandler.PeriodHandler, cfg *config.Config) *gin.Engine {
+func setupRouter(gradeHandler *handler.GradeHandler, timeHandler *sharedHandler.TimeHandler, periodHandler *sharedHandler.PeriodHandler, internalPeriodHandler *sharedHandler.InternalPeriodHandlerFull, cfg *config.Config) *gin.Engine {
 	if cfg.Server.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -183,6 +186,7 @@ func setupRouter(gradeHandler *handler.GradeHandler, timeHandler *sharedHandler.
 	router.Use(sharedMiddleware.CORS())
 	router.Use(sharedMiddleware.RequestLogger())
 	router.Use(sharedMiddleware.IPRateLimit())
+	router.Use(sharedMiddleware.SetCSRFToken(cfg.Server.Environment == "production"))
 
 	// Health check
 	router.GET("/health", func(c *gin.Context) {
@@ -196,6 +200,7 @@ func setupRouter(gradeHandler *handler.GradeHandler, timeHandler *sharedHandler.
 	// User info is extracted from X-User-* headers set by Traefik
 	api := router.Group("/api/grades")
 	api.Use(sharedMiddleware.ExtractUserFromHeaders())
+	api.Use(sharedMiddleware.CSRFProtection())
 	api.Use(sharedMiddleware.UserRateLimit())
 
 	// Teacher routes (require teacher or admin role)
@@ -231,6 +236,13 @@ func setupRouter(gradeHandler *handler.GradeHandler, timeHandler *sharedHandler.
 		// Time Machine & Academic Periods (shared handlers)
 		timeHandler.RegisterRoutes(admin)
 		periodHandler.RegisterRoutes(admin)
+	}
+
+	// Internal routes (service-to-service, no auth)
+	internal := api.Group("/internal")
+	internal.Use(sharedMiddleware.StripInternalHeaders())
+	{
+		internalPeriodHandler.RegisterRoutes(internal)
 	}
 
 	return router

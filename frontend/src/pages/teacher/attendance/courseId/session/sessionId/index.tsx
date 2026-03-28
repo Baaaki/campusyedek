@@ -222,7 +222,7 @@ export default function AttendanceSessionPage() {
     return (
       <div className="space-y-6">
         <Link
-          href={`/teacher/attendance/${courseId}`}
+          to={`/teacher/attendance/${courseId}`}
           className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -241,7 +241,7 @@ export default function AttendanceSessionPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <Link
-          href={`/teacher/attendance/${courseId}`}
+          to={`/teacher/attendance/${courseId}`}
           className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
         >
           <ArrowLeft className="h-4 w-4" />

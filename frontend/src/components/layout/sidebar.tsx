@@ -14,6 +14,7 @@ import {
   ChevronDown,
   ChevronRight,
   CalendarPlus,
+  History,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -66,19 +67,13 @@ const navItems: NavItem[] = [
   },
   {
     label: 'Yoklama',
+    href: '/attendance',
     icon: FileCheck,
-    children: [
-      { label: 'Öğrenci Yoklama', href: '/attendance/student' },
-      { label: 'Öğretmen Yoklama', href: '/attendance/teacher' },
-    ],
   },
   {
     label: 'Notlar',
+    href: '/grades',
     icon: BarChart3,
-    children: [
-      { label: 'Öğrenci Notları', href: '/grades/student' },
-      { label: 'Not Girişi', href: '/grades/teacher' },
-    ],
   },
   {
     label: 'Yemekhane',
@@ -89,12 +84,15 @@ const navItems: NavItem[] = [
     ],
   },
   {
+    label: 'Zaman Makinesi',
+    href: '/system/time',
+    icon: History,
+  },
+  {
     label: 'Sistem',
     icon: Settings,
     children: [
-      { label: 'Zaman Makinesi', href: '/system/time' },
-      { label: 'Dönem Yönetimi', href: '/system/periods' },
-      { label: 'Dönem Durumu', href: '/system/semesters' },
+      { label: 'Dönem Yönetimi', href: '/system/semesters' },
       { label: 'Audit Log', href: '/system/audit' },
     ],
   },
@@ -175,7 +173,7 @@ export function Sidebar() {
                         {item.children.map((child) => (
                           <li key={child.href}>
                             <Link
-                              href={child.href}
+                              to={child.href}
                               className={cn(
                                 'block rounded-lg px-3 py-2 text-sm transition-colors',
                                 isActive(child.href)
@@ -192,7 +190,7 @@ export function Sidebar() {
                   </>
                 ) : (
                   <Link
-                    href={item.href!}
+                    to={item.href!}
                     className={cn(
                       'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
                       isActive(item.href!)

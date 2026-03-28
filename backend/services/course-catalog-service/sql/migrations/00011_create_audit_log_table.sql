@@ -19,12 +19,14 @@ CREATE INDEX idx_audit_log_actor ON audit_log(actor_id);
 
 -- Immutability: prevent UPDATE and DELETE on audit log
 -- Even if application layer is bypassed, audit records are protected
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION prevent_audit_modification()
 RETURNS TRIGGER AS $$
 BEGIN
     RAISE EXCEPTION 'Audit log entries cannot be modified or deleted';
 END;
 $$ LANGUAGE plpgsql;
+-- +goose StatementEnd
 
 CREATE TRIGGER trg_audit_no_update
     BEFORE UPDATE OR DELETE ON audit_log

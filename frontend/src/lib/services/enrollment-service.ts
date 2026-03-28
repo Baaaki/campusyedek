@@ -1,5 +1,5 @@
 import { enrollmentApi } from '@/lib/api-client';
-import { AdvisorPendingProgramsResponse } from '@/lib/types';
+import type { AdvisorPendingProgramsResponse } from '@/lib/types';
 
 export const enrollmentService = {
     /**

@@ -21,60 +21,44 @@ watching sql/queries
 !exclude tmp
 building...
 running...
-23:56:13.660	[34mINFO[0m	cmd/main.go:43	starting grades-service	{"environment": "development", "port": "8007"}
-23:56:13.669	[34mINFO[0m	cmd/main.go:55	database connection established
-23:56:13.669	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
-23:56:13.675	[34mINFO[0m	redis/redis.go:41	redis connection established
-23:56:13.675	[34mINFO[0m	cmd/main.go:73	rate limiter configured
-23:56:13.675	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
-23:56:13.678	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
-23:56:13.678	[34mINFO[0m	cmd/main.go:84	RabbitMQ connection established
-23:56:13.678	[34mINFO[0m	cmd/main.go:255	RabbitMQ exchange declared	{"exchange": "grade.events"}
+10:31:48.397	[34mINFO[0m	cmd/main.go:44	starting grades-service	{"environment": "development", "port": "8007"}
+10:31:48.405	[34mINFO[0m	cmd/main.go:56	database connection established
+10:31:48.406	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+10:31:48.408	[34mINFO[0m	redis/redis.go:41	redis connection established
+10:31:48.408	[34mINFO[0m	cmd/main.go:74	rate limiter configured
+10:31:48.408	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+10:31:48.411	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+10:31:48.411	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
+10:31:48.411	[34mINFO[0m	cmd/main.go:267	RabbitMQ exchange declared	{"exchange": "grade.events"}
 [GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
  - using env:	export GIN_MODE=release
  - using code:	gin.SetMode(gin.ReleaseMode)
 
-[GIN-debug] GET    /health                   --> main.setupRouter.func1 (5 handlers)
-[GIN-debug] GET    /api/grades/course/:course_id/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (8 handlers)
-[GIN-debug] GET    /api/grades/course/:course_id/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (8 handlers)
-[GIN-debug] POST   /api/grades/course/:course_id/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (8 handlers)
-[GIN-debug] POST   /api/grades/course/:course_id/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (8 handlers)
-[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (7 handlers)
-[GIN-debug] GET    /api/grades/transcript/:student_id --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (7 handlers)
-[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (8 handlers)
-[GIN-debug] POST   /api/grades/admin/scores/unlock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).UnlockScore-fm (8 handlers)
-[GIN-debug] POST   /api/grades/admin/scores/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockScore-fm (8 handlers)
-[GIN-debug] POST   /api/grades/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (8 handlers)
-23:56:13.678	[34mINFO[0m	worker/event_consumer.go:35	starting event consumer
-[GIN-debug] POST   /api/grades/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (8 handlers)
-[GIN-debug] GET    /api/grades/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (8 handlers)
-[GIN-debug] POST   /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).CreatePeriod-fm (8 handlers)
-[GIN-debug] GET    /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).ListPeriods-fm (8 handlers)
-[GIN-debug] PUT    /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).UpdatePeriod-fm (8 handlers)
-[GIN-debug] DELETE /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).DeletePeriod-fm (8 handlers)
-23:56:13.678	[34mINFO[0m	worker/outbox_worker.go:36	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
-23:56:13.679	[34mINFO[0m	cmd/main.go:147	server starting	{"port": "8007"}
-23:56:13.681	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
-23:56:13.686	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
-23:56:13.688	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
-23:56:13.689	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
-23:56:13.689	[34mINFO[0m	worker/event_consumer.go:101	event consumer started
-23:56:34.815	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-23:56:34.820	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "1cf96c5a-b6c4-49a5-bbd3-bbc882e20983", "method": "GET", "path": "/api/grades/admin/periods", "query": "", "status": 200, "duration": "5.068232ms", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:148.0) Gecko/20100101 Firefox/148.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-23:56:34.823	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-23:56:34.823	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "620d0081-f390-4eb6-8e67-2197c91b7d7b", "method": "GET", "path": "/api/grades/admin/periods", "query": "", "status": 200, "duration": "556.148µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:148.0) Gecko/20100101 Firefox/148.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-23:56:43.775	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-23:56:43.776	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "138bcbd4-707d-46a6-8da3-1b3eafa3713d", "method": "GET", "path": "/api/grades/admin/periods", "query": "", "status": 200, "duration": "624.57µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:148.0) Gecko/20100101 Firefox/148.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-23:56:43.777	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-23:56:43.778	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "6de45ff9-61ac-4dc8-9560-85b8dc366e15", "method": "GET", "path": "/api/grades/admin/periods", "query": "", "status": 200, "duration": "527.217µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:148.0) Gecko/20100101 Firefox/148.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-23:56:53.376	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-23:56:53.377	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "27b549e5-4083-452e-bbe4-f87d9be60b6e", "method": "GET", "path": "/api/grades/admin/periods", "query": "", "status": 200, "duration": "712.023µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:148.0) Gecko/20100101 Firefox/148.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-23:56:57.802	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-23:56:57.802	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "24aba6ee-8272-4779-bd3a-50d678070d86", "method": "GET", "path": "/api/grades/admin/periods", "query": "", "status": 200, "duration": "686.062µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:148.0) Gecko/20100101 Firefox/148.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-23:56:57.804	[35mDEBUG[0m	middleware/auth.go:223	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-23:56:57.805	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "26ec0816-b9fb-4d4e-98da-b2ec0b363852", "method": "GET", "path": "/api/grades/admin/periods", "query": "", "status": 200, "duration": "428.794µs", "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:148.0) Gecko/20100101 Firefox/148.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-23:59:17.585	[31mERROR[0m	rabbitmq/connection.go:94	rabbitmq connection lost	{"error": "Exception (320) Reason: \"CONNECTION_FORCED - broker forced connection closure with reason 'shutdown'\""}
-github.com/baaaki/mydreamcampus/shared/rabbitmq.(*Connection).handleReconnect
-	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/rabbitmq/connection.go:94
-23:59:17.586	[34mINFO[0m	rabbitmq/connection.go:99	attempting to reconnect to rabbitmq...
-cleaning...
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (6 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (10 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (10 handlers)
+10:31:48.411	[34mINFO[0m	worker/event_consumer.go:35	starting event consumer
+10:31:48.411	[34mINFO[0m	worker/outbox_worker.go:36	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
+[GIN-debug] POST   /api/grades/course/:course_id/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (10 handlers)
+[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (9 handlers)
+[GIN-debug] GET    /api/grades/transcript/:student_id --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (9 handlers)
+[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/unlock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).UnlockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).CreatePeriod-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).ListPeriods-fm (10 handlers)
+[GIN-debug] PUT    /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).UpdatePeriod-fm (10 handlers)
+[GIN-debug] DELETE /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).DeletePeriod-fm (10 handlers)
+[GIN-debug] POST   /api/grades/internal/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).CreatePeriod-fm (10 handlers)
+10:31:48.411	[34mINFO[0m	cmd/main.go:150	server starting	{"port": "8007"}
+10:31:48.429	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
+10:31:48.458	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
+10:31:48.464	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
+10:31:48.469	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
+10:31:48.469	[34mINFO[0m	worker/event_consumer.go:101	event consumer started
+10:32:53.449	[35mDEBUG[0m	rabbitmq/consumer.go:71	message received	{"queue": "grades-service-course", "routing_key": "course.semester.created", "body_size": 776}
+10:32:53.449	[34mINFO[0m	worker/event_consumer.go:261	handling course.semester.created event	{"course_id": "019d335c-2663-763f-bd50-54f164a0afec"}

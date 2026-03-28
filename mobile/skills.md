@@ -85,3 +85,19 @@ mobile/
 - `.web.ts` suffix'i web-specific implementasyonlar icin (ornek: `useColorScheme.web.ts`)
 - `react-native-web` ile web desteji mevcut
 - Platform kontrolu: `import { Platform } from 'react-native'`
+
+## Docker / sudo Kurali
+
+Docker komutlari `sudo` gerektirir (kullanici docker grubunda degil). Claude Code sandbox'tan `sudo` calistiramadigindan, bu tur komutlari dogrudan calistirma — kullaniciya kopyala-yapistir yapabilecegi sekilde goster.
+
+Ornek:
+```bash
+# Veritabani sorgusu
+sudo docker exec mydreamcampus-postgres-auth psql -U postgres -d mydreamcampus_auth -c "SELECT email FROM users;"
+
+# Servisleri baslat
+sudo docker compose -f backend/infrastructure/docker-compose.yml up -d
+
+# Loglari izle
+sudo docker logs -f mydreamcampus-postgres-auth
+```

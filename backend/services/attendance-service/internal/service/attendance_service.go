@@ -11,8 +11,11 @@ import (
 	"github.com/baaaki/mydreamcampus/attendance-service/internal/dto"
 	"github.com/baaaki/mydreamcampus/attendance-service/internal/errors"
 	"github.com/baaaki/mydreamcampus/attendance-service/internal/repository"
+	"github.com/baaaki/mydreamcampus/shared/client"
 	"github.com/baaaki/mydreamcampus/shared/clock"
 	"github.com/baaaki/mydreamcampus/shared/logger"
+	sharedRepo "github.com/baaaki/mydreamcampus/shared/repository"
+	"github.com/baaaki/mydreamcampus/shared/rules"
 	"github.com/baaaki/mydreamcampus/shared/utils"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -34,6 +37,8 @@ type AttendanceService struct {
 	outboxRepo     *repository.OutboxRepository
 	qrService      *QRService
 	redisService   *RedisService
+	semesterClient *client.SemesterClient
+	periodRepo     *sharedRepo.SimplePeriodRepository
 }
 
 func NewAttendanceService(
@@ -43,6 +48,8 @@ func NewAttendanceService(
 	outboxRepo *repository.OutboxRepository,
 	qrService *QRService,
 	redisService *RedisService,
+	semesterClient *client.SemesterClient,
+	periodRepo *sharedRepo.SimplePeriodRepository,
 ) *AttendanceService {
 	return &AttendanceService{
 		cacheRepo:      cacheRepo,
@@ -51,6 +58,8 @@ func NewAttendanceService(
 		outboxRepo:     outboxRepo,
 		qrService:      qrService,
 		redisService:   redisService,
+		semesterClient: semesterClient,
+		periodRepo:     periodRepo,
 	}
 }
 
@@ -73,7 +82,12 @@ func (s *AttendanceService) CreateSession(ctx context.Context, instructorID uuid
 		return dto.CreateSessionResponse{}, errors.ErrForbidden
 	}
 
-	// 2. Validate lab session is allowed
+	// 2. Semester enforcement: checks hard_deadline + period window
+	if err := s.checkSemesterEnforcement(ctx, course.Semester, false); err != nil {
+		return dto.CreateSessionResponse{}, err
+	}
+
+	// 3. Validate lab session is allowed
 	if req.SessionType == "lab" && !course.HasLab {
 		logger.Error("lab session requested but course has no lab hours")
 		return dto.CreateSessionResponse{}, errors.ErrLabNotAvailable
@@ -172,6 +186,11 @@ func (s *AttendanceService) ScanQR(ctx context.Context, studentID uuid.UUID, req
 		return dto.ScanQRResponse{}, errors.ErrSessionExpired
 	}
 
+	// Semester enforcement: checks hard_deadline + period window
+	if err := s.checkSemesterEnforcement(ctx, session.Semester, false); err != nil {
+		return dto.ScanQRResponse{}, err
+	}
+
 	// 2. Validate QR signature
 	if !s.qrService.ValidateQRSignature(req.QRPayload, session.QrSecret) {
 		return dto.ScanQRResponse{}, errors.ErrInvalidQRCode
@@ -267,6 +286,11 @@ func (s *AttendanceService) CreateManualAttendance(ctx context.Context, sessionI
 	// Check ownership
 	if utils.PgUUIDToUUID(session.InstructorID) != instructorID {
 		return dto.ManualAttendanceResponse{}, errors.ErrForbidden
+	}
+
+	// Semester enforcement: checks hard_deadline + period window
+	if err := s.checkSemesterEnforcement(ctx, session.Semester, false); err != nil {
+		return dto.ManualAttendanceResponse{}, err
 	}
 
 	// Check enrollment
@@ -962,4 +986,89 @@ func (s *AttendanceService) GetSessionStudents(ctx context.Context, sessionID, i
 		MarkedCount:   markedCount,
 		Students:      students,
 	}, nil
+}
+
+// GetSessionsByDateRange returns all sessions within a date range (admin use)
+func (s *AttendanceService) GetSessionsByDateRange(ctx context.Context, startDate, endDate time.Time) (dto.AdminSessionsResponse, error) {
+	start := pgtype.Date{Time: startDate, Valid: true}
+	end := pgtype.Date{Time: endDate, Valid: true}
+
+	rows, err := s.sessionRepo.GetSessionsByDateRange(ctx, db.GetSessionsByDateRangeParams{
+		StartDate: start,
+		EndDate:   end,
+	})
+	if err != nil {
+		return dto.AdminSessionsResponse{}, fmt.Errorf("failed to get sessions: %w", err)
+	}
+
+	sessions := make([]dto.AdminSessionItem, 0, len(rows))
+	for _, row := range rows {
+		sessions = append(sessions, dto.AdminSessionItem{
+			SessionID:     utils.PgUUIDToUUID(row.ID),
+			CourseID:      utils.PgUUIDToUUID(row.CourseID),
+			CourseCode:    row.CourseCode,
+			CourseName:    row.CourseName,
+			InstructorID:  utils.PgUUIDToUUID(row.InstructorID),
+			Semester:      row.Semester,
+			WeekNumber:    row.WeekNumber,
+			SessionType:   string(row.SessionType),
+			SessionDate:   row.SessionDate.Time.Format("2006-01-02"),
+			IsActive:      row.IsActive.Bool,
+			StartedAt:     row.StartedAt.Time,
+			ExpiresAt:     row.ExpiresAt.Time,
+			PresentCount:  row.PresentCount,
+			EnrolledCount: row.EnrolledCount,
+		})
+	}
+
+	return dto.AdminSessionsResponse{
+		Sessions: sessions,
+		Total:    len(sessions),
+	}, nil
+}
+
+// checkSemesterEnforcement checks hard_deadline + admin bypass + period window.
+// Semester enforcement: Uses CanOperateInSemester() — the three-layer model.
+// Admin can override period but NOT hard_deadline.
+// See: docs/semester-wizard-plan.md
+func (s *AttendanceService) checkSemesterEnforcement(ctx context.Context, semester string, isAdmin bool) error {
+	// Fetch hard_deadline from catalog service
+	semesterInfo, err := s.semesterClient.GetSemesterInfo(ctx, semester)
+	if err != nil {
+		logger.Warn("failed to fetch semester info, skipping enforcement",
+			zap.String("semester", semester),
+			zap.Error(err),
+		)
+		return nil // graceful degradation: if catalog is unreachable, allow operation
+	}
+
+	// Fetch period from local DB
+	var periodStart, periodEnd *time.Time
+	period, periodErr := s.periodRepo.GetActivePeriodBySemester(ctx, semester)
+	if periodErr == nil {
+		periodStart = &period.PeriodStart
+		periodEnd = &period.PeriodEnd
+	}
+
+	result := rules.CanOperateInSemester(rules.SemesterOperationParams{
+		HardDeadline:  semesterInfo.HardDeadline,
+		PeriodStart:   periodStart,
+		PeriodEnd:     periodEnd,
+		IsAdminAction: isAdmin,
+	})
+
+	if !result.Allowed {
+		switch result.Reason {
+		case "semester_ended":
+			return errors.ErrSemesterEnded
+		case "period_not_started":
+			return errors.ErrPeriodNotStarted
+		case "period_ended":
+			return errors.ErrPeriodEnded
+		default:
+			return errors.ErrPeriodEnded
+		}
+	}
+
+	return nil
 }

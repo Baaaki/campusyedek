@@ -63,6 +63,8 @@ func (s *AuthService) Login(ctx context.Context, req dto.LoginRequest, deviceInf
 	if err != nil {
 		// Check if user not found
 		if sharedErrors.Is(err, serviceErrors.ErrUserNotFoundRepo) {
+			// Timing-safe: perform dummy password verification to prevent email enumeration
+			utils.VerifyPassword("$argon2id$v=19$m=65536,t=3,p=4$dummysalt$dummyhash", req.Password)
 			serviceLogger.Warn("login attempt for non-existent user")
 			return dto.LoginResponse{}, "", serviceErrors.ErrInvalidCredentials
 		}

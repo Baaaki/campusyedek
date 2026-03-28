@@ -40,15 +40,17 @@ export function Header() {
     }
   }, []);
 
-  const handleLogout = () => {
-    // Clear localStorage
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user');
+  const handleLogout = async () => {
+    try {
+      // Call backend logout to clear httpOnly cookies and invalidate session
+      const { authApi } = await import('@/lib/api-client');
+      await authApi.post('logout');
+    } catch {
+      // Even if the API call fails, clear local state
+    }
 
-    // Clear cookies
-    document.cookie = 'access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-    document.cookie = 'user=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    // Clear UI-only localStorage data
+    localStorage.removeItem('user');
 
     // Redirect to login
     navigate('/auth/login');

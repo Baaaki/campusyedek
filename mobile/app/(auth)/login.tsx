@@ -1,44 +1,66 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
+import { View, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { Text, TextInput, Button, Surface, useTheme } from 'react-native-paper';
 import { useRouter } from 'expo-router';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
+
 import { useLogin } from '@/hooks/useAuth';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
+import { useHaptic } from '@/hooks/useHaptic';
+import { spacing, radius } from '@/constants/tokens';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const haptic = useHaptic();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const { setUser } = useAuthContext();
+  const toast = useToast();
 
   const loginMutation = useLogin();
 
-  const handleLogin = async () => {
+  const handleLogin = () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      haptic.error();
+      toast.show({ message: 'Lutfen tum alanlari doldurun', type: 'warning' });
       return;
     }
 
+    haptic.light();
     loginMutation.mutate(
       { email, password },
       {
         onSuccess: (data) => {
+          haptic.success();
           setUser(data.user);
-          Alert.alert('Success', 'Logged in successfully!');
+
+          if (data.force_password_change) {
+            toast.show({ message: 'Lutfen sifrenizi degistirin', type: 'warning' });
+            router.replace('/screens/change-password');
+            return;
+          }
+
           router.replace('/(tabs)');
         },
         onError: (error: any) => {
-          const message = error.response?.data?.error || 'Login failed';
-          Alert.alert('Login Failed', message);
+          haptic.error();
+          const errorData = error.response?.data;
+          let message = 'Giris basarisiz';
+
+          if (errorData?.error === 'ACCOUNT_LOCKED') {
+            message = errorData.message || 'Hesabiniz gecici olarak kilitlendi';
+          } else if (errorData?.error === 'ACCOUNT_DEACTIVATED') {
+            message = 'Hesabiniz devre disi birakilmis';
+          } else if (errorData?.error === 'INVALID_CREDENTIALS') {
+            message = 'Gecersiz e-posta veya sifre';
+          } else if (errorData?.message) {
+            message = errorData.message;
+          }
+
+          toast.show({ message, type: 'error' });
         },
       }
     );
@@ -47,53 +69,68 @@ export default function LoginScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
     >
       <View style={styles.content}>
-        <Text style={styles.title}>MyDreamCampus</Text>
-        <Text style={styles.subtitle}>Welcome Back</Text>
+        <View style={styles.logoArea} accessibilityRole="header">
+          <Surface style={[styles.logoCircle, { backgroundColor: colors.primaryContainer }]} elevation={0}>
+            <FontAwesome name="graduation-cap" size={40} color={colors.primary} />
+          </Surface>
+          <Text variant="headlineLarge" style={[styles.title, { color: colors.primary }]}>
+            MyDreamCampus
+          </Text>
+          <Text variant="bodyLarge" style={{ color: colors.onSurfaceVariant }}>
+            Hosgeldiniz
+          </Text>
+        </View>
 
-        <View style={styles.form}>
+        <Surface style={[styles.formCard, { backgroundColor: colors.surface }]} elevation={1}>
           <TextInput
-            style={styles.input}
-            placeholder="Email"
+            label="E-posta"
             value={email}
             onChangeText={setEmail}
             autoCapitalize="none"
             keyboardType="email-address"
-            editable={!loginMutation.isPending}
+            disabled={loginMutation.isPending}
+            mode="outlined"
+            left={<TextInput.Icon icon="email-outline" />}
+            style={styles.input}
+            accessibilityLabel="E-posta adresi"
+            accessibilityHint="Universite e-posta adresinizi girin"
           />
 
           <TextInput
-            style={styles.input}
-            placeholder="Password"
+            label="Sifre"
             value={password}
             onChangeText={setPassword}
-            secureTextEntry
-            editable={!loginMutation.isPending}
+            secureTextEntry={!showPassword}
+            disabled={loginMutation.isPending}
+            mode="outlined"
+            left={<TextInput.Icon icon="lock-outline" />}
+            right={
+              <TextInput.Icon
+                icon={showPassword ? 'eye-off' : 'eye'}
+                onPress={() => { haptic.selection(); setShowPassword(!showPassword); }}
+                accessibilityLabel={showPassword ? 'Sifreyi gizle' : 'Sifreyi goster'}
+              />
+            }
+            style={styles.input}
+            accessibilityLabel="Sifre"
           />
 
-          <TouchableOpacity
-            style={[styles.button, loginMutation.isPending && styles.buttonDisabled]}
+          <Button
+            mode="contained"
             onPress={handleLogin}
+            loading={loginMutation.isPending}
             disabled={loginMutation.isPending}
+            style={styles.loginButton}
+            contentStyle={styles.buttonContent}
+            labelStyle={styles.buttonLabel}
+            accessibilityLabel="Giris yap"
           >
-            {loginMutation.isPending ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>Login</Text>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => router.push('/(auth)/register')}
-            disabled={loginMutation.isPending}
-          >
-            <Text style={styles.linkText}>
-              Don't have an account? <Text style={styles.linkBold}>Sign Up</Text>
-            </Text>
-          </TouchableOpacity>
-        </View>
+            Giris Yap
+          </Button>
+        </Surface>
       </View>
     </KeyboardAvoidingView>
   );
@@ -102,61 +139,44 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   content: {
     flex: 1,
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing.lg,
+  },
+  logoArea: {
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+  },
+  logoCircle: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
   },
   title: {
-    fontSize: 32,
     fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
-    textAlign: 'center',
+    marginBottom: spacing.xs,
   },
-  subtitle: {
-    fontSize: 18,
-    color: '#666',
-    marginBottom: 40,
-    textAlign: 'center',
-  },
-  form: {
-    gap: 16,
+  formCard: {
+    borderRadius: radius.xl,
+    padding: spacing.lg,
   },
   input: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 8,
+    marginBottom: spacing.md,
+  },
+  loginButton: {
+    marginTop: spacing.sm,
+    borderRadius: radius.md,
+  },
+  buttonContent: {
+    paddingVertical: 6,
+  },
+  buttonLabel: {
     fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  button: {
-    backgroundColor: '#007AFF',
-    paddingVertical: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  linkText: {
-    textAlign: 'center',
-    color: '#666',
-    fontSize: 14,
-    marginTop: 8,
-  },
-  linkBold: {
-    color: '#007AFF',
     fontWeight: '600',
   },
 });

@@ -1,15 +1,15 @@
 -- name: CreateSemesterCourse :one
 INSERT INTO semester_courses (
-    semester, course_code, credits, class_level, instructor_id,
+    semester, course_code, department, credits, class_level, instructor_id,
     instructor_fullname, classroom_location, max_capacity, assessment_schema, prerequisites
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-RETURNING id, semester, course_code, credits, class_level, instructor_id,
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+RETURNING id, semester, course_code, department, credits, class_level, instructor_id,
           instructor_fullname, classroom_location, max_capacity, assessment_schema, prerequisites,
           created_at, updated_at;
 
 -- name: GetSemesterCourseByID :one
-SELECT id, semester, course_code, credits, class_level, instructor_id,
+SELECT id, semester, course_code, department, credits, class_level, instructor_id,
        instructor_fullname, classroom_location, max_capacity, assessment_schema, prerequisites,
        created_at, updated_at
 FROM semester_courses
@@ -17,7 +17,7 @@ WHERE id = $1 AND semester = $2
 LIMIT 1;
 
 -- name: GetSemesterCourseBySemesterAndCode :one
-SELECT id, semester, course_code, credits, class_level, instructor_id,
+SELECT id, semester, course_code, department, credits, class_level, instructor_id,
        instructor_fullname, classroom_location, max_capacity, assessment_schema, prerequisites,
        created_at, updated_at
 FROM semester_courses
@@ -29,7 +29,7 @@ DELETE FROM semester_courses
 WHERE id = $1;
 
 -- name: ListSemesterCourses :many
-SELECT sc.id, sc.semester, sc.course_code, cc.name as course_name, sc.credits, sc.class_level,
+SELECT sc.id, sc.semester, sc.course_code, sc.department, cc.name as course_name, sc.credits, sc.class_level,
        sc.instructor_id, sc.instructor_fullname, sc.classroom_location, sc.max_capacity,
        sc.assessment_schema
 FROM semester_courses sc

@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { staffApi, adminStaffApi } from '@/lib/api-client';
 import { mockFaculties, mockAdminStaff } from '@/mock_data';
-import { AdminStaffProfile } from '@/mock_data/admin-staff';
+import type { AdminStaffProfile } from '@/mock_data/admin-staff';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -48,7 +48,7 @@ import {
   MapPin,
   Calendar,
 } from 'lucide-react';
-import { Staff } from '@/lib/types';
+import type { Staff } from '@/lib/types';
 
 // Eğitim bilgisi interface
 interface EducationInfo {
@@ -189,11 +189,10 @@ export default function StaffProfilePage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    // Check for access_token in cookies
+    // Check for user in localStorage
     const checkAuth = () => {
-      const cookies = document.cookie.split(';');
-      const hasToken = cookies.some(cookie => cookie.trim().startsWith('access_token='));
-      setIsAuthenticated(hasToken);
+      const userStr = localStorage.getItem('user');
+      setIsAuthenticated(!!userStr);
     };
     checkAuth();
   }, []);
@@ -269,7 +268,7 @@ export default function StaffProfilePage() {
           };
         }
         
-        const response = await staffApi.get(queryParams).json() as StaffListResponse;
+        const response = await staffApi.get(`instructors${queryParams}`).json() as StaffListResponse;
         console.log('[Personel Details] Staff response:', response);
         
         setStaffList(response.data || []);

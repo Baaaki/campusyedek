@@ -1,4 +1,4 @@
-import { MyGradesResponse, TranscriptResponse } from '@/lib/types';
+import type { MyGradesResponse, TranscriptResponse } from '@/lib/types';
 
 // Mock My Grades Response (from grades-service)
 // grade_point: DB'de numeric string olarak saklanır ('4.00', '3.50' vb.)

@@ -1,31 +1,22 @@
 import api from './api';
 import * as SecureStore from 'expo-secure-store';
-import type { LoginRequest, RegisterRequest, AuthResponse, User } from '@/types/auth.types';
+import type { LoginRequest, LoginResponse, ChangePasswordRequest, ChangePasswordResponse, User } from '@/types/auth.types';
+
+const TOKEN_KEY = 'jwt_token';
+const USER_KEY = 'user_data';
 
 export const authService = {
   /**
-   * Login user
+   * Login user — backend returns access_token (not "token")
    */
-  async login(data: LoginRequest): Promise<AuthResponse> {
-    const response = await api.post<AuthResponse>('/auth/login', data);
+  async login(data: LoginRequest): Promise<LoginResponse> {
+    const response = await api.post<LoginResponse>('/auth/login', data);
 
-    // Store JWT token in secure storage
-    if (response.data.token) {
-      await SecureStore.setItemAsync('jwt_token', response.data.token);
+    if (response.data.access_token) {
+      await SecureStore.setItemAsync(TOKEN_KEY, response.data.access_token);
     }
-
-    return response.data;
-  },
-
-  /**
-   * Register new user
-   */
-  async register(data: RegisterRequest): Promise<AuthResponse> {
-    const response = await api.post<AuthResponse>('/auth/register', data);
-
-    // Store JWT token in secure storage
-    if (response.data.token) {
-      await SecureStore.setItemAsync('jwt_token', response.data.token);
+    if (response.data.user) {
+      await SecureStore.setItemAsync(USER_KEY, JSON.stringify(response.data.user));
     }
 
     return response.data;
@@ -40,25 +31,45 @@ export const authService = {
     } catch (error) {
       console.error('Logout API error:', error);
     } finally {
-      // Always clear local token
-      await SecureStore.deleteItemAsync('jwt_token');
+      await SecureStore.deleteItemAsync(TOKEN_KEY);
+      await SecureStore.deleteItemAsync(USER_KEY);
     }
   },
 
   /**
-   * Get current user profile
+   * Change password
    */
-  async getProfile(): Promise<User> {
-    const response = await api.get<User>('/auth/profile');
+  async changePassword(data: ChangePasswordRequest): Promise<ChangePasswordResponse> {
+    const response = await api.post<ChangePasswordResponse>('/auth/password/change', data);
+
+    if (response.data.access_token) {
+      await SecureStore.setItemAsync(TOKEN_KEY, response.data.access_token);
+    }
+
     return response.data;
   },
 
   /**
-   * Check if user is authenticated
+   * Get stored user from SecureStore (no profile endpoint on backend)
+   */
+  async getStoredUser(): Promise<User | null> {
+    try {
+      const userData = await SecureStore.getItemAsync(USER_KEY);
+      if (userData) {
+        return JSON.parse(userData) as User;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  },
+
+  /**
+   * Check if user is authenticated (has stored token)
    */
   async isAuthenticated(): Promise<boolean> {
     try {
-      const token = await SecureStore.getItemAsync('jwt_token');
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       return !!token;
     } catch {
       return false;
@@ -70,10 +81,18 @@ export const authService = {
    */
   async getToken(): Promise<string | null> {
     try {
-      return await SecureStore.getItemAsync('jwt_token');
+      return await SecureStore.getItemAsync(TOKEN_KEY);
     } catch {
       return null;
     }
+  },
+
+  /**
+   * Clear all auth data
+   */
+  async clearAuth(): Promise<void> {
+    await SecureStore.deleteItemAsync(TOKEN_KEY);
+    await SecureStore.deleteItemAsync(USER_KEY);
   },
 };
 

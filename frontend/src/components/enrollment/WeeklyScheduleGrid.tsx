@@ -1,4 +1,4 @@
-import { AvailableCourse } from '@/lib/types';
+import type { AvailableCourse } from '@/lib/types';
 import { TIME_SLOTS } from '@/lib/constants';
 
 interface WeeklyScheduleGridProps {

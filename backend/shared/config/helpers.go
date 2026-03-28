@@ -58,11 +58,14 @@ func SetCommonDefaults(serviceName, defaultPort, dbPort string) {
 
 	// Redis defaults
 	viper.SetDefault("REDIS_ADDR", "localhost:6379")
-	viper.SetDefault("REDIS_PASSWORD", "")
+	viper.SetDefault("REDIS_PASSWORD", "changeme_redis_secret")
 	viper.SetDefault("REDIS_DB", 0)
 
 	// JWT defaults
 	viper.SetDefault("JWT_SECRET", "change-this-secret-in-production")
+
+	// Internal service communication secret
+	viper.SetDefault("INTERNAL_SERVICE_SECRET", "changeme_internal_secret")
 
 	// Rate limiting defaults
 	viper.SetDefault("RATE_LIMIT_ENABLED", true)
@@ -70,7 +73,7 @@ func SetCommonDefaults(serviceName, defaultPort, dbPort string) {
 	viper.SetDefault("RATE_LIMIT_IP_WINDOW_SECS", 60)
 	viper.SetDefault("RATE_LIMIT_USER_LIMIT", 200)
 	viper.SetDefault("RATE_LIMIT_USER_WINDOW_SECS", 60)
-	viper.SetDefault("RATE_LIMIT_LOGIN_LIMIT", 5)
+	viper.SetDefault("RATE_LIMIT_LOGIN_LIMIT", 20)
 	viper.SetDefault("RATE_LIMIT_LOGIN_WINDOW_SECS", 60)
 	viper.SetDefault("RATE_LIMIT_REFRESH_LIMIT", 10)
 	viper.SetDefault("RATE_LIMIT_REFRESH_WINDOW_SECS", 60)

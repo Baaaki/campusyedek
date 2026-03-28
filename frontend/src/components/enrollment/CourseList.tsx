@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { AvailableCourse } from '@/lib/types';
+import type { AvailableCourse } from '@/lib/types';
 
 interface CourseListProps {
   courses: AvailableCourse[];

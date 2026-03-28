@@ -244,3 +244,82 @@ func (q *Queries) GetSessionsByCourse(ctx context.Context, arg GetSessionsByCour
 	}
 	return items, nil
 }
+
+const getSessionsByDateRange = `-- name: GetSessionsByDateRange :many
+SELECT
+    s.id,
+    s.course_id,
+    s.instructor_id,
+    s.semester,
+    s.week_number,
+    s.session_date,
+    s.session_type,
+    s.is_active,
+    s.started_at,
+    s.expires_at,
+    c.course_code,
+    c.course_name,
+    (SELECT COUNT(*) FROM attendance_records ar WHERE ar.session_id = s.id) as present_count,
+    (SELECT COUNT(*) FROM enrollments_cache ec WHERE ec.course_id = s.course_id AND ec.semester = s.semester) as enrolled_count
+FROM attendance_sessions s
+JOIN courses_cache c ON s.course_id = c.id
+WHERE s.session_date >= $1 AND s.session_date <= $2
+ORDER BY s.session_date ASC, s.started_at ASC
+`
+
+type GetSessionsByDateRangeParams struct {
+	StartDate pgtype.Date `json:"start_date"`
+	EndDate   pgtype.Date `json:"end_date"`
+}
+
+type GetSessionsByDateRangeRow struct {
+	ID            pgtype.UUID      `json:"id"`
+	CourseID      pgtype.UUID      `json:"course_id"`
+	InstructorID  pgtype.UUID      `json:"instructor_id"`
+	Semester      string           `json:"semester"`
+	WeekNumber    int16            `json:"week_number"`
+	SessionDate   pgtype.Date      `json:"session_date"`
+	SessionType   SessionTypeEnum  `json:"session_type"`
+	IsActive      pgtype.Bool      `json:"is_active"`
+	StartedAt     pgtype.Timestamp `json:"started_at"`
+	ExpiresAt     pgtype.Timestamp `json:"expires_at"`
+	CourseCode    string           `json:"course_code"`
+	CourseName    string           `json:"course_name"`
+	PresentCount  int64            `json:"present_count"`
+	EnrolledCount int64            `json:"enrolled_count"`
+}
+
+func (q *Queries) GetSessionsByDateRange(ctx context.Context, arg GetSessionsByDateRangeParams) ([]GetSessionsByDateRangeRow, error) {
+	rows, err := q.db.Query(ctx, getSessionsByDateRange, arg.StartDate, arg.EndDate)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetSessionsByDateRangeRow{}
+	for rows.Next() {
+		var i GetSessionsByDateRangeRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CourseID,
+			&i.InstructorID,
+			&i.Semester,
+			&i.WeekNumber,
+			&i.SessionDate,
+			&i.SessionType,
+			&i.IsActive,
+			&i.StartedAt,
+			&i.ExpiresAt,
+			&i.CourseCode,
+			&i.CourseName,
+			&i.PresentCount,
+			&i.EnrolledCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

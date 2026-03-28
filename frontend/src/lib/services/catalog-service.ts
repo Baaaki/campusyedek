@@ -240,7 +240,7 @@ export const catalogService = {
     const response = await catalogApi.get(url).json<ListCoursesResponse>();
 
     return {
-      courses: response.data.map(mapCourseListItemToCourseCatalog),
+      courses: (response.data || []).map(mapCourseListItemToCourseCatalog),
       pagination: response.pagination,
     };
   },

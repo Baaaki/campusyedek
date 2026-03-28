@@ -1,4 +1,4 @@
-import { User, Session, AuthResponse } from '@/lib/types';
+import type { User, Session, AuthResponse } from '@/lib/types';
 
 // Mock Users
 export const mockUsers: User[] = [

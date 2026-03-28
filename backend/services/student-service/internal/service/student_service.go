@@ -265,6 +265,9 @@ func (s *StudentService) UpdateStudent(ctx context.Context, id string, req dto.U
 
 	params := db.UpdateStudentParams{
 		ID:          utils.UUIDToPgtype(studentID),
+		FirstName:   utils.PointerStringToPgText(req.FirstName),
+		LastName:    utils.PointerStringToPgText(req.LastName),
+		Email:       utils.PointerStringToPgText(req.Email),
 		ClassLevel:  classLevel,
 		AdvisorID:   utils.PointerUUIDToPgtype(req.AdvisorID),
 		AdvisorName: utils.PointerStringToPgText(&advisorName),
@@ -272,6 +275,15 @@ func (s *StudentService) UpdateStudent(ctx context.Context, id string, req dto.U
 	}
 
 	changedFields := make(map[string]any)
+	if req.FirstName != nil {
+		changedFields["first_name"] = *req.FirstName
+	}
+	if req.LastName != nil {
+		changedFields["last_name"] = *req.LastName
+	}
+	if req.Email != nil {
+		changedFields["email"] = *req.Email
+	}
 	if req.ClassLevel != nil {
 		changedFields["class_level"] = *req.ClassLevel
 	}
@@ -282,12 +294,25 @@ func (s *StudentService) UpdateStudent(ctx context.Context, id string, req dto.U
 		changedFields["status"] = *req.Status
 	}
 
+	firstName := currentStudent.FirstName
+	if req.FirstName != nil {
+		firstName = *req.FirstName
+	}
+	lastName := currentStudent.LastName
+	if req.LastName != nil {
+		lastName = *req.LastName
+	}
+	email := currentStudent.Email
+	if req.Email != nil {
+		email = *req.Email
+	}
+
 	eventPayload := map[string]any{
 		"id":              id,
 		"student_number":  currentStudent.StudentNumber,
-		"first_name":      currentStudent.FirstName,
-		"last_name":       currentStudent.LastName,
-		"email":           currentStudent.Email,
+		"first_name":      firstName,
+		"last_name":       lastName,
+		"email":           email,
 		"faculty":         currentStudent.Faculty,
 		"department":      currentStudent.Department,
 		"enrollment_year": int(currentStudent.EnrollmentYear),

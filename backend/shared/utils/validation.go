@@ -17,19 +17,21 @@ func ValidateEmail(email string) bool {
 
 // ValidatePassword checks password strength
 // Requirements:
-// - Length between 8 and 128 characters
+// - Length between 12 and 128 characters
 // - At least one uppercase letter
 // - At least one lowercase letter
 // - At least one digit
+// - At least one special character (non-alphanumeric)
 func ValidatePassword(password string) bool {
-	if len(password) < 8 || len(password) > 128 {
+	if len(password) < 12 || len(password) > 128 {
 		return false
 	}
 
 	var (
-		hasUpper = false
-		hasLower = false
-		hasDigit = false
+		hasUpper   = false
+		hasLower   = false
+		hasDigit   = false
+		hasSpecial = false
 	)
 
 	for _, char := range password {
@@ -40,10 +42,12 @@ func ValidatePassword(password string) bool {
 			hasLower = true
 		case unicode.IsDigit(char):
 			hasDigit = true
+		default:
+			hasSpecial = true
 		}
 	}
 
-	return hasUpper && hasLower && hasDigit
+	return hasUpper && hasLower && hasDigit && hasSpecial
 }
 
 // ValidateStudentNumber checks student number format

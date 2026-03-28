@@ -30,9 +30,12 @@ import MealAdminPage from '@/pages/admin/meal/admin';
 import MenusPage from '@/pages/admin/meal/menus';
 import MealStudentPage from '@/pages/admin/meal/student';
 import TimeSettingsPage from '@/pages/admin/system/time';
-import PeriodsPage from '@/pages/admin/system/periods';
 import SemestersPage from '@/pages/admin/system/semesters';
+import SemesterWizardPage from '@/pages/admin/system/semesters/new';
 import AuditPage from '@/pages/admin/system/audit';
+import AdminAttendancePage from '@/pages/admin/attendance';
+import AdminAttendanceSessionPage from '@/pages/admin/attendance/sessionId';
+import AdminGradesPage from '@/pages/admin/grades';
 
 // Teacher
 import TeacherAttendancePage from '@/pages/teacher/attendance';
@@ -84,9 +87,12 @@ export function AppRoutes() {
           <Route path="/meal/admin" element={<MealAdminPage />} />
           <Route path="/meal/menus" element={<MenusPage />} />
           <Route path="/meal/student" element={<MealStudentPage />} />
+          <Route path="/attendance" element={<AdminAttendancePage />} />
+          <Route path="/attendance/:sessionId" element={<AdminAttendanceSessionPage />} />
+          <Route path="/grades" element={<AdminGradesPage />} />
           <Route path="/system/time" element={<TimeSettingsPage />} />
-          <Route path="/system/periods" element={<PeriodsPage />} />
           <Route path="/system/semesters" element={<SemestersPage />} />
+          <Route path="/system/semesters/new" element={<SemesterWizardPage />} />
           <Route path="/system/audit" element={<AuditPage />} />
         </Route>
       </Route>

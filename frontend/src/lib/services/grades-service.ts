@@ -52,6 +52,28 @@ export const gradesService = {
       throw error;
     }
   },
+
+  async unlockScore(data: { registration_id: string; slug: string }): Promise<void> {
+    try {
+      await gradesApi.post('admin/scores/unlock', {
+        json: data,
+      }).json();
+    } catch (error) {
+      console.error('Failed to unlock score:', error);
+      throw error;
+    }
+  },
+
+  async lockScore(data: { registration_id: string; slug: string }): Promise<void> {
+    try {
+      await gradesApi.post('admin/scores/lock', {
+        json: data,
+      }).json();
+    } catch (error) {
+      console.error('Failed to lock score:', error);
+      throw error;
+    }
+  },
 };
 
 export default gradesService;

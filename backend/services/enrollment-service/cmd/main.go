@@ -165,9 +165,10 @@ func main() {
 	// Initialize shared handlers
 	timeHandler := sharedHandler.NewTimeHandler()
 	periodHandler := sharedHandler.NewSimplePeriodHandler(periodRepo, semesterChecker, auditLogger)
+	internalPeriodHandler := sharedHandler.NewInternalPeriodHandler(periodRepo)
 
 	// Setup Gin router
-	router := setupRouter(enrollmentHandler, timeHandler, periodHandler, cfg.Server.Environment)
+	router := setupRouter(enrollmentHandler, timeHandler, periodHandler, internalPeriodHandler, cfg.Server.Environment)
 
 	// Start HTTP server
 	srv := &http.Server{
@@ -210,7 +211,7 @@ func main() {
 	logger.Info("server exited")
 }
 
-func setupRouter(enrollmentHandler *handler.EnrollmentHandler, timeHandler *sharedHandler.TimeHandler, periodHandler *sharedHandler.SimplePeriodHandler, env string) *gin.Engine {
+func setupRouter(enrollmentHandler *handler.EnrollmentHandler, timeHandler *sharedHandler.TimeHandler, periodHandler *sharedHandler.SimplePeriodHandler, internalPeriodHandler *sharedHandler.InternalPeriodHandler, env string) *gin.Engine {
 	if env == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -222,6 +223,7 @@ func setupRouter(enrollmentHandler *handler.EnrollmentHandler, timeHandler *shar
 	router.Use(sharedMiddleware.CORS())
 	router.Use(sharedMiddleware.RequestLogger())
 	router.Use(sharedMiddleware.IPRateLimit())
+	router.Use(sharedMiddleware.SetCSRFToken(env == "production"))
 
 	// Health check
 	router.GET("/health", func(c *gin.Context) {
@@ -235,6 +237,7 @@ func setupRouter(enrollmentHandler *handler.EnrollmentHandler, timeHandler *shar
 	// User info is extracted from X-User-* headers set by Traefik
 	api := router.Group("/api/enrollment")
 	api.Use(sharedMiddleware.ExtractUserFromHeaders())
+	api.Use(sharedMiddleware.CSRFProtection())
 	api.Use(sharedMiddleware.UserRateLimit())
 	{
 		// Student routes - students can view and manage their enrollments
@@ -265,6 +268,13 @@ func setupRouter(enrollmentHandler *handler.EnrollmentHandler, timeHandler *shar
 			timeHandler.RegisterRoutes(admin)
 			periodHandler.RegisterRoutes(admin)
 		}
+	}
+
+	// Internal routes (service-to-service, no auth)
+	internal := router.Group("/api/enrollment/internal")
+	internal.Use(sharedMiddleware.StripInternalHeaders())
+	{
+		internalPeriodHandler.RegisterRoutes(internal)
 	}
 
 	return router

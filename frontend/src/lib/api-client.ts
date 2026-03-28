@@ -1,64 +1,69 @@
 import ky from 'ky';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+
+/** Read a cookie value by name. Returns null if not found. */
+function getCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+
+/** Attach the CSRF token header (read from the csrf_token cookie) to the request. */
+function attachCSRFToken(request: Request): void {
+  const csrfToken = getCookie('csrf_token');
+  if (csrfToken) {
+    request.headers.set('X-CSRF-Token', csrfToken);
+  }
+}
 
 // Create ky instance with default configuration
 const apiClient = ky.create({
   prefixUrl: API_BASE_URL,
   timeout: 30000,
+  credentials: 'include',
   retry: {
     limit: 2,
     methods: ['get', 'post', 'put', 'delete'],
-    statusCodes: [408, 413, 429, 500, 502, 503, 504],
+    statusCodes: [408, 413, 500, 502, 503, 504],
   },
   hooks: {
     beforeRequest: [
       async (request) => {
+        // Attach CSRF token for state-changing requests
+        attachCSRFToken(request);
+
         // Remove trailing slash from URL (Gin doesn't handle /api/students/ the same as /api/students)
         const url = new URL(request.url);
-        let needsNewRequest = false;
 
         if (url.pathname.endsWith('/') && url.pathname !== '/') {
           url.pathname = url.pathname.slice(0, -1);
-          needsNewRequest = true;
-        }
 
-        // Add authorization token if exists
-        const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
-
-        if (needsNewRequest) {
           // Clone the request to preserve the body (body streams can only be read once)
           const clonedRequest = request.clone();
           const body = await clonedRequest.text();
 
-          const newRequest = new Request(url.toString(), {
+          return new Request(url.toString(), {
             method: request.method,
             headers: request.headers,
             body: body || undefined,
+            credentials: 'include',
           });
-
-          if (token) {
-            newRequest.headers.set('Authorization', `Bearer ${token}`);
-          }
-          return newRequest;
-        } else if (token) {
-          request.headers.set('Authorization', `Bearer ${token}`);
         }
       },
     ],
     afterResponse: [
-      async (_request, _options, response) => {
+      async (request, _options, response) => {
         // Handle 401 Unauthorized - token expired
         if (response.status === 401) {
-          // Clear token and redirect to login
+          // Don't redirect on auth endpoints (401 = wrong credentials, not expired session)
+          const url = new URL(request.url);
+          if (url.pathname.includes('/auth/login') || url.pathname.includes('/auth/refresh')) {
+            return response;
+          }
+
           if (typeof window !== 'undefined') {
-            // Clear localStorage
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('refresh_token');
+            // Clear UI-only localStorage data
             localStorage.removeItem('user');
-            // Clear cookies (for middleware)
-            document.cookie = 'access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-            document.cookie = 'user=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
             // Redirect to login
             window.location.href = '/auth/login';
           }
@@ -87,14 +92,12 @@ export const mealApi = apiClient.extend({ prefixUrl: `${API_BASE_URL}/api/meals`
 const noRedirectClient = ky.create({
   prefixUrl: API_BASE_URL,
   timeout: 30000,
+  credentials: 'include',
   retry: { limit: 0 },
   hooks: {
     beforeRequest: [
-      async (request) => {
-        const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
-        if (token) {
-          request.headers.set('Authorization', `Bearer ${token}`);
-        }
+      (request) => {
+        attachCSRFToken(request);
       },
     ],
   },

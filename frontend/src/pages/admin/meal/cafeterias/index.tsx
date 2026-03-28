@@ -23,7 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Cafeteria } from '@/lib/types';
+import type { Cafeteria } from '@/lib/types';
 import {
   Plus,
   Pencil,

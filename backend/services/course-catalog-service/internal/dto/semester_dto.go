@@ -38,6 +38,7 @@ type SemesterCourseResponse struct {
 	Semester           string            `json:"semester"`
 	CourseCode         string            `json:"course_code"`
 	CourseName         string            `json:"course_name"`
+	Department         string            `json:"department"`
 	Credits            int16             `json:"credits"`
 	ClassLevel         int16             `json:"class_level"`
 	InstructorID       uuid.UUID         `json:"instructor_id"`
@@ -57,6 +58,7 @@ type SemesterCourseListItem struct {
 	Semester           string            `json:"semester"`
 	CourseCode         string            `json:"course_code"`
 	CourseName         string            `json:"course_name"`
+	Department         string            `json:"department"`
 	Credits            int16             `json:"credits"`
 	ClassLevel         int16             `json:"class_level"`
 	InstructorID       uuid.UUID         `json:"instructor_id"`

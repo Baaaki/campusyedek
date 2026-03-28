@@ -14,12 +14,16 @@ import (
 	"github.com/baaaki/mydreamcampus/attendance-service/internal/repository"
 	"github.com/baaaki/mydreamcampus/attendance-service/internal/service"
 	"github.com/baaaki/mydreamcampus/attendance-service/internal/worker"
+	"github.com/baaaki/mydreamcampus/shared/audit"
+	"github.com/baaaki/mydreamcampus/shared/client"
 	"github.com/baaaki/mydreamcampus/shared/database"
 	sharedHandler "github.com/baaaki/mydreamcampus/shared/handler"
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	sharedMiddleware "github.com/baaaki/mydreamcampus/shared/middleware"
 	"github.com/baaaki/mydreamcampus/shared/rabbitmq"
 	sharedRedis "github.com/baaaki/mydreamcampus/shared/redis"
+	sharedRepo "github.com/baaaki/mydreamcampus/shared/repository"
+	"github.com/baaaki/mydreamcampus/shared/semester"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
@@ -110,6 +114,12 @@ func main() {
 	attendanceRepo := repository.NewAttendanceRepository(pool)
 	outboxRepo := repository.NewOutboxRepository(pool)
 	eventRepo := repository.NewEventRepository(pool)
+	periodRepo := sharedRepo.NewSimplePeriodRepository(pool)
+
+	// Initialize semester checker, semester client and audit logger (via catalog service HTTP)
+	semesterChecker := semester.NewHTTPChecker(cfg.CatalogService.BaseURL)
+	semesterClient := client.NewSemesterClient(cfg.CatalogService.BaseURL)
+	auditLogger := audit.NewHTTPLogger(cfg.CatalogService.BaseURL, "attendance")
 
 	// Initialize services
 	qrService := service.NewQRService()
@@ -121,11 +131,15 @@ func main() {
 		outboxRepo,
 		qrService,
 		redisService,
+		semesterClient,
+		periodRepo,
 	)
 
 	// Initialize handlers
 	attendanceHandler := handler.NewAttendanceHandler(attendanceService)
 	timeHandler := sharedHandler.NewTimeHandler()
+	periodHandler := sharedHandler.NewSimplePeriodHandler(periodRepo, semesterChecker, auditLogger)
+	internalPeriodHandler := sharedHandler.NewInternalPeriodHandler(periodRepo)
 
 	// Initialize workers
 	outboxWorker := worker.NewOutboxWorker(outboxRepo, publisher)
@@ -143,7 +157,7 @@ func main() {
 	go sessionExpiryHandler.Start(ctx)
 
 	// Setup HTTP server
-	router := setupRouter(cfg, attendanceHandler, timeHandler)
+	router := setupRouter(cfg, attendanceHandler, timeHandler, periodHandler, internalPeriodHandler)
 
 	srv := &http.Server{
 		Addr:    ":" + cfg.Server.Port,
@@ -175,7 +189,7 @@ func main() {
 	logger.Info("server exited")
 }
 
-func setupRouter(cfg *config.Config, attendanceHandler *handler.AttendanceHandler, timeHandler *sharedHandler.TimeHandler) *gin.Engine {
+func setupRouter(cfg *config.Config, attendanceHandler *handler.AttendanceHandler, timeHandler *sharedHandler.TimeHandler, periodHandler *sharedHandler.SimplePeriodHandler, internalPeriodHandler *sharedHandler.InternalPeriodHandler) *gin.Engine {
 	if cfg.Server.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -187,6 +201,7 @@ func setupRouter(cfg *config.Config, attendanceHandler *handler.AttendanceHandle
 	router.Use(sharedMiddleware.RequestLogger())
 	router.Use(sharedMiddleware.CORS())
 	router.Use(sharedMiddleware.IPRateLimit())
+	router.Use(sharedMiddleware.SetCSRFToken(cfg.Server.Environment == "production"))
 
 	// Health check
 	router.GET("/health", func(c *gin.Context) {
@@ -197,6 +212,7 @@ func setupRouter(cfg *config.Config, attendanceHandler *handler.AttendanceHandle
 	// User info is extracted from X-User-* headers set by Traefik
 	api := router.Group("/api/attendance")
 	api.Use(sharedMiddleware.ExtractUserFromHeaders())
+	api.Use(sharedMiddleware.CSRFProtection())
 	api.Use(sharedMiddleware.UserRateLimit())
 
 	// Student routes
@@ -213,12 +229,21 @@ func setupRouter(cfg *config.Config, attendanceHandler *handler.AttendanceHandle
 	api.POST("/sessions/:session_id/close", sharedMiddleware.RequireRole("teacher"), attendanceHandler.CloseSession)
 	api.POST("/courses/:course_id/finalize", sharedMiddleware.RequireRole("teacher"), attendanceHandler.FinalizeAttendance)
 
-	// Admin routes for Time Machine
+	// Admin routes
 	admin := router.Group("/api/attendance/admin")
 	admin.Use(sharedMiddleware.ExtractUserFromHeaders())
 	admin.Use(sharedMiddleware.RequireAdmin())
 	{
+		admin.GET("/sessions", attendanceHandler.AdminListSessions)
 		timeHandler.RegisterRoutes(admin)
+		periodHandler.RegisterRoutes(admin)
+	}
+
+	// Internal routes (service-to-service, no auth)
+	internal := router.Group("/api/attendance/internal")
+	internal.Use(sharedMiddleware.StripInternalHeaders())
+	{
+		internalPeriodHandler.RegisterRoutes(internal)
 	}
 
 	return router

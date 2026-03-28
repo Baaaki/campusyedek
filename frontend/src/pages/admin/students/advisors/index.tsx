@@ -25,13 +25,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Input } from '@/components/ui/input'
+
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { studentApi, staffApi } from '@/lib/api-client'
 import { ArrowLeft, UserPlus, Users, ArrowUpDown, ArrowUp, ArrowDown, Loader2 } from 'lucide-react'
 import { Link } from 'react-router'
+import { mockFaculties } from '@/mock_data/catalog'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost'
 
@@ -257,7 +258,7 @@ export default function AdvisorManagementPage() {
     if (selectedStudentIds.length === 0 || !bulkAdvisorId) return
 
     try {
-      await studentApi.post('advisors/bulk-assign', {
+      await studentApi.put('bulk-advisor-assign', {
         json: {
           student_ids: selectedStudentIds,
           advisor_id: bulkAdvisorId,
@@ -360,25 +361,16 @@ export default function AdvisorManagementPage() {
     return 0
   })
 
-  // Helper: Get unique departments from staff list (used as "faculties" since backend doesn't have faculty field)
+  // Helper: Get unique faculties from mock data
   const getUniqueFaculties = () => {
-    const departments = new Set<string>()
-    staffList.forEach((staff) => {
-      if (staff.department) {
-        departments.add(staff.department)
-      }
-    })
-    const result = Array.from(departments).sort()
-    console.log('Unique Departments (as faculties):', result, 'Staff List Length:', staffList.length)
-    return result
+    return mockFaculties.map(f => f.name).sort()
   }
 
-  // Helper: Get departments for a specific faculty (returns same department since we're using department as faculty)
-  const getDepartmentsForFaculty = (faculty: string) => {
-    // Since backend doesn't have faculty, we treat department as both faculty and department
-    // Return the same department if it exists in staff list
-    const hasStaffInDepartment = staffList.some((staff) => staff.department === faculty)
-    return hasStaffInDepartment ? [faculty] : []
+  // Helper: Get departments for a specific faculty from mock data
+  const getDepartmentsForFaculty = (facultyName: string) => {
+    const faculty = mockFaculties.find(f => f.name === facultyName)
+    if (!faculty) return []
+    return faculty.departments.map(d => d.name).sort()
   }
 
   // Fetch instructors by department from API (with Turkish-English normalization on backend)
@@ -403,16 +395,8 @@ export default function AdvisorManagementPage() {
     }
   }
 
-  // Helper: Get advisors for a specific department (uses API with caching)
-  const getAdvisorsForDepartment = (department: string) => {
-    // If we have department-specific instructors loaded, use them
-    if (departmentInstructors.length > 0 && assigningStudent?.department === department) {
-      return departmentInstructors
-    }
-    // Fallback to all staff if no filter or loading
-    if (!department) return staffList
-    return staffList
-  }
+  // No longer returning all staff fallback. We rely solely on departmentInstructors
+  // which is fetched precisely for the selected department.
 
   // Load instructors when assigning student changes
   useEffect(() => {
@@ -420,15 +404,31 @@ export default function AdvisorManagementPage() {
       setLoadingInstructors(true)
       fetchInstructorsByDepartment(assigningStudent.department)
         .then((instructors) => {
-          setDepartmentInstructors(instructors) // Bölümde hoca yoksa boş kalacak
+          setDepartmentInstructors(instructors)
         })
         .finally(() => {
           setLoadingInstructors(false)
         })
-    } else {
+    } else if (!bulkSelectedDepartment) {
       setDepartmentInstructors([])
     }
   }, [assigningStudent])
+
+  // Load instructors when bulk department changes
+  useEffect(() => {
+    if (bulkSelectedDepartment) {
+      setLoadingInstructors(true)
+      fetchInstructorsByDepartment(bulkSelectedDepartment)
+        .then((instructors) => {
+          setDepartmentInstructors(instructors)
+        })
+        .finally(() => {
+          setLoadingInstructors(false)
+        })
+    } else if (!assigningStudent) {
+      setDepartmentInstructors([])
+    }
+  }, [bulkSelectedDepartment])
 
 
 
@@ -533,19 +533,41 @@ export default function AdvisorManagementPage() {
 
                   {bulkSelectedDepartment && (
                     <div>
-                      <Label htmlFor="bulk_advisor">Danışman</Label>
-                      <Select value={bulkAdvisorId} onValueChange={setBulkAdvisorId}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Danışman seçin" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {getAdvisorsForDepartment(bulkSelectedDepartment).map((staff) => (
-                            <SelectItem key={staff.id} value={staff.id}>
-                              {staff.first_name} {staff.last_name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Label htmlFor="bulk_advisor">
+                        Danışman
+                        {loadingInstructors && (
+                          <Loader2 className="ml-2 h-4 w-4 animate-spin inline" />
+                        )}
+                      </Label>
+                      {loadingInstructors ? (
+                        <div className="mt-1.5 p-2 border rounded-md text-sm text-muted-foreground">
+                          Danışmanlar yükleniyor...
+                        </div>
+                      ) : (
+                        <>
+                          <Select value={bulkAdvisorId} onValueChange={setBulkAdvisorId}>
+                            <SelectTrigger className="mt-1.5">
+                              <SelectValue placeholder="Danışman seçin" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {departmentInstructors.length === 0 ? (
+                                <SelectItem value="none" disabled>Hoca bulunamadı</SelectItem>
+                              ) : (
+                                departmentInstructors.map((staff) => (
+                                  <SelectItem key={staff.id} value={staff.id}>
+                                    {staff.first_name} {staff.last_name}
+                                  </SelectItem>
+                                ))
+                              )}
+                            </SelectContent>
+                          </Select>
+                          {departmentInstructors.length > 0 && (
+                            <p className="mt-1 text-xs text-green-600">
+                              {departmentInstructors.length} danışman bulundu
+                            </p>
+                          )}
+                        </>
+                      )}
                     </div>
                   )}
 
@@ -718,11 +740,15 @@ export default function AdvisorManagementPage() {
                                         <SelectValue placeholder="Danışman seçin" />
                                       </SelectTrigger>
                                       <SelectContent>
-                                        {departmentInstructors.map((staff) => (
-                                          <SelectItem key={staff.id} value={staff.id}>
-                                            {staff.first_name} {staff.last_name} {staff.department !== student.department ? `(${staff.department})` : ''}
-                                          </SelectItem>
-                                        ))}
+                                        {departmentInstructors.length === 0 ? (
+                                          <SelectItem value="none" disabled>Hoca bulunamadı</SelectItem>
+                                        ) : (
+                                          departmentInstructors.map((staff) => (
+                                            <SelectItem key={staff.id} value={staff.id}>
+                                              {staff.first_name} {staff.last_name} {staff.department !== student.department ? `(${staff.department})` : ''}
+                                            </SelectItem>
+                                          ))
+                                        )}
                                       </SelectContent>
                                     </Select>
                                     {departmentInstructors.length > 0 && (

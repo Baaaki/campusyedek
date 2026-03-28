@@ -199,6 +199,7 @@ func setupRouter(studentHandler *handler.StudentHandler, timeHandler *sharedHand
 	router.Use(sharedMiddleware.CORS())
 	router.Use(sharedMiddleware.RequestLogger())
 	router.Use(sharedMiddleware.IPRateLimit())
+	router.Use(sharedMiddleware.SetCSRFToken(env == "production"))
 
 	// Health check
 	router.GET("/health", func(c *gin.Context) {
@@ -212,6 +213,7 @@ func setupRouter(studentHandler *handler.StudentHandler, timeHandler *sharedHand
 	// User info is extracted from X-User-* headers set by Traefik
 	api := router.Group("/api/students")
 	api.Use(sharedMiddleware.ExtractUserFromHeaders())
+	api.Use(sharedMiddleware.CSRFProtection())
 	api.Use(sharedMiddleware.UserRateLimit())
 	{
 		// Read operations - any authenticated user

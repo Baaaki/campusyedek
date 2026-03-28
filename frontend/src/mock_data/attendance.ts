@@ -1,4 +1,4 @@
-import { MyAttendanceResponse, CourseAttendanceDetail } from '@/lib/types';
+import type { MyAttendanceResponse, CourseAttendanceDetail } from '@/lib/types';
 
 // Mock Attendance Response (from attendance-service)
 export const mockMyAttendanceResponse: MyAttendanceResponse = {

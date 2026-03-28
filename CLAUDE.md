@@ -27,7 +27,8 @@ mydreamcampus/
 ## Genel Kurallar
 
 ### Docker
-- `sudo` ile docker komutu CALISTIRMA — kullaniciya komutu goster, kendisi calistirsin
+- Docker komutlarini dogrudan CALISTIRMA — kullaniciya komutu goster, kendisi calistirsin
+- Docker komutlari `sudo` gerektirir (kullanici docker grubunda degil)
 - Ornek: `sudo docker compose up -d postgres-auth rabbitmq redis`
 
 ### Dil

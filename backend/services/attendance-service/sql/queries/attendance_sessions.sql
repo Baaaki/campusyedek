@@ -42,3 +42,24 @@ WHERE id = $1;
 -- name: GetExpiredSessions :many
 SELECT * FROM attendance_sessions
 WHERE is_active = TRUE AND expires_at < NOW();
+
+-- name: GetSessionsByDateRange :many
+SELECT
+    s.id,
+    s.course_id,
+    s.instructor_id,
+    s.semester,
+    s.week_number,
+    s.session_date,
+    s.session_type,
+    s.is_active,
+    s.started_at,
+    s.expires_at,
+    c.course_code,
+    c.course_name,
+    (SELECT COUNT(*) FROM attendance_records ar WHERE ar.session_id = s.id) as present_count,
+    (SELECT COUNT(*) FROM enrollments_cache ec WHERE ec.course_id = s.course_id AND ec.semester = s.semester) as enrolled_count
+FROM attendance_sessions s
+JOIN courses_cache c ON s.course_id = c.id
+WHERE s.session_date >= @start_date AND s.session_date <= @end_date
+ORDER BY s.session_date ASC, s.started_at ASC;

@@ -116,7 +116,11 @@ func main() {
 	periodHandler := sharedHandler.NewSimplePeriodHandler(periodRepo, semesterStatusRepo, catalogAuditLogger)
 
 	// Initialize semester status handler
-	semesterStatusHandler := handler.NewSemesterStatusHandler(semesterStatusRepo, catalogAuditLogger)
+	semesterStatusHandler := handler.NewSemesterStatusHandler(semesterStatusRepo, periodRepo, catalogAuditLogger, handler.ServiceURLs{
+		Enrollment: cfg.EnrollmentService.BaseURL,
+		Grades:     cfg.GradesService.BaseURL,
+		Attendance: cfg.AttendanceService.BaseURL,
+	})
 
 	// Initialize audit handler
 	auditHandler := handler.NewAuditHandler(auditRepo)
@@ -210,6 +214,7 @@ func setupRouter(catalogHandler *handler.CatalogHandler, semesterHandler *handle
 	router.Use(sharedMiddleware.CORS())
 	router.Use(sharedMiddleware.RequestLogger())
 	router.Use(sharedMiddleware.IPRateLimit())
+	router.Use(sharedMiddleware.SetCSRFToken(env == "production"))
 
 	// Health check
 	router.GET("/health", func(c *gin.Context) {
@@ -235,6 +240,7 @@ func setupRouter(catalogHandler *handler.CatalogHandler, semesterHandler *handle
 		// User info is extracted from X-User-* headers set by Traefik forward-auth
 		protectedApi := api.Group("")
 		protectedApi.Use(sharedMiddleware.ExtractUserFromHeaders())
+		protectedApi.Use(sharedMiddleware.CSRFProtection())
 		protectedApi.Use(sharedMiddleware.UserRateLimit())
 		{
 			// Catalog admin routes

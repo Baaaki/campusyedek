@@ -20,6 +20,7 @@ CREATE INDEX idx_semesters_name ON semesters(name);
 
 -- Prevent status regression: completed can never go back
 -- This trigger enforces safety even if application layer is bypassed (SQL injection etc.)
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION prevent_semester_reactivation()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -47,6 +48,7 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+-- +goose StatementEnd
 
 CREATE TRIGGER trg_semester_status_change
     BEFORE UPDATE OF status ON semesters

@@ -289,22 +289,21 @@ func (h *StudentHandler) GetMyAdvisees(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
 	defer cancel()
 
-	// TODO: Get advisor ID from JWT token (when auth is implemented)
-	// For now, accept it as a query parameter
-	advisorIDStr := c.Query("advisor_id")
-	if advisorIDStr == "" {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error: "advisor_id is required",
-			Code:  "MISSING_ADVISOR_ID",
+	// Extract advisor ID from JWT context (prevents IDOR)
+	userIDStr, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
+			Error: "User not authenticated",
+			Code:  "UNAUTHORIZED",
 		})
 		return
 	}
 
-	advisorID, err := uuid.Parse(advisorIDStr)
+	advisorID, err := uuid.Parse(userIDStr.(string))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error: "invalid advisor_id",
-			Code:  "INVALID_ADVISOR_ID",
+			Error: "invalid user ID in token",
+			Code:  "INVALID_USER_ID",
 		})
 		return
 	}
@@ -504,6 +503,9 @@ func (h *StudentHandler) BulkImport(c *gin.Context) {
 	}
 	defer file.Close()
 
+	// Limit upload size to 10MB
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 10<<20)
+
 	// Validate file extension
 	fileName := header.Filename
 	if !strings.HasSuffix(strings.ToLower(fileName), ".csv") {
@@ -514,8 +516,9 @@ func (h *StudentHandler) BulkImport(c *gin.Context) {
 		return
 	}
 
-	// TODO: Get user ID from JWT token (for now use a placeholder)
-	createdBy := uuid.MustParse("00000000-0000-0000-0000-000000000000")
+	// Extract user ID from JWT context
+	userIDStr, _ := c.Get("user_id")
+	createdBy, _ := uuid.Parse(userIDStr.(string))
 
 	logger.Info("processing bulk import",
 		zap.String("filename", fileName),
@@ -558,6 +561,19 @@ func (h *StudentHandler) GetImportJobStatus(c *gin.Context) {
 
 	jobID := c.Param("job_id")
 
+	// Extract user info from JWT context
+	userIDStr, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
+			Error: "User not authenticated",
+			Code:  "UNAUTHORIZED",
+		})
+		return
+	}
+	userID, _ := uuid.Parse(userIDStr.(string))
+
+	userRole, _ := c.Get("role")
+
 	logger.Info("getting import job status",
 		zap.String("job_id", jobID),
 	)
@@ -575,6 +591,15 @@ func (h *StudentHandler) GetImportJobStatus(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error: errors.ErrInternal.Message,
 			Code:  errors.ErrInternal.Code,
+		})
+		return
+	}
+
+	// Verify ownership: only the creator or an admin can view the job
+	if response.CreatedBy != userID.String() && userRole.(string) != "admin" {
+		c.JSON(http.StatusForbidden, dto.ErrorResponse{
+			Error: errors.ErrForbidden.Message,
+			Code:  errors.ErrForbidden.Code,
 		})
 		return
 	}
@@ -600,8 +625,9 @@ func (h *StudentHandler) ListImportJobs(c *gin.Context) {
 		return
 	}
 
-	// TODO: Get user ID from JWT token (for now use a placeholder)
-	userID := uuid.MustParse("00000000-0000-0000-0000-000000000000")
+	// Extract user ID from JWT context
+	userIDStr, _ := c.Get("user_id")
+	userID, _ := uuid.Parse(userIDStr.(string))
 
 	logger.Info("listing import jobs",
 		zap.String("user_id", userID.String()),

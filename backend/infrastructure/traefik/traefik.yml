@@ -5,9 +5,10 @@
 # Documentation: https://doc.traefik.io/traefik/
 
 # API and Dashboard
+# In production, access dashboard via authenticated route defined in dynamic.yml
 api:
   dashboard: true
-  insecure: true  # Enable dashboard on :8080 without auth (development only)
+  insecure: false
 
 # Health check endpoint
 ping:
@@ -17,15 +18,42 @@ ping:
 entryPoints:
   web:
     address: ":80"
-  # websecure:
-  #   address: ":443"
+    # NOTE: HTTPS redirect disabled for local development (no SSL cert).
+    # In production, uncomment the block below:
+    # http:
+    #   redirections:
+    #     entryPoint:
+    #       to: websecure
+    #       scheme: https
+    #       permanent: true
+  websecure:
+    address: ":443"
+    http:
+      tls:
+        # In production, configure certResolver or provide certificates:
+        # certResolver: letsencrypt
+        # Or use file-based certificates in dynamic.yml:
+        # tls:
+        #   certificates:
+        #     - certFile: /etc/traefik/certs/cert.pem
+        #       keyFile: /etc/traefik/certs/key.pem
+        {}
+
+# Certificate Resolvers (uncomment for Let's Encrypt in production)
+# certificatesResolvers:
+#   letsencrypt:
+#     acme:
+#       email: admin@mydreamcampus.com
+#       storage: /etc/traefik/acme.json
+#       httpChallenge:
+#         entryPoint: web
 
 # Providers
 providers:
   docker:
     endpoint: "unix:///var/run/docker.sock"
     exposedByDefault: false
-    network: mydreamcampus-network
+    network: app-network
   file:
     filename: /etc/traefik/dynamic.yml
     watch: true

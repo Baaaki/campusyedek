@@ -17,7 +17,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { mockFaculties } from '@/mock_data/catalog';
 import { catalogApi } from '@/lib/api-client';
-import { Faculty, Department, WeeklyTopic, CourseCoordinator } from '@/lib/types';
+import type { Faculty, Department, WeeklyTopic, CourseCoordinator } from '@/lib/types';
 import {
   ArrowLeft,
   Plus,

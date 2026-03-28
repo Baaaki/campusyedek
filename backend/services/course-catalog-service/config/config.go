@@ -9,17 +9,25 @@ import (
 
 // Config holds all configuration for the course catalog service
 type Config struct {
-	Server       config.ServerConfig
-	Database     config.DatabaseConfig
-	RabbitMQ     config.RabbitMQConfig
-	Redis        config.RedisConfig
-	JWT          config.JWTConfig
-	StaffService StaffServiceConfig
-	RateLimit    config.RateLimitConfig
+	Server            config.ServerConfig
+	Database          config.DatabaseConfig
+	RabbitMQ          config.RabbitMQConfig
+	Redis             config.RedisConfig
+	JWT               config.JWTConfig
+	StaffService      StaffServiceConfig
+	RateLimit         config.RateLimitConfig
+	EnrollmentService ServiceURLConfig
+	GradesService     ServiceURLConfig
+	AttendanceService ServiceURLConfig
 }
 
 // StaffServiceConfig holds configuration for Staff Service integration
 type StaffServiceConfig struct {
+	BaseURL string
+}
+
+// ServiceURLConfig holds base URL for a downstream service
+type ServiceURLConfig struct {
 	BaseURL string
 }
 
@@ -30,6 +38,9 @@ func Load() (*Config, error) {
 
 	// Set service-specific defaults
 	viper.SetDefault("STAFF_SERVICE_URL", "http://localhost:"+config.StaffServicePort)
+	viper.SetDefault("ENROLLMENT_SERVICE_URL", "http://localhost:"+config.EnrollmentServicePort)
+	viper.SetDefault("GRADES_SERVICE_URL", "http://localhost:"+config.GradesServicePort)
+	viper.SetDefault("ATTENDANCE_SERVICE_URL", "http://localhost:"+config.AttendanceServicePort)
 
 	// Setup Viper using shared helper
 	if err := config.SetupViper("course-catalog-service"); err != nil {
@@ -53,6 +64,9 @@ func Load() (*Config, error) {
 		JWT:          jwt,
 		StaffService: staffService,
 		RateLimit:    config.LoadRateLimitConfig(),
+		EnrollmentService: ServiceURLConfig{BaseURL: viper.GetString("ENROLLMENT_SERVICE_URL")},
+		GradesService:     ServiceURLConfig{BaseURL: viper.GetString("GRADES_SERVICE_URL")},
+		AttendanceService: ServiceURLConfig{BaseURL: viper.GetString("ATTENDANCE_SERVICE_URL")},
 	}
 
 	// Validate config

@@ -59,3 +59,7 @@ func (r *SessionRepository) DeactivateSession(ctx context.Context, sessionID uui
 func (r *SessionRepository) GetExpiredSessions(ctx context.Context) ([]db.AttendanceSession, error) {
 	return r.queries.GetExpiredSessions(ctx)
 }
+
+func (r *SessionRepository) GetSessionsByDateRange(ctx context.Context, params db.GetSessionsByDateRangeParams) ([]db.GetSessionsByDateRangeRow, error) {
+	return r.queries.GetSessionsByDateRange(ctx, params)
+}

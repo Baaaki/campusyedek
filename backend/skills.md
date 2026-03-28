@@ -75,6 +75,32 @@ service-name/
 | `audit/` | HTTP audit loglama |
 | `rules/` | Is kurali tanimlari |
 
+## Goose Migration Kurallari
+
+**`$$` delimiter kullanan SQL fonksiyonlari (PL/pgSQL) icin `-- +goose StatementBegin` / `-- +goose StatementEnd` satirlari ZORUNLUDUR.** Goose, `$$` isaretlerini varsayilan statement ayiricisi olarak tanimiyor ve "unterminated dollar-quoted string" hatasi veriyor.
+
+```sql
+-- YANLIS! (goose parse edemez)
+CREATE OR REPLACE FUNCTION my_func()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- ...
+END;
+$$ LANGUAGE plpgsql;
+
+-- DOGRU!
+-- +goose StatementBegin
+CREATE OR REPLACE FUNCTION my_func()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- ...
+END;
+$$ LANGUAGE plpgsql;
+-- +goose StatementEnd
+```
+
+Bu kural tum `CREATE FUNCTION`, `CREATE TRIGGER` ve `DO $$` bloklari icin gecerlidir.
+
 ## Gelistirme Workflow (Yeni Ozellik / Servis)
 
 1. **Migration olustur**: `make migrate-create name=create_xxx`

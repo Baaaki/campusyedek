@@ -329,10 +329,18 @@ http:
         authRequestHeaders:
           - "Authorization"
           - "Content-Type"
+          - "Cookie"
         authResponseHeaders:
           - "X-User-ID"
           - "X-User-Role"
           - "X-User-Department"
+
+    # Dashboard Basic Auth (for production use)
+    # Generate password hash with: htpasswd -n admin
+    dashboard-auth:
+      basicAuth:
+        users:
+          - "admin:$apr1$changeme" # Generate with: htpasswd -n admin
 
     # CORS headers for frontend
     cors-headers:
@@ -348,10 +356,12 @@ http:
           - "Authorization"
           - "Content-Type"
           - "X-Requested-With"
+          - "X-CSRF-Token"
           - "Accept"
           - "Origin"
         accessControlAllowOriginList:
           - "http://localhost:3000"
           - "http://localhost:3002"
+        accessControlAllowCredentials: true
         accessControlMaxAge: 100
         addVaryHeader: true

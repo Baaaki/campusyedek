@@ -1,4 +1,4 @@
-import { Cafeteria, MyReservationsResponse, QRResponse } from '@/lib/types';
+import type { Cafeteria, MyReservationsResponse, QRResponse } from '@/lib/types';
 
 // Mock Cafeterias (from meal-service)
 export const mockCafeterias: Cafeteria[] = [

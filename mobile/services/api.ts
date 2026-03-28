@@ -23,7 +23,7 @@ const getBaseURL = () => {
 
 export const api = axios.create({
   baseURL: getBaseURL(),
-  timeout: 10000,
+  timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -47,14 +47,21 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor - Handle errors
+// Callback for auth state reset — set by AuthContext
+let onUnauthorized: (() => void) | null = null;
+
+export const setOnUnauthorized = (callback: () => void) => {
+  onUnauthorized = callback;
+};
+
+// Response interceptor - Handle 401
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
-      // Unauthorized - Clear token and redirect to login
       await SecureStore.deleteItemAsync('jwt_token');
-      // You can add navigation logic here if needed
+      await SecureStore.deleteItemAsync('user_data');
+      onUnauthorized?.();
     }
     return Promise.reject(error);
   }

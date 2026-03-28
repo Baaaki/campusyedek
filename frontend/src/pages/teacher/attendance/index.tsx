@@ -73,7 +73,7 @@ export default function AttendancePage() {
         {courses.map((course) => (
           <Link
             key={course.id}
-            href={`/teacher/attendance/${course.id}`}
+            to={`/teacher/attendance/${course.id}`}
             className="group block rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-800 dark:bg-gray-900 dark:hover:border-blue-700"
           >
             <div className="flex items-center justify-between">

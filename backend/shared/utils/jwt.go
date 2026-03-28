@@ -34,7 +34,7 @@ type Claims struct {
 	Department   string `json:"department,omitempty"`
 	TokenVersion int    `json:"token_version"`
 	TokenType    string `json:"token_type"`
-	JTI          string `json:"jti,omitempty"` // JWT ID for refresh tokens
+	JTI          string `json:"jti,omitempty"` // JWT ID for token blacklisting/revocation
 	jwt.RegisteredClaims
 }
 
@@ -51,17 +51,20 @@ func GetJWTSecret() []byte {
 
 // GenerateAccessToken creates a 15-minute access token
 // Should ONLY be called by Auth Service
+// Returns: (tokenString, jti, error)
 // DEPRECATED: Use GenerateAccessTokenWithSecret instead for better testability
-func GenerateAccessToken(userID, role, department string, tokenVersion int) (string, error) {
+func GenerateAccessToken(userID, role, department string, tokenVersion int) (string, string, error) {
 	return GenerateAccessTokenWithSecret(userID, role, department, tokenVersion, GetJWTSecret(), 15)
 }
 
 // GenerateAccessTokenWithSecret creates an access token with custom secret and expiry
 // Should ONLY be called by Auth Service
+// Returns: (tokenString, jti, error)
 // expiryMinutes: token expiry time in minutes
-func GenerateAccessTokenWithSecret(userID, role, department string, tokenVersion int, secret []byte, expiryMinutes int) (string, error) {
+func GenerateAccessTokenWithSecret(userID, role, department string, tokenVersion int, secret []byte, expiryMinutes int) (string, string, error) {
 	now := clock.Now()
 	expiresAt := now.Add(time.Duration(expiryMinutes) * time.Minute)
+	jti := uuid.New().String() // Unique JWT ID for token blacklisting/revocation
 
 	claims := &Claims{
 		UserID:       userID,
@@ -69,6 +72,7 @@ func GenerateAccessTokenWithSecret(userID, role, department string, tokenVersion
 		Department:   department,
 		TokenVersion: tokenVersion,
 		TokenType:    string(AccessToken),
+		JTI:          jti,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expiresAt),
 			IssuedAt:  jwt.NewNumericDate(now),
@@ -76,7 +80,8 @@ func GenerateAccessTokenWithSecret(userID, role, department string, tokenVersion
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(secret)
+	tokenString, err := token.SignedString(secret)
+	return tokenString, jti, err
 }
 
 // GenerateRefreshToken creates a 24-hour refresh token with unique JTI

@@ -107,16 +107,21 @@ func (s *SemesterService) CreateSemesterCourse(ctx context.Context, semester str
 		return dto.SemesterCourseResponse{}, catalogErrors.ErrInvalidSemesterFormat
 	}
 
-	// Check semester is active (zero trust: DB-enforced state machine)
+	// Semester course offerings can only be added while semester is in 'planned' status.
+	// After activation, the course structure is FROZEN — no add/remove/modify.
+	// See: docs/semester-wizard-plan.md "Iki Katmanli Degismezlik Modeli"
 	if s.semesterStatusRepo != nil {
-		active, err := s.semesterStatusRepo.IsSemesterActive(ctx, semester)
+		status, err := s.semesterStatusRepo.GetSemesterStatus(ctx, semester)
 		if err != nil {
 			serviceLogger.Warn("semester status check failed, semester may not exist in status table",
 				zap.Error(err),
 			)
-		} else if !active {
-			serviceLogger.Warn("semester is not active", zap.String("semester", semester))
-			return dto.SemesterCourseResponse{}, catalogErrors.ErrSemesterNotActive
+		} else if status != db.SemesterStatusPlanned {
+			serviceLogger.Warn("semester is not in planned status — course structure is frozen",
+				zap.String("semester", semester),
+				zap.String("status", string(status)),
+			)
+			return dto.SemesterCourseResponse{}, catalogErrors.ErrSemesterCourseFrozen
 		}
 	}
 
@@ -260,6 +265,7 @@ func (s *SemesterService) CreateSemesterCourse(ctx context.Context, semester str
 	semesterCourseParams := db.CreateSemesterCourseParams{
 		Semester:           semester,
 		CourseCode:         req.CourseCode,
+		Department:         catalogCourse.Department,
 		Credits:            catalogCourse.Credits,
 		ClassLevel:         req.ClassLevel,
 		InstructorID:       utils.UUIDToPgtype(req.InstructorID),
@@ -543,6 +549,7 @@ func (s *SemesterService) ListSemesterCourses(ctx context.Context, semester stri
 			Semester:           course.Semester,
 			CourseCode:         course.CourseCode,
 			CourseName:         course.CourseName,
+			Department:         course.Department,
 			Credits:            course.Credits,
 			ClassLevel:         course.ClassLevel,
 			InstructorID:       uuid.UUID(course.InstructorID.Bytes),
@@ -589,6 +596,15 @@ func (s *SemesterService) DeleteSemesterCourse(ctx context.Context, semester, co
 			zap.Error(err),
 		)
 		return dto.DeleteSemesterCourseResponse{}, sharedErrors.ErrInvalidID
+	}
+
+	// Semester course offerings can only be deleted while semester is in 'planned' status.
+	if s.semesterStatusRepo != nil {
+		status, statusErr := s.semesterStatusRepo.GetSemesterStatus(ctx, semester)
+		if statusErr == nil && status != db.SemesterStatusPlanned {
+			serviceLogger.Warn("semester is not in planned status — course structure is frozen")
+			return dto.DeleteSemesterCourseResponse{}, catalogErrors.ErrSemesterCourseFrozen
+		}
 	}
 
 	// Get existing semester course
@@ -823,6 +839,7 @@ func (s *SemesterService) toSemesterCourseResponse(course db.SemesterCourse, cou
 		Semester:           course.Semester,
 		CourseCode:         course.CourseCode,
 		CourseName:         courseName,
+		Department:         course.Department,
 		Credits:            course.Credits,
 		ClassLevel:         course.ClassLevel,
 		InstructorID:       uuid.UUID(course.InstructorID.Bytes),

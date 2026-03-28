@@ -28,11 +28,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { studentApi } from "@/lib/api-client";
 import { mockFaculties } from "@/mock_data";
-import { mockStudents } from "@/mock_data/students";
 import type { Student } from "@/lib/types";
-
-// Helper to delay execution (simulate API latency)
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export default function StudentPage() {
   // View state
@@ -65,38 +61,36 @@ export default function StudentPage() {
     if (!selectedFacultyId || !selectedDepartmentId) return;
 
     setIsLoading(true);
-    // Simulate API call
-    await delay(600);
-    
-    // Get faculty and department names to filter
-    const faculty = mockFaculties.find(f => f.id === selectedFacultyId);
-    const department = faculty?.departments.find(d => d.id === selectedDepartmentId);
-    
-    if (faculty && department) {
-      // Filter mock students
-      // Note: In a real app, we would pass IDs to the API. 
-      // Here we match by name since mock data uses names for these fields currently.
-      const filtered = mockStudents.filter(s => 
-        (s.faculty === faculty.name || s.department === department.name)
-      );
-      setStudentList(filtered);
-      setViewMode('list');
+    try {
+      const faculty = mockFaculties.find(f => f.id === selectedFacultyId);
+      const department = faculty?.departments.find(d => d.id === selectedDepartmentId);
+
+      if (faculty && department) {
+        const response = await studentApi.post('search', {
+          json: {
+            query: '',
+            filters: {
+              department: [department.name],
+            },
+            pagination: { limit: 100 },
+          },
+        }).json<{ data: Student[] }>();
+
+        setStudentList(response.data || []);
+        setViewMode('list');
+      }
+    } catch (error) {
+      console.error('Failed to fetch students:', error);
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
   // Select a student to view details
   const handleStudentSelect = async (studentId: string) => {
     setIsLoading(true);
-    
     try {
-      // In a real app, fetch single student by ID
-      // const data = await studentApi.get(`students/${studentId}`).json<Student>();
-      
-      // For mock, find in list
-      const student = mockStudents.find(s => s.id === studentId);
-      
+      const student = await studentApi.get(`${studentId}`).json<Student>();
       if (student) {
         setProfile(student);
         setViewMode('profile');
@@ -135,8 +129,23 @@ export default function StudentPage() {
 
     try {
       setIsSaving(true);
-      await studentApi.put(`students/${profile.id}`, { json: profile }).json();
-      
+      // Send all updatable fields to backend
+      const payload = {
+        first_name: profile.first_name,
+        last_name: profile.last_name,
+        email: profile.email,
+        class_level: profile.class_level,
+        status: profile.status,
+        ...(profile.advisor_id ? { advisor_id: profile.advisor_id } : {}),
+      };
+      await studentApi.put(`${profile.id}`, { json: payload }).json();
+
+      // Re-fetch updated student to sync local state
+      const updated = await studentApi.get(`${profile.id}`).json<Student>();
+      setProfile(updated);
+      // Update the student in the list so changes are visible when going back
+      setStudentList(prev => prev.map(s => s.id === updated.id ? updated : s));
+
       setIsEditing(false);
       alert('Öğrenci bilgileri başarıyla güncellendi!');
     } catch (error) {

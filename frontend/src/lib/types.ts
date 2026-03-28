@@ -797,9 +797,22 @@ export interface Semester {
   updated_at: string;
 }
 
+export interface PeriodTimeRange {
+  start: string;
+  end: string;
+}
+
+export interface SemesterPeriods {
+  enrollment?: PeriodTimeRange;
+  grading?: PeriodTimeRange;
+  attendance?: PeriodTimeRange;
+  catalog?: PeriodTimeRange;
+}
+
 export interface CreateSemesterRequest {
   name: string;
   hard_deadline: string;
+  periods?: SemesterPeriods;
 }
 
 // Audit Log types
@@ -817,5 +830,28 @@ export interface AuditLogEntry {
 
 export interface AuditLogListResponse {
   entries: AuditLogEntry[];
+  total: number;
+}
+
+// Admin Attendance
+export interface AdminSessionItem {
+  session_id: string;
+  course_id: string;
+  course_code: string;
+  course_name: string;
+  instructor_id: string;
+  semester: string;
+  week_number: number;
+  session_type: 'theory' | 'lab';
+  session_date: string;
+  is_active: boolean;
+  started_at: string;
+  expires_at: string;
+  present_count: number;
+  enrolled_count: number;
+}
+
+export interface AdminSessionsResponse {
+  sessions: AdminSessionItem[];
   total: number;
 }

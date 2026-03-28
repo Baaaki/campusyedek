@@ -301,6 +301,19 @@ func (s *ImportService) ListImportJobs(ctx context.Context, userID uuid.UUID, qu
 
 // Helper functions
 
+// sanitizeCSVCell strips formula injection characters from CSV cells
+func sanitizeCSVCell(cell string) string {
+	cell = strings.TrimSpace(cell)
+	// Prevent CSV formula injection
+	if len(cell) > 0 {
+		firstChar := cell[0]
+		if firstChar == '=' || firstChar == '+' || firstChar == '-' || firstChar == '@' || firstChar == '\t' || firstChar == '\r' {
+			cell = "'" + cell // Prefix with single quote to neutralize formula
+		}
+	}
+	return cell
+}
+
 func validateHeader(got, expected []string) bool {
 	if len(got) != len(expected) {
 		return false
@@ -318,14 +331,19 @@ func parseStudentRecord(record []string, lineNumber int) (db.CreateStudentParams
 		return db.CreateStudentParams{}, fmt.Errorf("Line %d: expected 8 columns, got %d", lineNumber, len(record))
 	}
 
+	// Sanitize all fields to prevent CSV formula injection
+	for i := range record {
+		record[i] = sanitizeCSVCell(record[i])
+	}
+
 	// Parse enrollment year
-	enrollmentYear, err := strconv.Atoi(strings.TrimSpace(record[6]))
+	enrollmentYear, err := strconv.Atoi(record[6])
 	if err != nil {
 		return db.CreateStudentParams{}, fmt.Errorf("Line %d: invalid enrollment_year: %v", lineNumber, err)
 	}
 
 	// Parse class level
-	classLevel, err := strconv.ParseInt(strings.TrimSpace(record[7]), 10, 16)
+	classLevel, err := strconv.ParseInt(record[7], 10, 16)
 	if err != nil {
 		return db.CreateStudentParams{}, fmt.Errorf("Line %d: invalid class_level: %v", lineNumber, err)
 	}
@@ -335,12 +353,12 @@ func parseStudentRecord(record []string, lineNumber int) (db.CreateStudentParams
 	}
 
 	return db.CreateStudentParams{
-		StudentNumber:  strings.TrimSpace(record[0]),
-		FirstName:      strings.TrimSpace(record[1]),
-		LastName:       strings.TrimSpace(record[2]),
-		Email:          strings.TrimSpace(record[3]),
-		Faculty:        strings.TrimSpace(record[4]),
-		Department:     strings.TrimSpace(record[5]),
+		StudentNumber:  record[0],
+		FirstName:      record[1],
+		LastName:       record[2],
+		Email:          record[3],
+		Faculty:        record[4],
+		Department:     record[5],
 		EnrollmentYear: int32(enrollmentYear),
 		ClassLevel:     int16(classLevel),
 		AdvisorID:      utils.UUIDToPgtype(uuid.Nil), // Will be assigned later

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/baaaki/mydreamcampus/attendance-service/internal/dto"
 	"github.com/baaaki/mydreamcampus/attendance-service/internal/service"
@@ -550,6 +551,56 @@ func (h *AttendanceHandler) GetSessionStudents(c *gin.Context) {
 }
 
 // handleError maps service errors to HTTP status codes
+// AdminListSessions lists all attendance sessions in a date range (admin only)
+func (h *AttendanceHandler) AdminListSessions(c *gin.Context) {
+	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+		zap.String("handler", "AttendanceHandler"),
+		zap.String("method", "AdminListSessions"),
+	)
+
+	startStr := c.Query("start_date")
+	endStr := c.Query("end_date")
+
+	if startStr == "" || endStr == "" {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error: "start_date and end_date query parameters are required (YYYY-MM-DD)",
+			Code:  "VALIDATION_ERROR",
+		})
+		return
+	}
+
+	startDate, err := time.Parse("2006-01-02", startStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error: "invalid start_date format, expected YYYY-MM-DD",
+			Code:  "VALIDATION_ERROR",
+		})
+		return
+	}
+
+	endDate, err := time.Parse("2006-01-02", endStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error: "invalid end_date format, expected YYYY-MM-DD",
+			Code:  "VALIDATION_ERROR",
+		})
+		return
+	}
+
+	handlerLogger.Info("listing sessions by date range",
+		zap.String("start_date", startStr),
+		zap.String("end_date", endStr),
+	)
+
+	response, err := h.service.GetSessionsByDateRange(c.Request.Context(), startDate, endDate)
+	if err != nil {
+		h.handleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
 func (h *AttendanceHandler) handleError(c *gin.Context, err error) {
 	reqLogger := logger.WithContextAndFields(c.Request.Context(),
 		zap.String("handler", "AttendanceHandler"),

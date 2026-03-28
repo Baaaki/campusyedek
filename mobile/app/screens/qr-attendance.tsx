@@ -1,22 +1,32 @@
-import { useState } from 'react';
-import { StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { useState, useCallback } from 'react';
+import { StyleSheet, View } from 'react-native';
+import { Text, Surface, Banner, ActivityIndicator, useTheme } from 'react-native-paper';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { Text as RNText, View as RNView } from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
 
-import Colors from '@/constants/Colors';
-import { useColorScheme } from '@/components/useColorScheme';
 import { useMyAttendance, useScanQR } from '@/hooks/useAttendance';
 import type { CourseAttendance, WeeklyRecord } from '@/types/attendance.types';
+import {
+  SectionHeader,
+  StatusChip,
+  SessionTypeChip,
+  AttendanceChip,
+  SkeletonList,
+  ScreenWrapper,
+} from '@/components/ui';
+import {
+  spacing,
+  radius,
+  semanticColors,
+} from '@/constants/tokens';
 
 export default function QRAttendanceScreen() {
-  const theme = useColorScheme() ?? 'light';
-  const c = Colors[theme];
-
+  const { colors } = useTheme();
+  const queryClient = useQueryClient();
   const { data: attendance, isLoading, error } = useMyAttendance();
   const scanMutation = useScanQR();
   const [lastScan, setLastScan] = useState<{ course: string; message: string } | null>(null);
 
-  // Flatten recent records across all courses, sorted by date desc
   const recentRecords: (WeeklyRecord & { courseName: string; courseCode: string })[] = [];
   if (attendance?.courses) {
     for (const course of attendance.courses) {
@@ -28,246 +38,258 @@ export default function QRAttendanceScreen() {
   recentRecords.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   const latestRecords = recentRecords.slice(0, 6);
 
-  // Find most relevant active course (last attended or first in list)
   const activeCourse: CourseAttendance | null = attendance?.courses?.[0] ?? null;
 
+  const handleRefresh = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ['my-attendance'] });
+  }, [queryClient]);
+
   return (
-    <ScrollView style={[styles.scrollView, { backgroundColor: c.background }]}>
-      <RNView style={[styles.container, { backgroundColor: c.background }]}>
-        {/* QR Scan Area */}
-        <RNView style={[styles.qrArea, { backgroundColor: c.card }]}>
-          <RNView style={[styles.qrIconBox, { borderColor: c.tint }]}>
-            <FontAwesome name="qrcode" size={80} color={c.tint} />
-          </RNView>
-          <RNText style={[styles.qrHint, { color: c.textSecondary }]}>
-            Yoklama icin QR kodu tarayin
-          </RNText>
-          {scanMutation.isPending && (
-            <ActivityIndicator style={{ marginTop: 12 }} color={c.tint} />
-          )}
-          {lastScan && (
-            <RNView style={[styles.scanResult, { backgroundColor: '#dcfce7' }]}>
-              <FontAwesome name="check-circle" size={16} color="#16a34a" />
-              <RNText style={{ color: '#16a34a', fontSize: 13, flex: 1 }}>{lastScan.course} - {lastScan.message}</RNText>
-            </RNView>
-          )}
-          {scanMutation.isError && (
-            <RNView style={[styles.scanResult, { backgroundColor: '#fee2e2' }]}>
-              <FontAwesome name="exclamation-circle" size={16} color="#dc2626" />
-              <RNText style={{ color: '#dc2626', fontSize: 13, flex: 1 }}>Yoklama alinamadi. Tekrar deneyin.</RNText>
-            </RNView>
-          )}
-        </RNView>
-
-        {/* Loading state */}
-        {isLoading && (
-          <RNView style={styles.loadingBox}>
-            <ActivityIndicator color={c.tint} size="large" />
-            <RNText style={[styles.loadingText, { color: c.textMuted }]}>Yoklama verileri yukleniyor...</RNText>
-          </RNView>
+    <ScreenWrapper onRefresh={handleRefresh}>
+      {/* QR Scan Area */}
+      <Surface style={[styles.qrArea, { backgroundColor: colors.surface }]} elevation={2}>
+        <View
+          style={[styles.qrIconBox, { borderColor: colors.primary }]}
+          accessibilityLabel="QR kod tarama alani"
+        >
+          <FontAwesome name="qrcode" size={72} color={colors.primary} />
+        </View>
+        <Text variant="bodyLarge" style={{ color: colors.onSurfaceVariant, marginTop: spacing.md }}>
+          Yoklama icin QR kodu tarayin
+        </Text>
+        {scanMutation.isPending && (
+          <ActivityIndicator animating style={{ marginTop: spacing.md }} color={colors.primary} />
         )}
-
-        {/* Error state */}
-        {error && !isLoading && (
-          <RNView style={[styles.errorBanner, { backgroundColor: theme === 'dark' ? '#3b1818' : '#fef2f2', borderColor: '#fca5a5' }]}>
-            <FontAwesome name="exclamation-triangle" size={14} color="#ef4444" />
-            <RNText style={{ color: '#dc2626', fontSize: 13, flex: 1 }}>
-              Backend baglantisi kurulamadi. Veriler yuklenemedi.
-            </RNText>
-          </RNView>
+        {lastScan && (
+          <Surface style={[styles.scanResult, { backgroundColor: semanticColors.successLight }]} elevation={0}>
+            <FontAwesome name="check-circle" size={16} color={semanticColors.success} />
+            <Text variant="bodySmall" style={{ color: semanticColors.success, flex: 1 }}>
+              {lastScan.course} - {lastScan.message}
+            </Text>
+          </Surface>
         )}
-
-        {/* Active Course Info */}
-        {activeCourse && (
-          <RNView style={styles.section}>
-            <RNText style={[styles.sectionTitle, { color: c.text }]}>Aktif Ders Devam Durumu</RNText>
-            <RNView style={[styles.classCard, { backgroundColor: c.card }]}>
-              <RNView style={styles.classHeader}>
-                <FontAwesome name="book" size={18} color={c.tint} />
-                <RNView style={{ flex: 1 }}>
-                  <RNText style={[styles.className, { color: c.text }]}>{activeCourse.course_name}</RNText>
-                  <RNText style={[styles.classCode, { color: c.textMuted }]}>{activeCourse.course_code}</RNText>
-                </RNView>
-              </RNView>
-
-              {/* Theory stats */}
-              <RNView style={[styles.statsRow, { borderTopColor: c.border }]}>
-                <RNText style={[styles.statsLabel, { color: c.textSecondary }]}>Teori</RNText>
-                <RNView style={styles.statsValues}>
-                  <RNText style={[styles.statsPresent, { color: '#16a34a' }]}>{activeCourse.theory.present_count} katilim</RNText>
-                  <RNText style={[styles.statsSep, { color: c.textMuted }]}>/</RNText>
-                  <RNText style={[styles.statsTotal, { color: c.textMuted }]}>{activeCourse.theory.total_sessions} toplam</RNText>
-                </RNView>
-                <RNView style={[styles.passBadge, { backgroundColor: activeCourse.theory.passed ? '#dcfce7' : '#fee2e2' }]}>
-                  <RNText style={{ color: activeCourse.theory.passed ? '#16a34a' : '#dc2626', fontSize: 11, fontWeight: '600' }}>
-                    {activeCourse.theory.passed ? 'Gecti' : 'Risk'}
-                  </RNText>
-                </RNView>
-              </RNView>
-
-              {/* Lab stats */}
-              {activeCourse.lab.total_sessions > 0 && (
-                <RNView style={[styles.statsRow, { borderTopColor: c.border }]}>
-                  <RNText style={[styles.statsLabel, { color: c.textSecondary }]}>Lab</RNText>
-                  <RNView style={styles.statsValues}>
-                    <RNText style={[styles.statsPresent, { color: '#16a34a' }]}>{activeCourse.lab.present_count} katilim</RNText>
-                    <RNText style={[styles.statsSep, { color: c.textMuted }]}>/</RNText>
-                    <RNText style={[styles.statsTotal, { color: c.textMuted }]}>{activeCourse.lab.total_sessions} toplam</RNText>
-                  </RNView>
-                  <RNView style={[styles.passBadge, { backgroundColor: activeCourse.lab.passed ? '#dcfce7' : '#fee2e2' }]}>
-                    <RNText style={{ color: activeCourse.lab.passed ? '#16a34a' : '#dc2626', fontSize: 11, fontWeight: '600' }}>
-                      {activeCourse.lab.passed ? 'Gecti' : 'Risk'}
-                    </RNText>
-                  </RNView>
-                </RNView>
-              )}
-
-              <RNView style={styles.classDetail}>
-                <FontAwesome name="user" size={14} color={c.textMuted} />
-                <RNText style={[styles.classDetailText, { color: c.textSecondary }]}>{activeCourse.instructor}</RNText>
-              </RNView>
-            </RNView>
-          </RNView>
+        {scanMutation.isError && (
+          <Surface
+            style={[styles.scanResult, { backgroundColor: colors.errorContainer }]}
+            elevation={0}
+            accessibilityRole="alert"
+          >
+            <FontAwesome name="exclamation-circle" size={16} color={colors.error} />
+            <Text variant="bodySmall" style={{ color: colors.error, flex: 1 }}>Yoklama alinamadi. Tekrar deneyin.</Text>
+          </Surface>
         )}
+      </Surface>
 
-        {/* All Courses Summary */}
-        {attendance?.courses && attendance.courses.length > 1 && (
-          <RNView style={styles.section}>
-            <RNText style={[styles.sectionTitle, { color: c.text }]}>Tum Dersler</RNText>
-            {attendance.courses.map((course) => {
-              const theoryPct = course.theory.total_sessions > 0
-                ? Math.round((course.theory.present_count / course.theory.total_sessions) * 100)
-                : 100;
-              return (
-                <RNView key={course.course_id} style={[styles.courseSummaryRow, { backgroundColor: c.card }]}>
-                  <RNView style={{ flex: 1 }}>
-                    <RNText style={[styles.courseSummaryCode, { color: c.tint }]}>{course.course_code}</RNText>
-                    <RNText style={[styles.courseSummaryName, { color: c.text }]}>{course.course_name}</RNText>
-                  </RNView>
-                  <RNView style={[styles.pctBadge, { backgroundColor: theoryPct >= 80 ? '#dcfce7' : theoryPct >= 60 ? '#fff7ed' : '#fee2e2' }]}>
-                    <RNText style={{ color: theoryPct >= 80 ? '#16a34a' : theoryPct >= 60 ? '#ea580c' : '#dc2626', fontSize: 13, fontWeight: '700' }}>
-                      %{theoryPct}
-                    </RNText>
-                  </RNView>
-                </RNView>
-              );
-            })}
-          </RNView>
-        )}
+      {/* Loading */}
+      {isLoading && <SkeletonList count={2} lines={3} />}
 
-        {/* Recent Attendance */}
-        {latestRecords.length > 0 && (
-          <RNView style={styles.section}>
-            <RNText style={[styles.sectionTitle, { color: c.text }]}>Son Yoklamalar</RNText>
-            {latestRecords.map((item, index) => (
-              <RNView key={`${item.courseCode}-${item.week}-${item.session_type}-${index}`} style={[styles.attendanceRow, { backgroundColor: c.card }]}>
-                <RNView style={styles.attendanceInfo}>
-                  <RNText style={[styles.attendanceCourse, { color: c.text }]}>{item.courseName}</RNText>
-                  <RNText style={[styles.attendanceDate, { color: c.textMuted }]}>
-                    {item.date} - Hafta {item.week} ({item.session_type === 'theory' ? 'Teori' : 'Lab'})
-                  </RNText>
-                </RNView>
-                <RNView style={[styles.statusBadge, { backgroundColor: '#dcfce7' }]}>
-                  <RNText style={{ color: '#16a34a', fontSize: 11, fontWeight: '600' }}>
-                    {item.marked_via === 'qr' ? 'QR' : 'Manuel'}
-                  </RNText>
-                </RNView>
-              </RNView>
-            ))}
-          </RNView>
-        )}
-      </RNView>
-    </ScrollView>
+      {/* Error */}
+      {error && !isLoading && (
+        <Banner
+          visible
+          icon="alert-circle-outline"
+          style={[styles.errorBanner, { backgroundColor: colors.errorContainer }]}
+          accessibilityRole="alert"
+        >
+          <Text variant="bodySmall" style={{ color: colors.onErrorContainer }}>
+            Backend baglantisi kurulamadi. Veriler yuklenemedi.
+          </Text>
+        </Banner>
+      )}
+
+      {/* Active Course Info */}
+      {activeCourse && (
+        <View style={styles.section}>
+          <SectionHeader title="Aktif Ders Devam Durumu" />
+          <Surface style={[styles.classCard, { backgroundColor: colors.surface }]} elevation={1}>
+            <View style={styles.classHeader}>
+              <Surface style={[styles.courseIconBg, { backgroundColor: colors.primaryContainer }]} elevation={0}>
+                <FontAwesome name="book" size={18} color={colors.primary} />
+              </Surface>
+              <View style={{ flex: 1 }}>
+                <Text variant="titleSmall" style={{ color: colors.onSurface }}>{activeCourse.course_name}</Text>
+                <Text variant="labelSmall" style={{ color: colors.onSurfaceVariant }}>{activeCourse.course_code}</Text>
+              </View>
+            </View>
+
+            {/* Theory stats */}
+            <View style={[styles.statsRow, { borderTopColor: colors.outlineVariant }]}>
+              <SessionTypeChip type="Teori" />
+              <View style={styles.statsValues}>
+                <Text variant="bodySmall" style={{ color: semanticColors.success, fontWeight: '600' }}>
+                  {activeCourse.theory.present_count} katilim
+                </Text>
+                <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>/</Text>
+                <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+                  {activeCourse.theory.total_sessions} toplam
+                </Text>
+              </View>
+              <StatusChip
+                label={activeCourse.theory.passed ? 'Gecti' : 'Risk'}
+                variant={activeCourse.theory.passed ? 'success' : 'danger'}
+              />
+            </View>
+
+            {/* Lab stats */}
+            {activeCourse.lab.total_sessions > 0 && (
+              <View style={[styles.statsRow, { borderTopColor: colors.outlineVariant }]}>
+                <SessionTypeChip type="Lab" />
+                <View style={styles.statsValues}>
+                  <Text variant="bodySmall" style={{ color: semanticColors.success, fontWeight: '600' }}>
+                    {activeCourse.lab.present_count} katilim
+                  </Text>
+                  <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>/</Text>
+                  <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+                    {activeCourse.lab.total_sessions} toplam
+                  </Text>
+                </View>
+                <StatusChip
+                  label={activeCourse.lab.passed ? 'Gecti' : 'Risk'}
+                  variant={activeCourse.lab.passed ? 'success' : 'danger'}
+                />
+              </View>
+            )}
+
+            <View style={styles.classDetail}>
+              <FontAwesome name="user" size={14} color={colors.onSurfaceVariant} />
+              <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>{activeCourse.instructor}</Text>
+            </View>
+          </Surface>
+        </View>
+      )}
+
+      {/* All Courses Summary */}
+      {attendance?.courses && attendance.courses.length > 1 && (
+        <View style={styles.section}>
+          <SectionHeader title="Tum Dersler" />
+          {attendance.courses.map((course) => {
+            const theoryPct = course.theory.total_sessions > 0
+              ? Math.round((course.theory.present_count / course.theory.total_sessions) * 100)
+              : 100;
+            return (
+              <Surface
+                key={course.course_id}
+                style={[styles.courseSummaryRow, { backgroundColor: colors.surface }]}
+                elevation={1}
+                accessibilityLabel={`${course.course_code} ${course.course_name}, devam: yuzde ${theoryPct}`}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text variant="labelSmall" style={{ color: colors.primary, fontWeight: '600' }}>{course.course_code}</Text>
+                  <Text variant="bodyMedium" style={{ color: colors.onSurface }}>{course.course_name}</Text>
+                </View>
+                <AttendanceChip percentage={theoryPct} />
+              </Surface>
+            );
+          })}
+        </View>
+      )}
+
+      {/* Recent Attendance */}
+      {latestRecords.length > 0 && (
+        <View style={styles.section}>
+          <SectionHeader title="Son Yoklamalar" />
+          {latestRecords.map((item, index) => (
+            <Surface
+              key={`${item.courseCode}-${item.week}-${item.session_type}-${index}`}
+              style={[styles.attendanceRow, { backgroundColor: colors.surface }]}
+              elevation={1}
+              accessibilityLabel={`${item.courseName}, ${item.date}, hafta ${item.week}`}
+            >
+              <View style={styles.attendanceInfo}>
+                <Text variant="bodyMedium" style={{ color: colors.onSurface, fontWeight: '500' }}>{item.courseName}</Text>
+                <Text variant="labelSmall" style={{ color: colors.onSurfaceVariant }}>
+                  {item.date} - Hafta {item.week} ({item.session_type === 'theory' ? 'Teori' : 'Lab'})
+                </Text>
+              </View>
+              <StatusChip
+                label={item.marked_via === 'qr' ? 'QR' : 'Manuel'}
+                variant="success"
+              />
+            </Surface>
+          ))}
+        </View>
+      )}
+    </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollView: { flex: 1 },
-  container: { flex: 1, padding: 20 },
   qrArea: {
-    borderRadius: 16,
-    padding: 32,
+    borderRadius: radius.xl,
+    padding: spacing.xl,
     alignItems: 'center',
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
+    marginBottom: spacing.lg,
   },
   qrIconBox: {
-    width: 160,
-    height: 160,
-    borderRadius: 20,
+    width: 150,
+    height: 150,
+    borderRadius: radius.xl,
     borderWidth: 3,
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
   },
-  qrHint: { fontSize: 15 },
-  scanResult: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12, padding: 10, borderRadius: 8, width: '100%' },
-
-  loadingBox: { alignItems: 'center', paddingVertical: 40, gap: 12 },
-  loadingText: { fontSize: 14 },
-  errorBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 10, borderWidth: 1, padding: 12, marginBottom: 16 },
-
-  section: { marginBottom: 24 },
-  sectionTitle: { fontSize: 18, fontWeight: '600', marginBottom: 12 },
+  scanResult: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.sm,
+    width: '100%',
+  },
+  errorBanner: { borderRadius: radius.md, marginBottom: spacing.md },
+  section: { marginBottom: spacing.lg },
   classCard: {
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
+    borderRadius: radius.lg,
+    padding: spacing.md,
   },
-  classHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 10 },
-  className: { fontSize: 17, fontWeight: '600' },
-  classCode: { fontSize: 12, marginTop: 1 },
-  classDetail: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
-  classDetailText: { fontSize: 14 },
-
-  statsRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth, gap: 8 },
-  statsLabel: { fontSize: 13, fontWeight: '600', width: 40 },
-  statsValues: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4 },
-  statsPresent: { fontSize: 13, fontWeight: '600' },
-  statsSep: { fontSize: 13 },
-  statsTotal: { fontSize: 13 },
-  passBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-
+  classHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+    gap: spacing.md,
+  },
+  courseIconBg: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  classDetail: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    gap: spacing.sm,
+  },
+  statsValues: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
   courseSummaryRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
+    borderRadius: radius.md,
+    padding: 14,
+    marginBottom: spacing.sm,
   },
-  courseSummaryCode: { fontSize: 11, fontWeight: '600' },
-  courseSummaryName: { fontSize: 14, fontWeight: '500', marginTop: 1 },
-  pctBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
-
   attendanceRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderRadius: 12,
+    borderRadius: radius.md,
     padding: 14,
-    marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
+    marginBottom: spacing.sm,
   },
   attendanceInfo: { flex: 1 },
-  attendanceCourse: { fontSize: 15, fontWeight: '500' },
-  attendanceDate: { fontSize: 12, marginTop: 2 },
-  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
 });

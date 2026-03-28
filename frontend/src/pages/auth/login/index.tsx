@@ -4,12 +4,6 @@ import { useNavigate, useSearchParams } from 'react-router';
 import { authApi } from "@/lib/api-client";
 import type { AuthResponse } from "@/lib/types";
 
-// Helper to set cookies
-function setCookie(name: string, value: string, days: number = 7) {
-  const expires = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toUTCString();
-  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
-}
-
 export default function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -30,12 +24,9 @@ export default function LoginPage() {
         })
         .json();
 
-      // Store token in both localStorage and cookies
-      // localStorage for API client, cookies for middleware
-      localStorage.setItem("access_token", response.access_token);
+      // Store user info in localStorage for UI display only
+      // Access token is stored as httpOnly cookie by the backend
       localStorage.setItem("user", JSON.stringify(response.user));
-      setCookie("access_token", response.access_token);
-      setCookie("user", JSON.stringify(response.user));
 
       // Check if password change is required
       if (response.force_password_change) {
@@ -43,9 +34,9 @@ export default function LoginPage() {
         return;
       }
 
-      // Check for redirect parameter
+      // Check for redirect parameter (only allow safe relative paths)
       const redirectTo = searchParams.get("redirect");
-      if (redirectTo && !redirectTo.startsWith("/auth")) {
+      if (redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("//") && !redirectTo.includes("://")) {
         navigate(redirectTo);
         return;
       }

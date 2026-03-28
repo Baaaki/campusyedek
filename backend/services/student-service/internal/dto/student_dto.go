@@ -21,6 +21,9 @@ type CreateStudentRequest struct {
 
 // UpdateStudentRequest represents the request body for updating a student
 type UpdateStudentRequest struct {
+	FirstName  *string    `json:"first_name" binding:"omitempty"`
+	LastName   *string    `json:"last_name" binding:"omitempty"`
+	Email      *string    `json:"email" binding:"omitempty,email"`
 	ClassLevel *int16     `json:"class_level" binding:"omitempty,min=1,max=6"`
 	AdvisorID  *uuid.UUID `json:"advisor_id"`
 	Status     *string    `json:"status" binding:"omitempty,oneof=active graduated suspended withdrawn"`

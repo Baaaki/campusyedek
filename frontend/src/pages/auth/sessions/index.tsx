@@ -39,7 +39,6 @@ export default function SessionsPage() {
       const revokedSession = sessions.find(s => s.id === sessionId);
       if (revokedSession?.is_current) {
         // Current session revoked, logout
-        localStorage.removeItem("access_token");
         localStorage.removeItem("user");
         navigate("/auth/login");
       } else {

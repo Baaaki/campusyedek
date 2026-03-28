@@ -200,6 +200,30 @@ type FinalizeAttendanceResponse struct {
 	FinalizedAt     time.Time       `json:"finalized_at"`
 }
 
+// AdminSessionItem represents a session in admin list view
+type AdminSessionItem struct {
+	SessionID     uuid.UUID `json:"session_id"`
+	CourseID      uuid.UUID `json:"course_id"`
+	CourseCode    string    `json:"course_code"`
+	CourseName    string    `json:"course_name"`
+	InstructorID  uuid.UUID `json:"instructor_id"`
+	Semester      string    `json:"semester"`
+	WeekNumber    int16     `json:"week_number"`
+	SessionType   string    `json:"session_type"`
+	SessionDate   string    `json:"session_date"`
+	IsActive      bool      `json:"is_active"`
+	StartedAt     time.Time `json:"started_at"`
+	ExpiresAt     time.Time `json:"expires_at"`
+	PresentCount  int64     `json:"present_count"`
+	EnrolledCount int64     `json:"enrolled_count"`
+}
+
+// AdminSessionsResponse is the response for admin sessions list
+type AdminSessionsResponse struct {
+	Sessions []AdminSessionItem `json:"sessions"`
+	Total    int                `json:"total"`
+}
+
 // ErrorResponse represents an error response
 type ErrorResponse struct {
 	Error string `json:"error"`

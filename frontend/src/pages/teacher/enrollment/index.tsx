@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from 'react';
 import { enrollmentService } from '@/lib/services/enrollment-service';
-import { EnrollmentProgramResponse } from '@/lib/types';
+import type { EnrollmentProgramResponse } from '@/lib/types';
 import { EnrollmentReviewDialog } from '@/components/enrollment/enrollment-review-dialog';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';

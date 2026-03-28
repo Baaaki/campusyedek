@@ -19,6 +19,7 @@ import { Badge } from '@/components/ui/badge';
 import {
   AlertDialog,
   AlertDialogAction,
+  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -26,7 +27,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { mockFaculties } from '@/mock_data/catalog';
-import { Faculty, Department, AssessmentItem, ScheduleSessionDTO, CourseCatalog, CreateSemesterCourseRequest, SemesterCourse } from '@/lib/types';
+import type { Faculty, Department, AssessmentItem, ScheduleSessionDTO, CourseCatalog, CreateSemesterCourseRequest, SemesterCourse } from '@/lib/types';
 import { catalogApi, staffApi, semesterApi } from '@/lib/api-client';
 import {
   Plus,
@@ -43,6 +44,7 @@ import {
   CheckCircle2,
   BookOpen,
   Loader2,
+  Eye,
 } from 'lucide-react';
 
 // Types for API responses
@@ -190,6 +192,7 @@ export default function SemesterCoursesPage() {
   const [activeSessionType, setActiveSessionType] = useState<'theory' | 'lab'>('theory');
   const [errorDialog, setErrorDialog] = useState<{ open: boolean; title: string; message: string }>({ open: false, title: '', message: '' });
   const [successDialog, setSuccessDialog] = useState(false);
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
 
   // Calculate total assessment weight
   const totalWeight = formData.assessment_schema.reduce((sum, item) => sum + item.weight, 0);
@@ -239,6 +242,52 @@ export default function SemesterCoursesPage() {
     monday: 'Pazartesi', tuesday: 'Salı', wednesday: 'Çarşamba',
     thursday: 'Perşembe', friday: 'Cuma',
   };
+
+  // Course colors for preview
+  const previewColors = [
+    'bg-blue-100 border-blue-300 text-blue-800',
+    'bg-green-100 border-green-300 text-green-800',
+    'bg-purple-100 border-purple-300 text-purple-800',
+    'bg-yellow-100 border-yellow-300 text-yellow-800',
+    'bg-red-100 border-red-300 text-red-800',
+    'bg-indigo-100 border-indigo-300 text-indigo-800',
+    'bg-teal-100 border-teal-300 text-teal-800',
+    'bg-orange-100 border-orange-300 text-orange-800',
+    'bg-pink-100 border-pink-300 text-pink-800',
+    'bg-cyan-100 border-cyan-300 text-cyan-800',
+  ];
+
+  // Build preview schedule grid from existing semester courses
+  const previewSchedule = React.useMemo(() => {
+    const grid: Record<number, Record<string, Record<number, { course_code: string; course_name: string; instructor: string; classroom: string; color: string }>>> = {};
+    const colorMap = new Map<string, string>();
+    let colorIdx = 0;
+
+    existingSemesterCourses.forEach((course) => {
+      if (!colorMap.has(course.course_code)) {
+        colorMap.set(course.course_code, previewColors[colorIdx % previewColors.length]);
+        colorIdx++;
+      }
+      const color = colorMap.get(course.course_code)!;
+      const cl = course.class_level;
+      if (!grid[cl]) grid[cl] = {};
+
+      course.schedule_sessions?.forEach((session) => {
+        if (!grid[cl][session.day_of_week]) grid[cl][session.day_of_week] = {};
+        session.slot_numbers.forEach((slot) => {
+          grid[cl][session.day_of_week][slot] = {
+            course_code: course.course_code,
+            course_name: course.course_name,
+            instructor: course.instructor_fullname,
+            classroom: course.classroom_location,
+            color,
+          };
+        });
+      });
+    });
+
+    return grid;
+  }, [existingSemesterCourses]);
 
   // Mutation for creating semester course
   const createMutation = useMutation({
@@ -537,14 +586,27 @@ export default function SemesterCoursesPage() {
   return (
     <div className="container mx-auto py-6 px-4 max-w-5xl">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-600 text-white">
-          <CalendarPlus className="h-5 w-5" />
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-4">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-600 text-white">
+            <CalendarPlus className="h-5 w-5" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold dark:text-white">Dönem Ders Açılışı</h1>
+            <p className="text-muted-foreground text-sm">Dönemlik açılacak dersleri tanımlayın</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold dark:text-white">Dönem Ders Açılışı</h1>
-          <p className="text-muted-foreground text-sm">Dönemlik açılacak dersleri tanımlayın</p>
-        </div>
+
+        {existingSemesterCourses.length > 0 && (
+          <Button
+            type="button"
+            onClick={() => setPreviewDialogOpen(true)}
+            className="bg-green-600 hover:bg-green-700 text-white"
+          >
+            <CheckCircle2 className="h-4 w-4 mr-2" />
+            Ders Programını Tamamla ({existingSemesterCourses.length} ders)
+          </Button>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -1011,6 +1073,132 @@ export default function SemesterCoursesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Schedule Preview & Complete Dialog */}
+      {previewDialogOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/50"
+            onClick={() => setPreviewDialogOpen(false)}
+          />
+          {/* Content */}
+          <div className="relative z-50 w-[96vw] max-h-[94vh] bg-white dark:bg-gray-900 rounded-xl shadow-2xl flex flex-col">
+            {/* Header */}
+            <div className="px-6 py-4 border-b dark:border-gray-700 shrink-0">
+              <h2 className="flex items-center gap-2 text-xl font-semibold">
+                <Eye className="h-5 w-5 text-indigo-600" />
+                Haftalık Ders Programı Önizlemesi
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                {getDepartmentName(formData.department_id) && (
+                  <span><strong>{getDepartmentName(formData.department_id)}</strong> bölümünün </span>
+                )}
+                ders programını gözden geçirin. Onayladıktan sonra sonraki adıma geçilecektir.
+              </p>
+            </div>
+
+            {/* Scrollable body */}
+            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+              {[1, 2, 3, 4].map((classLevel) => {
+                const hasEntries = daysOfWeek.some((day) =>
+                  timeSlots.some((slot) => previewSchedule[classLevel]?.[day.key]?.[slot.slot])
+                );
+                if (!hasEntries) return null;
+
+                return (
+                  <div key={classLevel} className="rounded-lg border dark:border-gray-700 overflow-hidden">
+                    <div className="bg-indigo-600 px-4 py-2">
+                      <h3 className="text-base font-bold text-white">{classLevel}. Sınıf</h3>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse text-xs table-fixed">
+                        <thead>
+                          <tr className="bg-gray-50 dark:bg-gray-700">
+                            <th className="border dark:border-gray-600 px-2 py-1.5 font-semibold text-gray-700 dark:text-gray-300 w-20">
+                              Saat
+                            </th>
+                            {daysOfWeek.map((day) => (
+                              <th key={day.key} className="border dark:border-gray-600 px-2 py-1.5 font-semibold text-gray-700 dark:text-gray-300">
+                                {day.label}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {timeSlots.map((slot) => (
+                            <tr key={slot.slot}>
+                              <td className="border dark:border-gray-600 px-1 py-1 text-center font-medium text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700">
+                                {slot.slot}. Ders
+                                <br />
+                                <span className="text-[9px]">{slot.time}</span>
+                              </td>
+                              {daysOfWeek.map((day) => {
+                                const entry = previewSchedule[classLevel]?.[day.key]?.[slot.slot];
+                                return (
+                                  <td key={day.key} className="border dark:border-gray-600 p-0.5">
+                                    {entry ? (
+                                      <div className={`${entry.color} border rounded p-1.5 h-[52px] flex flex-col justify-center`}>
+                                        <div className="font-bold text-[11px] leading-tight">{entry.course_code} - {entry.course_name}</div>
+                                        <div className="text-[10px] opacity-80 leading-tight">{entry.instructor}</div>
+                                        <div className="text-[10px] opacity-60 leading-tight">{entry.classroom}</div>
+                                      </div>
+                                    ) : slot.slot === 5 ? (
+                                      <div className="h-[52px] flex items-center justify-center bg-orange-50 dark:bg-orange-950/20 rounded text-[10px] font-medium text-orange-400 dark:text-orange-500">
+                                        Öğle Arası
+                                      </div>
+                                    ) : (
+                                      <div className="h-[52px]" />
+                                    )}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {existingSemesterCourses.length === 0 && (
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  <BookOpen className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                  <p>Henüz ders eklenmemiş</p>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t dark:border-gray-700 shrink-0 space-y-3">
+              <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3">
+                <p className="text-sm text-amber-700 dark:text-amber-300">
+                  Onayladıktan sonra ders programı kesinleşecektir. Devam etmek istiyor musunuz?
+                </p>
+              </div>
+              <div className="flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setPreviewDialogOpen(false)}
+                >
+                  Geri Dön
+                </Button>
+                <Button
+                  onClick={() => {
+                    setPreviewDialogOpen(false);
+                    navigate('/system/semesters');
+                  }}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Onayla ve Tamamla
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,12 +1,13 @@
 import React from 'react';
+import { View } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Tabs } from 'expo-router';
-import { Pressable } from 'react-native';
+import { IconButton, useTheme } from 'react-native-paper';
 
-import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme as useAppTheme } from '@/contexts/ThemeContext';
+import { useAuthContext } from '@/contexts/AuthContext';
 
 function TabBarIcon(props: {
   name: React.ComponentProps<typeof FontAwesome>['name'];
@@ -17,31 +18,42 @@ function TabBarIcon(props: {
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-  const { toggleTheme, isDark } = useTheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const { toggleTheme, isDark } = useAppTheme();
+  const { logout } = useAuthContext();
+  const theme = useTheme();
+  const { colors } = theme;
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: colors.tint,
-        tabBarInactiveTintColor: colors.tabIconDefault,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.onSurfaceVariant,
         tabBarStyle: {
-          backgroundColor: colors.card,
-          borderTopColor: colors.border,
+          backgroundColor: colors.surface,
+          borderTopColor: colors.outlineVariant,
+          elevation: 4,
         },
         headerStyle: {
-          backgroundColor: colors.card,
+          backgroundColor: colors.surface,
+          elevation: 2,
         },
-        headerTintColor: colors.text,
+        headerTintColor: colors.onSurface,
         headerShown: useClientOnlyValue(false, true),
         headerRight: () => (
-          <Pressable onPress={toggleTheme} style={{ marginRight: 16 }}>
-            <FontAwesome
-              name={isDark ? 'sun-o' : 'moon-o'}
-              size={20}
-              color={colors.text}
+          <View style={{ flexDirection: 'row' }}>
+            <IconButton
+              icon={isDark ? 'white-balance-sunny' : 'moon-waning-crescent'}
+              size={22}
+              onPress={toggleTheme}
+              iconColor={colors.onSurface}
             />
-          </Pressable>
+            <IconButton
+              icon="logout"
+              size={22}
+              onPress={logout}
+              iconColor={colors.onSurface}
+            />
+          </View>
         ),
       }}>
       <Tabs.Screen

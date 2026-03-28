@@ -506,4 +506,5 @@ type SemesterCourse struct {
 	AssessmentSchema   []byte           `json:"assessment_schema"`
 	CreatedAt          pgtype.Timestamp `json:"created_at"`
 	UpdatedAt          pgtype.Timestamp `json:"updated_at"`
+	Department         string           `json:"department"`
 }

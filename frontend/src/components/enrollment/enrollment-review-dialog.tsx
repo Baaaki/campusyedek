@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { EnrollmentProgramResponse } from '@/lib/types';
+import type { EnrollmentProgramResponse } from '@/lib/types';
 import {
   Dialog,
   DialogContent,

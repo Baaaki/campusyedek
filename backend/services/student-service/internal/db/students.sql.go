@@ -699,10 +699,13 @@ func (q *Queries) UnassignAdvisorByStaffID(ctx context.Context, advisorID pgtype
 
 const updateStudent = `-- name: UpdateStudent :one
 UPDATE students
-SET class_level = COALESCE($2, class_level),
-    advisor_id = COALESCE($3, advisor_id),
-    advisor_name = COALESCE($4, advisor_name),
-    status = COALESCE($5, status),
+SET first_name = COALESCE($2, first_name),
+    last_name = COALESCE($3, last_name),
+    email = COALESCE($4, email),
+    class_level = COALESCE($5, class_level),
+    advisor_id = COALESCE($6, advisor_id),
+    advisor_name = COALESCE($7, advisor_name),
+    status = COALESCE($8, status),
     updated_at = NOW()
 WHERE id = $1 AND is_active = true
 RETURNING id, student_number, first_name, last_name, email, faculty, department,
@@ -712,6 +715,9 @@ RETURNING id, student_number, first_name, last_name, email, faculty, department,
 
 type UpdateStudentParams struct {
 	ID          pgtype.UUID `json:"id"`
+	FirstName   pgtype.Text `json:"first_name"`
+	LastName    pgtype.Text `json:"last_name"`
+	Email       pgtype.Text `json:"email"`
 	ClassLevel  int16       `json:"class_level"`
 	AdvisorID   pgtype.UUID `json:"advisor_id"`
 	AdvisorName pgtype.Text `json:"advisor_name"`
@@ -740,6 +746,9 @@ type UpdateStudentRow struct {
 func (q *Queries) UpdateStudent(ctx context.Context, arg UpdateStudentParams) (UpdateStudentRow, error) {
 	row := q.db.QueryRow(ctx, updateStudent,
 		arg.ID,
+		arg.FirstName,
+		arg.LastName,
+		arg.Email,
 		arg.ClassLevel,
 		arg.AdvisorID,
 		arg.AdvisorName,

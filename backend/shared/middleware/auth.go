@@ -2,6 +2,8 @@ package middleware
 
 import (
 	"context"
+	"net/http"
+	"os"
 	"strings"
 
 	"github.com/baaaki/mydreamcampus/shared/errors"
@@ -30,34 +32,32 @@ func SetBlacklistChecker(checker TokenBlacklistChecker) {
 // JWTAuth validates JWT token and sets user claims in context
 func JWTAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Extract token from Authorization header
+		// Try Authorization header first
+		tokenString := ""
 		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			logger.Warn("missing authorization header")
+		if authHeader != "" {
+			parts := strings.SplitN(authHeader, " ", 2)
+			if len(parts) == 2 && parts[0] == "Bearer" {
+				tokenString = parts[1]
+			}
+		}
+
+		// Fallback to cookie if no Authorization header
+		if tokenString == "" {
+			if cookie, err := c.Cookie("access_token"); err == nil {
+				tokenString = cookie
+			}
+		}
+
+		if tokenString == "" {
+			logger.Warn("no token provided")
 			c.JSON(401, gin.H{
 				"error":   errors.ErrUnauthorized.Code,
-				"message": "Authorization header is required",
+				"message": "No token provided",
 			})
 			c.Abort()
 			return
 		}
-
-		// Parse Bearer token
-		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			logger.Warn("invalid authorization header format",
-				zap.String("auth_header", authHeader),
-				zap.Int("parts_count", len(parts)),
-			)
-			c.JSON(401, gin.H{
-				"error":   errors.ErrUnauthorized.Code,
-				"message": "Authorization header must be 'Bearer <token>'",
-			})
-			c.Abort()
-			return
-		}
-
-		tokenString := parts[1]
 
 		// Validate token
 		claims, err := utils.ValidateToken(tokenString)
@@ -151,19 +151,28 @@ func JWTAuth() gin.HandlerFunc {
 // OptionalJWTAuth validates JWT if present, but doesn't require it
 func OptionalJWTAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Try Authorization header first
+		tokenString := ""
 		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
+		if authHeader != "" {
+			parts := strings.SplitN(authHeader, " ", 2)
+			if len(parts) == 2 && parts[0] == "Bearer" {
+				tokenString = parts[1]
+			}
+		}
+
+		// Fallback to cookie
+		if tokenString == "" {
+			if cookie, err := c.Cookie("access_token"); err == nil {
+				tokenString = cookie
+			}
+		}
+
+		if tokenString == "" {
 			c.Next()
 			return
 		}
 
-		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			c.Next()
-			return
-		}
-
-		tokenString := parts[1]
 		claims, err := utils.ValidateToken(tokenString)
 		if err != nil {
 			c.Next()
@@ -179,6 +188,32 @@ func OptionalJWTAuth() gin.HandlerFunc {
 	}
 }
 
+// StripInternalHeaders removes internal service headers from incoming requests
+// to prevent header spoofing. These headers should only be set by Traefik
+// after successful forward-auth verification.
+// This middleware should be placed BEFORE other auth middleware in the chain.
+// Internal services that communicate directly should include X-Internal-Secret.
+func StripInternalHeaders() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Only strip if the request doesn't come from a trusted internal source
+		internalSecret := os.Getenv("INTERNAL_SERVICE_SECRET")
+		if internalSecret == "" {
+			internalSecret = "changeme_internal_secret"
+		}
+
+		receivedSecret := c.GetHeader("X-Internal-Secret")
+		if receivedSecret != internalSecret {
+			// Request is not from a trusted internal source - strip auth headers
+			c.Request.Header.Del("X-User-ID")
+			c.Request.Header.Del("X-User-Role")
+			c.Request.Header.Del("X-User-Email")
+			c.Request.Header.Del("X-Internal-Secret")
+		}
+
+		c.Next()
+	}
+}
+
 // ExtractUserFromHeaders extracts user information from X-User-* headers
 // These headers are set by Traefik after forward-auth to auth-service
 // Use this middleware for services that rely on Traefik for authentication
@@ -187,26 +222,24 @@ func ExtractUserFromHeaders() gin.HandlerFunc {
 		// Extract user ID from header (required)
 		userID := c.GetHeader("X-User-ID")
 		if userID == "" {
-			logger.Warn("missing X-User-ID header - request not authenticated via Traefik")
-			c.JSON(401, gin.H{
+			logger.Warn("X-User-ID header missing - request may not have passed through auth gateway")
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"error":   errors.ErrUnauthorized.Code,
-				"message": "User not authenticated",
+				"message": "Authentication required",
 			})
-			c.Abort()
 			return
 		}
 
 		// Extract role from header (required)
 		role := c.GetHeader("X-User-Role")
 		if role == "" {
-			logger.Warn("missing X-User-Role header",
+			logger.Warn("X-User-Role header missing - request may not have passed through auth gateway",
 				zap.String("user_id", userID),
 			)
-			c.JSON(401, gin.H{
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"error":   errors.ErrUnauthorized.Code,
 				"message": "User role not found",
 			})
-			c.Abort()
 			return
 		}
 

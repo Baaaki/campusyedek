@@ -14,6 +14,7 @@ import (
 	"github.com/baaaki/mydreamcampus/auth-service/internal/repository"
 	"github.com/baaaki/mydreamcampus/auth-service/internal/service"
 	"github.com/baaaki/mydreamcampus/auth-service/internal/worker"
+	"github.com/baaaki/mydreamcampus/shared/audit"
 	"github.com/baaaki/mydreamcampus/shared/database"
 	sharedHandler "github.com/baaaki/mydreamcampus/shared/handler"
 	"github.com/baaaki/mydreamcampus/shared/logger"
@@ -36,6 +37,10 @@ func main() {
 		panic(fmt.Sprintf("failed to initialize logger: %v", err))
 	}
 	defer logger.Sync()
+
+	// Initialize security audit logger
+	audit.InitSecurity(cfg.Server.Environment)
+	defer audit.SyncSecurity()
 
 	logger.Info("starting auth-service",
 		zap.String("environment", cfg.Server.Environment),
@@ -209,6 +214,7 @@ func setupRouter(authHandler *handler.AuthHandler, timeHandler *sharedHandler.Ti
 	router.Use(sharedMiddleware.CORS())
 	router.Use(sharedMiddleware.RequestLogger())
 	router.Use(sharedMiddleware.IPRateLimit())
+	router.Use(sharedMiddleware.SetCSRFToken(env == "production"))
 
 	// Health check
 	router.GET("/health", func(c *gin.Context) {
@@ -228,6 +234,7 @@ func setupRouter(authHandler *handler.AuthHandler, timeHandler *sharedHandler.Ti
 		// Protected routes (JWT auth required)
 		protected := api.Group("")
 		protected.Use(sharedMiddleware.JWTAuth())
+		protected.Use(sharedMiddleware.CSRFProtection())
 		protected.Use(sharedMiddleware.UserRateLimit())
 		{
 			protected.POST("/logout", authHandler.Logout)

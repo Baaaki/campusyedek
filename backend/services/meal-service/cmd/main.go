@@ -197,6 +197,7 @@ func setupRouter(cfg *config.Config, handler *handler.MealHandler, timeHandler *
 	router.Use(middleware.RequestLogger())
 	router.Use(middleware.CORS())
 	router.Use(middleware.IPRateLimit())
+	router.Use(middleware.SetCSRFToken(cfg.Server.Environment == "production"))
 
 	// Health check
 	router.GET("/health", handler.Health)
@@ -211,6 +212,7 @@ func setupRouter(cfg *config.Config, handler *handler.MealHandler, timeHandler *
 		// User info is extracted from X-User-* headers set by Traefik
 		auth := api.Group("")
 		auth.Use(middleware.ExtractUserFromHeaders())
+		auth.Use(middleware.CSRFProtection())
 		auth.Use(middleware.UserRateLimit())
 		{
 			// Cafeterias (all authenticated users can view)

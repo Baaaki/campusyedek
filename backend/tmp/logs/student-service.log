@@ -23,44 +23,39 @@ watching tests
 !exclude tmp
 building...
 running...
-23:56:13.678	[34mINFO[0m	cmd/main.go:40	starting student-service	{"environment": "development", "port": "8003"}
-23:56:13.694	[34mINFO[0m	cmd/main.go:54	database connection established
-23:56:13.694	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
-23:56:13.695	[34mINFO[0m	redis/redis.go:41	redis connection established
-23:56:13.695	[34mINFO[0m	cmd/main.go:72	rate limiter configured
-23:56:13.695	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
-23:56:13.698	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
-23:56:13.698	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
-23:56:13.699	[34mINFO[0m	cmd/main.go:267	RabbitMQ exchange declared	{"exchange": "student.events"}
-23:56:13.710	[34mINFO[0m	worker/event_consumer.go:155	staff events queue setup completed	{"queue": "student.staff_events", "routing_key": "staff.deactivated"}
-23:56:13.714	[34mINFO[0m	cmd/main.go:304	downstream consumer queues pre-declared
-23:56:13.714	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
-23:56:13.714	[34mINFO[0m	worker/outbox_worker.go:39	starting outbox worker	{"interval": "5s", "batch_size": 10}
-23:56:13.714	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "student.staff_events"}
-23:56:13.714	[34mINFO[0m	worker/event_consumer.go:46	event consumer started successfully
+10:31:48.402	[34mINFO[0m	cmd/main.go:40	starting student-service	{"environment": "development", "port": "8003"}
+10:31:48.412	[34mINFO[0m	cmd/main.go:54	database connection established
+10:31:48.412	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+10:31:48.415	[34mINFO[0m	redis/redis.go:41	redis connection established
+10:31:48.415	[34mINFO[0m	cmd/main.go:72	rate limiter configured
+10:31:48.415	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+10:31:48.418	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+10:31:48.418	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
+10:31:48.418	[34mINFO[0m	cmd/main.go:269	RabbitMQ exchange declared	{"exchange": "student.events"}
+10:31:48.423	[34mINFO[0m	worker/event_consumer.go:155	staff events queue setup completed	{"queue": "student.staff_events", "routing_key": "staff.deactivated"}
+10:31:48.468	[34mINFO[0m	cmd/main.go:306	downstream consumer queues pre-declared
+10:31:48.468	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+10:31:48.468	[34mINFO[0m	worker/outbox_worker.go:39	starting outbox worker	{"interval": "5s", "batch_size": 10}
+10:31:48.470	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "student.staff_events"}
+10:31:48.470	[34mINFO[0m	worker/event_consumer.go:46	event consumer started successfully
 [GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
  - using env:	export GIN_MODE=release
  - using code:	gin.SetMode(gin.ReleaseMode)
 
-[GIN-debug] GET    /health                   --> main.setupRouter.func1 (5 handlers)
-[GIN-debug] GET    /api/students             --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).ListStudents-fm (7 handlers)
-[GIN-debug] GET    /api/students/:id         --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).GetStudentByID-fm (7 handlers)
-[GIN-debug] POST   /api/students/search      --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).SearchStudents-fm (7 handlers)
-[GIN-debug] GET    /api/students/my-advisees --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).GetMyAdvisees-fm (8 handlers)
-[GIN-debug] POST   /api/students             --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).CreateStudent-fm (8 handlers)
-[GIN-debug] PUT    /api/students/:id         --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).UpdateStudent-fm (8 handlers)
-[GIN-debug] DELETE /api/students/:id         --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).DeleteStudent-fm (8 handlers)
-[GIN-debug] GET    /api/students/orphaned    --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).ListOrphanedStudents-fm (8 handlers)
-[GIN-debug] PUT    /api/students/bulk-advisor-assign --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).BulkAssignAdvisor-fm (8 handlers)
-[GIN-debug] POST   /api/students/bulk-import --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).BulkImport-fm (8 handlers)
-[GIN-debug] GET    /api/students/bulk-import/:job_id --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).GetImportJobStatus-fm (8 handlers)
-[GIN-debug] GET    /api/students/bulk-import --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).ListImportJobs-fm (8 handlers)
-[GIN-debug] POST   /api/students/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (7 handlers)
-[GIN-debug] POST   /api/students/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (7 handlers)
-[GIN-debug] GET    /api/students/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (7 handlers)
-23:56:13.714	[34mINFO[0m	cmd/main.go:154	server starting	{"port": "8003"}
-23:59:17.585	[31mERROR[0m	rabbitmq/connection.go:94	rabbitmq connection lost	{"error": "Exception (320) Reason: \"CONNECTION_FORCED - broker forced connection closure with reason 'shutdown'\""}
-github.com/baaaki/mydreamcampus/shared/rabbitmq.(*Connection).handleReconnect
-	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/rabbitmq/connection.go:94
-23:59:17.585	[34mINFO[0m	rabbitmq/connection.go:99	attempting to reconnect to rabbitmq...
-cleaning...
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (6 handlers)
+[GIN-debug] GET    /api/students             --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).ListStudents-fm (9 handlers)
+[GIN-debug] GET    /api/students/:id         --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).GetStudentByID-fm (9 handlers)
+[GIN-debug] POST   /api/students/search      --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).SearchStudents-fm (9 handlers)
+[GIN-debug] GET    /api/students/my-advisees --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).GetMyAdvisees-fm (10 handlers)
+[GIN-debug] POST   /api/students             --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).CreateStudent-fm (10 handlers)
+[GIN-debug] PUT    /api/students/:id         --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).UpdateStudent-fm (10 handlers)
+[GIN-debug] DELETE /api/students/:id         --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).DeleteStudent-fm (10 handlers)
+[GIN-debug] GET    /api/students/orphaned    --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).ListOrphanedStudents-fm (10 handlers)
+[GIN-debug] PUT    /api/students/bulk-advisor-assign --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).BulkAssignAdvisor-fm (10 handlers)
+[GIN-debug] POST   /api/students/bulk-import --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).BulkImport-fm (10 handlers)
+[GIN-debug] GET    /api/students/bulk-import/:job_id --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).GetImportJobStatus-fm (10 handlers)
+[GIN-debug] GET    /api/students/bulk-import --> github.com/baaaki/mydreamcampus/student-service/internal/handler.(*StudentHandler).ListImportJobs-fm (10 handlers)
+[GIN-debug] POST   /api/students/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (8 handlers)
+[GIN-debug] POST   /api/students/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (8 handlers)
+[GIN-debug] GET    /api/students/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (8 handlers)
+10:31:48.470	[34mINFO[0m	cmd/main.go:154	server starting	{"port": "8003"}

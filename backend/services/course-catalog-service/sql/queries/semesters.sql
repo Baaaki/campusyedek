@@ -23,3 +23,9 @@ RETURNING *;
 -- name: AutoCompleteSemester :exec
 UPDATE semesters SET status = 'completed'
 WHERE name = $1 AND status = 'active' AND hard_deadline < NOW();
+
+-- name: HasActiveSemester :one
+-- INVARIANT: Only one semester can be active at any given time.
+-- Used before activation to give a clear error message at the application layer.
+-- The database also enforces this via idx_semesters_single_active partial unique index.
+SELECT EXISTS(SELECT 1 FROM semesters WHERE status = 'active') AS has_active;

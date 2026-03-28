@@ -130,6 +130,20 @@ func (q *Queries) GetSemesterByName(ctx context.Context, name string) (Semester,
 	return i, err
 }
 
+const hasActiveSemester = `-- name: HasActiveSemester :one
+SELECT EXISTS(SELECT 1 FROM semesters WHERE status = 'active') AS has_active
+`
+
+// INVARIANT: Only one semester can be active at any given time.
+// Used before activation to give a clear error message at the application layer.
+// The database also enforces this via idx_semesters_single_active partial unique index.
+func (q *Queries) HasActiveSemester(ctx context.Context) (bool, error) {
+	row := q.db.QueryRow(ctx, hasActiveSemester)
+	var has_active bool
+	err := row.Scan(&has_active)
+	return has_active, err
+}
+
 const listSemesters = `-- name: ListSemesters :many
 SELECT id, name, status, hard_deadline, activated_at, completed_at, created_at, updated_at FROM semesters ORDER BY created_at DESC
 `

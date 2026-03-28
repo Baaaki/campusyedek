@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/baaaki/mydreamcampus/shared/audit"
 	sharedErrors "github.com/baaaki/mydreamcampus/shared/errors"
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	"github.com/baaaki/mydreamcampus/auth-service/config"
@@ -74,6 +75,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 		// Check for specific auth errors
 		if sharedErrors.Is(err, authErrors.ErrAccountLocked) {
+			audit.LogSecurityFromContextWithDetails(c, audit.EventAccountLocked, "failure", "", "too many failed attempts", map[string]string{"email": req.Email})
 			c.JSON(http.StatusTooManyRequests, dto.ErrorResponse{
 				Error:   "ACCOUNT_LOCKED",
 				Message: "Hesabınız çok fazla başarısız giriş denemesi nedeniyle geçici olarak kilitlendi. Lütfen 30 dakika sonra tekrar deneyin.",
@@ -82,6 +84,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		}
 
 		if sharedErrors.Is(err, authErrors.ErrAccountDeactivated) {
+			audit.LogSecurityFromContextWithDetails(c, audit.EventLoginFailed, "failure", "", "account deactivated", map[string]string{"email": req.Email})
 			c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
 				Error:   "ACCOUNT_DEACTIVATED",
 				Message: "Hesabınız devre dışı bırakılmış",
@@ -90,6 +93,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		}
 
 		if sharedErrors.Is(err, authErrors.ErrInvalidCredentials) || err == sharedErrors.ErrUnauthorized {
+			audit.LogSecurityFromContextWithDetails(c, audit.EventLoginFailed, "failure", "", "invalid credentials", map[string]string{"email": req.Email})
 			c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
 				Error:   "INVALID_CREDENTIALS",
 				Message: "Geçersiz e-posta veya şifre",
@@ -109,13 +113,21 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		zap.String("role", response.User.Role),
 	)
 
+	audit.LogSecurityFromContext(c, audit.EventLogin, "success", response.User.ID)
+
+	// Set access token as HttpOnly cookie
+	accessTokenMaxAge := h.config.JWT.AccessTokenExpiry * 60 // convert minutes to seconds
+	c.SetSameSite(http.SameSiteLaxMode)
+	c.SetCookie("access_token", response.AccessToken, accessTokenMaxAge, "/api", "", h.config.Server.Environment == "production", true)
+
 	// Set refresh token as HttpOnly cookie
 	maxAge := h.config.JWT.RefreshTokenExpiry * 3600 // convert hours to seconds
+	c.SetSameSite(http.SameSiteLaxMode)
 	c.SetCookie(
 		"refresh_token",
 		refreshToken,
 		maxAge,
-		"/api/v1/auth",
+		"/api",
 		"",
 		h.config.Server.Environment == "production", // Secure flag (HTTPS only in production)
 		true, // HttpOnly
@@ -148,11 +160,16 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 		return
 	}
 
-	// Get access token from Authorization header for blacklisting
+	// Get access token from Authorization header or cookie for blacklisting
 	accessToken := ""
 	authHeader := c.GetHeader("Authorization")
 	if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
 		accessToken = authHeader[7:]
+	}
+	if accessToken == "" {
+		if cookie, cookieErr := c.Cookie("access_token"); cookieErr == nil {
+			accessToken = cookie
+		}
 	}
 
 	reqLogger.Info("logout attempt")
@@ -166,18 +183,30 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 		// Don't fail logout even if there's an error
 	}
 
+	// Clear access token cookie
+	c.SetSameSite(http.SameSiteLaxMode)
+	c.SetCookie("access_token", "", -1, "/api", "", h.config.Server.Environment == "production", true)
+
 	// Clear refresh token cookie
+	c.SetSameSite(http.SameSiteLaxMode)
 	c.SetCookie(
 		"refresh_token",
 		"",
 		-1, // MaxAge -1 deletes the cookie
-		"/api/v1/auth",
+		"/api",
 		"",
 		h.config.Server.Environment == "production",
 		true, // HttpOnly
 	)
 
 	reqLogger.Info("logout successful")
+
+	// Extract user ID if available from JWT context
+	logoutUserID := ""
+	if uid, exists := c.Get("user_id"); exists {
+		logoutUserID = uid.(string)
+	}
+	audit.LogSecurityFromContext(c, audit.EventLogout, "success", logoutUserID)
 
 	c.JSON(http.StatusOK, dto.MessageResponse{
 		Message: "Successfully logged out",
@@ -221,11 +250,16 @@ func (h *AuthHandler) LogoutAll(c *gin.Context) {
 	reqLogger = reqLogger.With(zap.String("user_id", userID.String()))
 	reqLogger.Info("logout all attempt")
 
-	// Get access token from Authorization header for blacklisting
+	// Get access token from Authorization header or cookie for blacklisting
 	accessToken := ""
 	authHeader := c.GetHeader("Authorization")
 	if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
 		accessToken = authHeader[7:]
+	}
+	if accessToken == "" {
+		if cookie, cookieErr := c.Cookie("access_token"); cookieErr == nil {
+			accessToken = cookie
+		}
 	}
 
 	// Perform logout all (also blacklists all tokens)
@@ -243,12 +277,19 @@ func (h *AuthHandler) LogoutAll(c *gin.Context) {
 
 	reqLogger.Info("logout all successful")
 
+	audit.LogSecurityFromContext(c, audit.EventLogoutAll, "success", userID.String())
+
+	// Clear access token cookie
+	c.SetSameSite(http.SameSiteLaxMode)
+	c.SetCookie("access_token", "", -1, "/api", "", h.config.Server.Environment == "production", true)
+
 	// Clear current refresh token cookie
+	c.SetSameSite(http.SameSiteLaxMode)
 	c.SetCookie(
 		"refresh_token",
 		"",
 		-1,
-		"/api/v1/auth",
+		"/api",
 		"",
 		h.config.Server.Environment == "production",
 		true,
@@ -309,13 +350,21 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 
 	reqLogger.Info("refresh token successful")
 
+	audit.LogSecurityFromContext(c, audit.EventTokenRefresh, "success", "")
+
+	// Set new access token as HttpOnly cookie
+	accessTokenMaxAge := h.config.JWT.AccessTokenExpiry * 60 // convert minutes to seconds
+	c.SetSameSite(http.SameSiteLaxMode)
+	c.SetCookie("access_token", response.AccessToken, accessTokenMaxAge, "/api", "", h.config.Server.Environment == "production", true)
+
 	// Set new refresh token cookie
 	maxAge := h.config.JWT.RefreshTokenExpiry * 3600 // convert hours to seconds
+	c.SetSameSite(http.SameSiteLaxMode)
 	c.SetCookie(
 		"refresh_token",
 		newRefreshToken,
 		maxAge,
-		"/api/v1/auth",
+		"/api",
 		"",
 		h.config.Server.Environment == "production",
 		true, // HttpOnly
@@ -366,6 +415,7 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 		)
 
 		if err == sharedErrors.ErrUnauthorized {
+			audit.LogSecurityFromContextWithDetails(c, audit.EventPasswordChange, "failure", userID.String(), "invalid old password", nil)
 			c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
 				Error:   "INVALID_OLD_PASSWORD",
 				Message: "Invalid old password",
@@ -373,6 +423,7 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 			return
 		}
 
+		audit.LogSecurityFromContextWithDetails(c, audit.EventPasswordChange, "failure", userID.String(), err.Error(), nil)
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
 			Error:   "PASSWORD_CHANGE_FAILED",
 			Message: err.Error(),
@@ -380,13 +431,21 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 		return
 	}
 
+	audit.LogSecurityFromContext(c, audit.EventPasswordChange, "success", userID.String())
+
+	// Set new access token as HttpOnly cookie
+	accessTokenMaxAge := h.config.JWT.AccessTokenExpiry * 60
+	c.SetSameSite(http.SameSiteLaxMode)
+	c.SetCookie("access_token", response.AccessToken, accessTokenMaxAge, "/api", "", h.config.Server.Environment == "production", true)
+
 	// Set new refresh token cookie
 	maxAge := h.config.JWT.RefreshTokenExpiry * 3600
+	c.SetSameSite(http.SameSiteLaxMode)
 	c.SetCookie(
 		"refresh_token",
 		newRefreshToken,
 		maxAge,
-		"/api/v1/auth",
+		"/api",
 		"",
 		h.config.Server.Environment == "production",
 		true,

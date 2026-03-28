@@ -1,4 +1,4 @@
-import { CourseCatalog, AvailableCourse, EnrollmentProgramResponse, Faculty, Department } from '@/lib/types';
+import type { CourseCatalog, AvailableCourse, EnrollmentProgramResponse, Faculty, Department } from '@/lib/types';
 
 // DEU Fakülte ve Bölüm Yapısı
 export const mockFaculties: Faculty[] = [

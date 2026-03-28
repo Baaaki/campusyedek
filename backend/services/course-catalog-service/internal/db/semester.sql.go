@@ -48,11 +48,11 @@ func (q *Queries) CountSemesterCourses(ctx context.Context, arg CountSemesterCou
 
 const createSemesterCourse = `-- name: CreateSemesterCourse :one
 INSERT INTO semester_courses (
-    semester, course_code, credits, class_level, instructor_id,
+    semester, course_code, department, credits, class_level, instructor_id,
     instructor_fullname, classroom_location, max_capacity, assessment_schema, prerequisites
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-RETURNING id, semester, course_code, credits, class_level, instructor_id,
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+RETURNING id, semester, course_code, department, credits, class_level, instructor_id,
           instructor_fullname, classroom_location, max_capacity, assessment_schema, prerequisites,
           created_at, updated_at
 `
@@ -60,6 +60,7 @@ RETURNING id, semester, course_code, credits, class_level, instructor_id,
 type CreateSemesterCourseParams struct {
 	Semester           string      `json:"semester"`
 	CourseCode         string      `json:"course_code"`
+	Department         string      `json:"department"`
 	Credits            int16       `json:"credits"`
 	ClassLevel         int16       `json:"class_level"`
 	InstructorID       pgtype.UUID `json:"instructor_id"`
@@ -74,6 +75,7 @@ type CreateSemesterCourseRow struct {
 	ID                 pgtype.UUID      `json:"id"`
 	Semester           string           `json:"semester"`
 	CourseCode         string           `json:"course_code"`
+	Department         string           `json:"department"`
 	Credits            int16            `json:"credits"`
 	ClassLevel         int16            `json:"class_level"`
 	InstructorID       pgtype.UUID      `json:"instructor_id"`
@@ -90,6 +92,7 @@ func (q *Queries) CreateSemesterCourse(ctx context.Context, arg CreateSemesterCo
 	row := q.db.QueryRow(ctx, createSemesterCourse,
 		arg.Semester,
 		arg.CourseCode,
+		arg.Department,
 		arg.Credits,
 		arg.ClassLevel,
 		arg.InstructorID,
@@ -104,6 +107,7 @@ func (q *Queries) CreateSemesterCourse(ctx context.Context, arg CreateSemesterCo
 		&i.ID,
 		&i.Semester,
 		&i.CourseCode,
+		&i.Department,
 		&i.Credits,
 		&i.ClassLevel,
 		&i.InstructorID,
@@ -129,7 +133,7 @@ func (q *Queries) DeleteSemesterCourse(ctx context.Context, id pgtype.UUID) erro
 }
 
 const getSemesterCourseByID = `-- name: GetSemesterCourseByID :one
-SELECT id, semester, course_code, credits, class_level, instructor_id,
+SELECT id, semester, course_code, department, credits, class_level, instructor_id,
        instructor_fullname, classroom_location, max_capacity, assessment_schema, prerequisites,
        created_at, updated_at
 FROM semester_courses
@@ -146,6 +150,7 @@ type GetSemesterCourseByIDRow struct {
 	ID                 pgtype.UUID      `json:"id"`
 	Semester           string           `json:"semester"`
 	CourseCode         string           `json:"course_code"`
+	Department         string           `json:"department"`
 	Credits            int16            `json:"credits"`
 	ClassLevel         int16            `json:"class_level"`
 	InstructorID       pgtype.UUID      `json:"instructor_id"`
@@ -165,6 +170,7 @@ func (q *Queries) GetSemesterCourseByID(ctx context.Context, arg GetSemesterCour
 		&i.ID,
 		&i.Semester,
 		&i.CourseCode,
+		&i.Department,
 		&i.Credits,
 		&i.ClassLevel,
 		&i.InstructorID,
@@ -180,7 +186,7 @@ func (q *Queries) GetSemesterCourseByID(ctx context.Context, arg GetSemesterCour
 }
 
 const getSemesterCourseBySemesterAndCode = `-- name: GetSemesterCourseBySemesterAndCode :one
-SELECT id, semester, course_code, credits, class_level, instructor_id,
+SELECT id, semester, course_code, department, credits, class_level, instructor_id,
        instructor_fullname, classroom_location, max_capacity, assessment_schema, prerequisites,
        created_at, updated_at
 FROM semester_courses
@@ -197,6 +203,7 @@ type GetSemesterCourseBySemesterAndCodeRow struct {
 	ID                 pgtype.UUID      `json:"id"`
 	Semester           string           `json:"semester"`
 	CourseCode         string           `json:"course_code"`
+	Department         string           `json:"department"`
 	Credits            int16            `json:"credits"`
 	ClassLevel         int16            `json:"class_level"`
 	InstructorID       pgtype.UUID      `json:"instructor_id"`
@@ -216,6 +223,7 @@ func (q *Queries) GetSemesterCourseBySemesterAndCode(ctx context.Context, arg Ge
 		&i.ID,
 		&i.Semester,
 		&i.CourseCode,
+		&i.Department,
 		&i.Credits,
 		&i.ClassLevel,
 		&i.InstructorID,
@@ -314,7 +322,7 @@ func (q *Queries) GetTeacherCourses(ctx context.Context, arg GetTeacherCoursesPa
 }
 
 const listSemesterCourses = `-- name: ListSemesterCourses :many
-SELECT sc.id, sc.semester, sc.course_code, cc.name as course_name, sc.credits, sc.class_level,
+SELECT sc.id, sc.semester, sc.course_code, sc.department, cc.name as course_name, sc.credits, sc.class_level,
        sc.instructor_id, sc.instructor_fullname, sc.classroom_location, sc.max_capacity,
        sc.assessment_schema
 FROM semester_courses sc
@@ -344,6 +352,7 @@ type ListSemesterCoursesRow struct {
 	ID                 pgtype.UUID `json:"id"`
 	Semester           string      `json:"semester"`
 	CourseCode         string      `json:"course_code"`
+	Department         string      `json:"department"`
 	CourseName         string      `json:"course_name"`
 	Credits            int16       `json:"credits"`
 	ClassLevel         int16       `json:"class_level"`
@@ -376,6 +385,7 @@ func (q *Queries) ListSemesterCourses(ctx context.Context, arg ListSemesterCours
 			&i.ID,
 			&i.Semester,
 			&i.CourseCode,
+			&i.Department,
 			&i.CourseName,
 			&i.Credits,
 			&i.ClassLevel,

@@ -46,6 +46,13 @@ func (r *SemesterStatusRepository) ListSemesters(ctx context.Context) ([]db.Seme
 	return r.queries.ListSemesters(ctx)
 }
 
+// HasActiveSemester checks if any semester is currently active.
+// INVARIANT: Only one semester can be active at any given time.
+// A new semester cannot be activated until the current active one is completed.
+func (r *SemesterStatusRepository) HasActiveSemester(ctx context.Context) (bool, error) {
+	return r.queries.HasActiveSemester(ctx)
+}
+
 func (r *SemesterStatusRepository) ActivateSemester(ctx context.Context, id uuid.UUID) (db.Semester, error) {
 	return r.queries.ActivateSemester(ctx, utils.UUIDToPgtype(id))
 }
@@ -102,4 +109,39 @@ func (r *SemesterStatusRepository) IsSemesterActive(ctx context.Context, semeste
 	}
 
 	return true, nil
+}
+
+// GetSemesterStatus returns the status of a semester by name.
+func (r *SemesterStatusRepository) GetSemesterStatus(ctx context.Context, semesterName string) (db.SemesterStatus, error) {
+	semester, err := r.queries.GetSemesterByName(ctx, semesterName)
+	if err != nil {
+		return "", err
+	}
+	return semester.Status, nil
+}
+
+// SemesterInfo contains the essential semester data needed by other services.
+type SemesterInfo struct {
+	Name           string
+	Status         string
+	HardDeadline   time.Time
+	IsPastDeadline bool
+}
+
+// GetSemesterInfo returns semester info including hard_deadline for enforcement by other services.
+func (r *SemesterStatusRepository) GetSemesterInfo(ctx context.Context, semesterName string) (*SemesterInfo, error) {
+	semester, err := r.queries.GetSemesterByName(ctx, semesterName)
+	if err != nil {
+		return nil, err
+	}
+
+	hardDeadline := utils.PgTimestamptzToTime(semester.HardDeadline)
+	isPast := time.Now().After(hardDeadline)
+
+	return &SemesterInfo{
+		Name:           semester.Name,
+		Status:         string(semester.Status),
+		HardDeadline:   hardDeadline,
+		IsPastDeadline: isPast,
+	}, nil
 }

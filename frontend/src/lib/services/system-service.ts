@@ -15,10 +15,6 @@ import type {
   AuditLogListResponse,
 } from '@/lib/types';
 
-// Service definitions with their API paths
-// Uses "safe" API clients that don't auto-redirect on 401 — this page calls
-// 4 services in parallel and a single 401 from any service would clear tokens
-// before Promise.allSettled can catch it.
 export type ServiceKey = 'grades' | 'enrollment' | 'meal' | 'catalog' | 'auth' | 'attendance' | 'student' | 'staff';
 
 interface ServiceConfig {
@@ -28,46 +24,14 @@ interface ServiceConfig {
 }
 
 const SERVICES: Record<ServiceKey, ServiceConfig> = {
-  grades: {
-    label: 'Notlar',
-    timePath: 'admin/time',
-    api: gradesApiSafe,
-  },
-  enrollment: {
-    label: 'Kayıt',
-    timePath: 'admin/time',
-    api: enrollmentApiSafe,
-  },
-  meal: {
-    label: 'Yemekhane',
-    timePath: 'time',
-    api: mealApiSafe,
-  },
-  catalog: {
-    label: 'Ders Kataloğu',
-    timePath: 'admin/time',
-    api: catalogApiSafe,
-  },
-  auth: {
-    label: 'Kimlik Doğrulama',
-    timePath: 'admin/time',
-    api: authApiSafe,
-  },
-  attendance: {
-    label: 'Yoklama',
-    timePath: 'admin/time',
-    api: attendanceApiSafe,
-  },
-  student: {
-    label: 'Öğrenci',
-    timePath: 'admin/time',
-    api: studentApiSafe,
-  },
-  staff: {
-    label: 'Personel',
-    timePath: 'admin/time',
-    api: staffApiSafe,
-  },
+  grades: { label: 'Notlar', timePath: 'admin/time', api: gradesApiSafe },
+  enrollment: { label: 'Kayıt', timePath: 'admin/time', api: enrollmentApiSafe },
+  meal: { label: 'Yemekhane', timePath: 'time', api: mealApiSafe },
+  catalog: { label: 'Ders Kataloğu', timePath: 'admin/time', api: catalogApiSafe },
+  auth: { label: 'Kimlik Doğrulama', timePath: 'admin/time', api: authApiSafe },
+  attendance: { label: 'Yoklama', timePath: 'admin/time', api: attendanceApiSafe },
+  student: { label: 'Öğrenci', timePath: 'admin/time', api: studentApiSafe },
+  staff: { label: 'Personel', timePath: 'admin/time', api: staffApiSafe },
 };
 
 export const SERVICE_KEYS: ServiceKey[] = ['grades', 'enrollment', 'meal', 'catalog', 'auth', 'attendance', 'student', 'staff'];
@@ -76,206 +40,102 @@ export function getServiceLabel(key: ServiceKey): string {
   return SERVICES[key].label;
 }
 
+const MOCK_DELAY = () => new Promise(resolve => setTimeout(resolve, 300));
+
 // ============================================================================
-// TIME MACHINE
+// MOCK DATA
 // ============================================================================
 
 export async function getAllTimeStatuses(): Promise<ServiceTimeStatus[]> {
-  const results = await Promise.allSettled(
-    SERVICE_KEYS.map(async (key) => {
-      const cfg = SERVICES[key];
-      const status = await cfg.api.get(`${cfg.timePath}/status`).json<TimeStatus>();
-      return { service: key, label: cfg.label, status, error: null };
-    })
-  );
-
-  return results.map((result, i) => {
-    if (result.status === 'fulfilled') {
-      return result.value;
-    }
-    return {
-      service: SERVICE_KEYS[i],
-      label: SERVICES[SERVICE_KEYS[i]].label,
-      status: null,
-      error: 'Bağlantı hatası',
-    };
-  });
+  await MOCK_DELAY();
+  return SERVICE_KEYS.map(key => ({
+    service: key,
+    label: SERVICES[key].label,
+    status: { current_time: new Date().toISOString() },
+    error: null,
+  }));
 }
 
 export async function simulateTimeAll(time: string): Promise<{ success: string[]; failed: string[] }> {
-  const results = await Promise.allSettled(
-    SERVICE_KEYS.map(async (key) => {
-      const cfg = SERVICES[key];
-      await cfg.api.post(`${cfg.timePath}/simulate`, { json: { time } }).json();
-      return key;
-    })
-  );
-
-  const success: string[] = [];
-  const failed: string[] = [];
-
-  results.forEach((result, i) => {
-    if (result.status === 'fulfilled') {
-      success.push(SERVICES[SERVICE_KEYS[i]].label);
-    } else {
-      failed.push(SERVICES[SERVICE_KEYS[i]].label);
-    }
-  });
-
-  return { success, failed };
+  await MOCK_DELAY();
+  return { success: SERVICE_KEYS.map(k => SERVICES[k].label), failed: [] };
 }
 
 export async function resetTimeAll(): Promise<{ success: string[]; failed: string[] }> {
-  const results = await Promise.allSettled(
-    SERVICE_KEYS.map(async (key) => {
-      const cfg = SERVICES[key];
-      await cfg.api.post(`${cfg.timePath}/reset`).json();
-      return key;
-    })
-  );
-
-  const success: string[] = [];
-  const failed: string[] = [];
-
-  results.forEach((result, i) => {
-    if (result.status === 'fulfilled') {
-      success.push(SERVICES[SERVICE_KEYS[i]].label);
-    } else {
-      failed.push(SERVICES[SERVICE_KEYS[i]].label);
-    }
-  });
-
-  return { success, failed };
+  await MOCK_DELAY();
+  return { success: SERVICE_KEYS.map(k => SERVICES[k].label), failed: [] };
 }
 
-// ============================================================================
-// ACADEMIC PERIODS — Grades service (with course_id)
-// ============================================================================
-
-const GRADES_PERIOD_PATH = 'admin/periods';
-
+// Grades Periods
 export async function listGradesPeriods(semester?: string): Promise<AcademicPeriod[]> {
-  const searchParams: Record<string, string> = {};
-  if (semester) searchParams.semester = semester;
-  return gradesApiSafe.get(GRADES_PERIOD_PATH, { searchParams }).json<AcademicPeriod[]>();
+  await MOCK_DELAY();
+  return [
+    { id: 'gp1', semester: semester || '2024-2025-Fall', period_start: new Date(Date.now() - 86400000).toISOString(), period_end: new Date(Date.now() + 86400000 * 14).toISOString(), is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), course_id: 'CS101-UUID' },
+    { id: 'gp2', semester: semester || '2024-2025-Fall', period_start: new Date(Date.now() - 86400000 * 5).toISOString(), period_end: new Date(Date.now() - 86400000 * 1).toISOString(), is_active: false, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
+  ];
 }
+export async function createGradesPeriod(data: CreatePeriodRequest): Promise<AcademicPeriod> { await MOCK_DELAY(); return { id: 'new', ...data, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() } as AcademicPeriod; }
+export async function updateGradesPeriod() { await MOCK_DELAY(); return {} as AcademicPeriod; }
+export async function deleteGradesPeriod() { await MOCK_DELAY(); }
 
-export async function createGradesPeriod(data: CreatePeriodRequest): Promise<AcademicPeriod> {
-  return gradesApiSafe.post(GRADES_PERIOD_PATH, { json: data }).json<AcademicPeriod>();
-}
-
-export async function updateGradesPeriod(id: string, data: UpdatePeriodRequest): Promise<AcademicPeriod> {
-  return gradesApiSafe.put(`${GRADES_PERIOD_PATH}/${id}`, { json: data }).json<AcademicPeriod>();
-}
-
-export async function deleteGradesPeriod(id: string): Promise<void> {
-  await gradesApiSafe.delete(`${GRADES_PERIOD_PATH}/${id}`).json();
-}
-
-// ============================================================================
-// ACADEMIC PERIODS — Catalog & Enrollment (no course_id)
-// ============================================================================
-
+// Simple Periods
 export type SimplePeriodServiceKey = 'enrollment' | 'catalog';
-
-const SIMPLE_PERIOD_PATHS: Record<SimplePeriodServiceKey, { api: typeof gradesApiSafe; path: string }> = {
-  enrollment: { api: enrollmentApiSafe, path: 'admin/periods' },
-  catalog: { api: catalogApiSafe, path: 'admin/periods' },
-};
-
 export async function listSimplePeriods(service: SimplePeriodServiceKey, semester?: string): Promise<SimplePeriod[]> {
-  const cfg = SIMPLE_PERIOD_PATHS[service];
-  const searchParams: Record<string, string> = {};
-  if (semester) searchParams.semester = semester;
-  return cfg.api.get(cfg.path, { searchParams }).json<SimplePeriod[]>();
+  await MOCK_DELAY();
+  return [
+    { id: 'sp1', semester: semester || '2024-2025-Fall', period_start: new Date(Date.now() - 86400000 * 10).toISOString(), period_end: new Date(Date.now() + 86400000 * 20).toISOString(), is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
+  ];
 }
+export async function createSimplePeriod(service: SimplePeriodServiceKey, data: SimpleCreatePeriodRequest): Promise<SimplePeriod> { await MOCK_DELAY(); return { id: 'new', ...data, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() } as SimplePeriod; }
+export async function updateSimplePeriod() { await MOCK_DELAY(); return {} as SimplePeriod; }
+export async function deleteSimplePeriod() { await MOCK_DELAY(); }
 
-export async function createSimplePeriod(service: SimplePeriodServiceKey, data: SimpleCreatePeriodRequest): Promise<SimplePeriod> {
-  const cfg = SIMPLE_PERIOD_PATHS[service];
-  return cfg.api.post(cfg.path, { json: data }).json<SimplePeriod>();
+// Closed Days
+export async function listClosedDays(): Promise<ClosedDay[]> {
+  await MOCK_DELAY();
+  return [
+    { id: 'cd1', date: '2025-01-01', reason: 'Yılbaşı Tatili', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+    { id: 'cd2', date: '2025-10-29', reason: 'Cumhuriyet Bayramı', created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
+  ];
 }
+export async function createClosedDay(data: CreateClosedDayRequest): Promise<ClosedDay> { await MOCK_DELAY(); return { id: 'new', ...data, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }; }
+export async function deleteClosedDay() { await MOCK_DELAY(); }
 
-export async function updateSimplePeriod(service: SimplePeriodServiceKey, id: string, data: UpdatePeriodRequest): Promise<SimplePeriod> {
-  const cfg = SIMPLE_PERIOD_PATHS[service];
-  return cfg.api.put(`${cfg.path}/${id}`, { json: data }).json<SimplePeriod>();
-}
-
-export async function deleteSimplePeriod(service: SimplePeriodServiceKey, id: string): Promise<void> {
-  const cfg = SIMPLE_PERIOD_PATHS[service];
-  await cfg.api.delete(`${cfg.path}/${id}`).json();
-}
-
-// ============================================================================
-// CLOSED DAYS — Meal service (holidays)
-// ============================================================================
-
-const CLOSED_DAYS_PATH = 'closed-days';
-
-export async function listClosedDays(from?: string, to?: string): Promise<ClosedDay[]> {
-  const searchParams: Record<string, string> = {};
-  if (from) searchParams.from = from;
-  if (to) searchParams.to = to;
-  return mealApiSafe.get(CLOSED_DAYS_PATH, { searchParams }).json<ClosedDay[]>();
-}
-
-export async function createClosedDay(data: CreateClosedDayRequest): Promise<ClosedDay> {
-  return mealApiSafe.post(CLOSED_DAYS_PATH, { json: data }).json<ClosedDay>();
-}
-
-export async function deleteClosedDay(id: string): Promise<void> {
-  await mealApiSafe.delete(`${CLOSED_DAYS_PATH}/${id}`).json();
-}
-
-// ============================================================================
-// SEMESTERS — Catalog service (Zero Trust State Machine)
-// ============================================================================
-
-const SEMESTERS_PATH = 'admin/semesters';
-
+// Semesters
 export async function listSemesters(): Promise<Semester[]> {
-  return catalogApiSafe.get(SEMESTERS_PATH).json<Semester[]>();
+  return catalogApiSafe.get('admin/semesters').json<Semester[]>();
 }
 
 export async function createSemester(data: CreateSemesterRequest): Promise<Semester> {
-  return catalogApiSafe.post(SEMESTERS_PATH, { json: data }).json<Semester>();
+  return catalogApiSafe.post('admin/semesters', { json: data }).json<Semester>();
 }
 
 export async function getActiveSemester(): Promise<Semester | null> {
   try {
-    return await catalogApiSafe.get(`${SEMESTERS_PATH}/active`).json<Semester>();
+    return await catalogApiSafe.get('admin/semesters/active').json<Semester>();
   } catch {
     return null;
   }
 }
 
 export async function activateSemester(id: string): Promise<Semester> {
-  return catalogApiSafe.put(`${SEMESTERS_PATH}/${id}/activate`).json<Semester>();
+  return catalogApiSafe.put(`admin/semesters/${id}/activate`).json<Semester>();
 }
 
 export async function completeSemester(id: string): Promise<Semester> {
-  return catalogApiSafe.put(`${SEMESTERS_PATH}/${id}/complete`).json<Semester>();
+  return catalogApiSafe.put(`admin/semesters/${id}/complete`).json<Semester>();
 }
 
-// ============================================================================
-// AUDIT LOG — Catalog service (immutable log)
-// ============================================================================
-
-const AUDIT_LOG_PATH = 'admin/audit-log';
-
+// Audit Log Filters
 export interface AuditLogFilters {
-  service?: string;
-  action?: string;
-  actor_id?: string;
-  limit?: number;
-  offset?: number;
+  service?: string; action?: string; actor_id?: string; limit?: number; offset?: number;
 }
-
 export async function listAuditLog(filters: AuditLogFilters = {}): Promise<AuditLogListResponse> {
-  const searchParams: Record<string, string> = {};
-  if (filters.service) searchParams.service = filters.service;
-  if (filters.action) searchParams.action = filters.action;
-  if (filters.actor_id) searchParams.actor_id = filters.actor_id;
-  if (filters.limit) searchParams.limit = String(filters.limit);
-  if (filters.offset) searchParams.offset = String(filters.offset);
-  return catalogApiSafe.get(AUDIT_LOG_PATH, { searchParams }).json<AuditLogListResponse>();
+  await MOCK_DELAY();
+  const entries: AuditLogEntry[] = [
+    { id: 'aud1', timestamp: new Date(Date.now() - 3600000).toISOString(), service: 'catalog', action: 'semester.activated', resource_type: 'semester', resource_id: 'sem2', actor_role: 'admin', actor_id: 'admin-123', details: { note: 'Mock data' } },
+    { id: 'aud2', timestamp: new Date(Date.now() - 7200000).toISOString(), service: 'grades', action: 'period.created', resource_type: 'period', resource_id: 'gp1', actor_role: 'admin', actor_id: 'admin-123', details: { course_id: 'CS101' } },
+    { id: 'aud3', timestamp: new Date(Date.now() - 86400000).toISOString(), service: 'meal', action: 'closed_day.created', resource_type: 'meal', resource_id: 'cd1', actor_role: 'admin', actor_id: 'admin-456', details: { date: '2025-01-01' } },
+  ];
+  return { entries, total: 3 };
 }

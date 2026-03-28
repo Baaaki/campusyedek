@@ -1,9 +1,10 @@
+// Backend: auth-service/internal/dto/auth_dto.go
+
 export interface User {
   id: string;
   email: string;
-  role: 'student' | 'staff' | 'admin';
-  created_at?: string;
-  updated_at?: string;
+  role: 'student' | 'teacher' | 'admin';
+  department?: string;
 }
 
 export interface LoginRequest {
@@ -11,18 +12,39 @@ export interface LoginRequest {
   password: string;
 }
 
-export interface RegisterRequest {
-  email: string;
-  password: string;
-  role?: 'student' | 'staff';
+export interface LoginResponse {
+  access_token: string;
+  expires_in: number;
+  user: User;
+  force_password_change: boolean;
+  message?: string;
 }
 
-export interface AuthResponse {
-  token: string;
-  user: User;
+export interface ChangePasswordRequest {
+  old_password: string;
+  new_password: string;
+}
+
+export interface ChangePasswordResponse {
+  message: string;
+  access_token: string;
+  expires_in: number;
+}
+
+export interface Session {
+  id: string;
+  device_info?: string;
+  ip_address?: string;
+  created_at: string;
+  last_used_at: string;
+  is_current: boolean;
+}
+
+export interface SessionsResponse {
+  sessions: Session[];
 }
 
 export interface AuthError {
-  message: string;
-  code?: string;
+  error: string;
+  message?: string;
 }

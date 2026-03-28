@@ -5,10 +5,11 @@ interface AuthGuardProps {
 }
 
 export function AuthGuard({ allowedRoles }: AuthGuardProps) {
-  const token = localStorage.getItem('access_token');
   const userStr = localStorage.getItem('user');
 
-  if (!token || !userStr) {
+  // User info in localStorage is for UI routing only.
+  // Actual auth is enforced server-side via httpOnly cookie.
+  if (!userStr) {
     return <Navigate to="/auth/login" replace />;
   }
 

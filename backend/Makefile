@@ -1,7 +1,7 @@
-.PHONY: dev dev-all stop stop-all logs help \
+.PHONY: dev dev-all stop stop-all logs help docs \
         dev-auth dev-staff dev-student dev-course dev-enrollment dev-attendance dev-grades dev-meal dev-payment \
         stop-auth stop-staff stop-student stop-course stop-enrollment stop-attendance stop-grades stop-meal stop-payment \
-        infra infra-down status
+        infra infra-down status clean-logs rotate-logs ensure-watchdog
 
 # Use bash for proper shell features
 SHELL := /bin/bash
@@ -31,8 +31,8 @@ NC := \033[0m
 # Start all services
 dev: dev-all
 
-dev-all:
-	@mkdir -p $(LOG_DIR)
+dev-all: ensure-watchdog
+	@$(MAKE) rotate-logs --no-print-directory
 	@echo -e "$(GREEN)🚀 Starting all backend services...$(NC)"
 	@for service in $(SERVICES); do \
 		echo -e "$(BLUE)  Starting $$service...$(NC)"; \
@@ -44,7 +44,7 @@ dev-all:
 	done
 	@sleep 2
 	@echo ""
-	@echo -e "$(GREEN)✅ All services started!$(NC)"
+	@echo -e "$(GREEN)✅ All services started! (log watchdog: max 5MB per service, checks every 10s)$(NC)"
 	@echo ""
 	@$(MAKE) status --no-print-directory
 
@@ -53,6 +53,11 @@ stop: stop-all
 
 stop-all:
 	@echo -e "$(RED)🛑 Stopping all backend services...$(NC)"
+	@# Stop log watchdog
+	@if [ -f $(LOG_DIR)/log-watchdog.pid ]; then \
+		kill $$(cat $(LOG_DIR)/log-watchdog.pid) 2>/dev/null || true; \
+		rm -f $(LOG_DIR)/log-watchdog.pid; \
+	fi
 	@for service in $(SERVICES) $(GRPC_SERVICES); do \
 		if [ -f $(LOG_DIR)/$$service.pid ]; then \
 			pid=$$(cat $(LOG_DIR)/$$service.pid); \
@@ -93,6 +98,41 @@ status:
 # 📝 LOGS
 # ============================================
 
+# Max log file size: 5MB, trim to 3MB when exceeded
+LOG_MAX_BYTES := 5242880
+LOG_TRIM_BYTES := 3145728
+
+# Start log watchdog if not already running (checks every 10s, trims at 5MB)
+ensure-watchdog:
+	@mkdir -p $(LOG_DIR)
+	@if [ -f $(LOG_DIR)/log-watchdog.pid ] && kill -0 $$(cat $(LOG_DIR)/log-watchdog.pid) 2>/dev/null; then \
+		true; \
+	else \
+		nohup bash -c 'while true; do sleep 10; for f in $(LOG_DIR)/*.log; do \
+			[ -f "$$f" ] || continue; \
+			s=$$(stat -c%s "$$f" 2>/dev/null || echo 0); \
+			[ "$$s" -gt $(LOG_MAX_BYTES) ] && tail -c $(LOG_TRIM_BYTES) "$$f" > "$$f.tmp" && mv "$$f.tmp" "$$f"; \
+		done; done' > /dev/null 2>&1 & echo $$! > $(LOG_DIR)/log-watchdog.pid; \
+	fi
+
+# Trim all log files exceeding 5MB
+rotate-logs:
+	@for logfile in $(LOG_DIR)/*.log; do \
+		if [ -f "$$logfile" ]; then \
+			size=$$(stat -c%s "$$logfile" 2>/dev/null || echo 0); \
+			if [ "$$size" -gt $(LOG_MAX_BYTES) ]; then \
+				tail -c $(LOG_TRIM_BYTES) "$$logfile" > "$$logfile.tmp" && mv "$$logfile.tmp" "$$logfile"; \
+				echo -e "  $(YELLOW)Trimmed $$(basename $$logfile)$(NC) ($$(( size / 1024 ))KB -> $$(( $(LOG_TRIM_BYTES) / 1024 ))KB)"; \
+			fi; \
+		fi; \
+	done
+
+# Delete all log files
+clean-logs:
+	@echo -e "$(YELLOW)🧹 Cleaning all logs...$(NC)"
+	@rm -f $(LOG_DIR)/*.log
+	@echo -e "$(GREEN)✅ All logs cleaned$(NC)"
+
 logs:
 	@tail -f $(LOG_DIR)/*.log
 
@@ -127,56 +167,47 @@ logs-payment:
 # 🔧 INDIVIDUAL SERVICES
 # ============================================
 
-dev-auth:
-	@mkdir -p $(LOG_DIR)
+dev-auth: ensure-watchdog
 	@echo -e "$(GREEN)🚀 Starting auth-service...$(NC)"
 	@cd $(SERVICES_DIR)/auth-service && nohup air > $(LOG_DIR)/auth-service.log 2>&1 & echo $$! > $(LOG_DIR)/auth-service.pid
 	@echo -e "$(GREEN)✅ auth-service started (logs: make logs-auth)$(NC)"
 
-dev-staff:
-	@mkdir -p $(LOG_DIR)
+dev-staff: ensure-watchdog
 	@echo -e "$(GREEN)🚀 Starting staff-service...$(NC)"
 	@cd $(SERVICES_DIR)/staff-service && nohup air > $(LOG_DIR)/staff-service.log 2>&1 & echo $$! > $(LOG_DIR)/staff-service.pid
 	@echo -e "$(GREEN)✅ staff-service started (logs: make logs-staff)$(NC)"
 
-dev-student:
-	@mkdir -p $(LOG_DIR)
+dev-student: ensure-watchdog
 	@echo -e "$(GREEN)🚀 Starting student-service...$(NC)"
 	@cd $(SERVICES_DIR)/student-service && nohup air > $(LOG_DIR)/student-service.log 2>&1 & echo $$! > $(LOG_DIR)/student-service.pid
 	@echo -e "$(GREEN)✅ student-service started (logs: make logs-student)$(NC)"
 
-dev-course:
-	@mkdir -p $(LOG_DIR)
+dev-course: ensure-watchdog
 	@echo -e "$(GREEN)🚀 Starting course-catalog-service...$(NC)"
 	@cd $(SERVICES_DIR)/course-catalog-service && nohup air > $(LOG_DIR)/course-catalog-service.log 2>&1 & echo $$! > $(LOG_DIR)/course-catalog-service.pid
 	@echo -e "$(GREEN)✅ course-catalog-service started (logs: make logs-course)$(NC)"
 
-dev-enrollment:
-	@mkdir -p $(LOG_DIR)
+dev-enrollment: ensure-watchdog
 	@echo -e "$(GREEN)🚀 Starting enrollment-service...$(NC)"
 	@cd $(SERVICES_DIR)/enrollment-service && nohup air > $(LOG_DIR)/enrollment-service.log 2>&1 & echo $$! > $(LOG_DIR)/enrollment-service.pid
 	@echo -e "$(GREEN)✅ enrollment-service started (logs: make logs-enrollment)$(NC)"
 
-dev-attendance:
-	@mkdir -p $(LOG_DIR)
+dev-attendance: ensure-watchdog
 	@echo -e "$(GREEN)🚀 Starting attendance-service...$(NC)"
 	@cd $(SERVICES_DIR)/attendance-service && nohup air > $(LOG_DIR)/attendance-service.log 2>&1 & echo $$! > $(LOG_DIR)/attendance-service.pid
 	@echo -e "$(GREEN)✅ attendance-service started (logs: make logs-attendance)$(NC)"
 
-dev-grades:
-	@mkdir -p $(LOG_DIR)
+dev-grades: ensure-watchdog
 	@echo -e "$(GREEN)🚀 Starting grades-service...$(NC)"
 	@cd $(SERVICES_DIR)/grades-service && nohup air > $(LOG_DIR)/grades-service.log 2>&1 & echo $$! > $(LOG_DIR)/grades-service.pid
 	@echo -e "$(GREEN)✅ grades-service started (logs: make logs-grades)$(NC)"
 
-dev-meal:
-	@mkdir -p $(LOG_DIR)
+dev-meal: ensure-watchdog
 	@echo -e "$(GREEN)🚀 Starting meal-service...$(NC)"
 	@cd $(SERVICES_DIR)/meal-service && nohup air > $(LOG_DIR)/meal-service.log 2>&1 & echo $$! > $(LOG_DIR)/meal-service.pid
 	@echo -e "$(GREEN)✅ meal-service started (logs: make logs-meal)$(NC)"
 
-dev-payment:
-	@mkdir -p $(LOG_DIR)
+dev-payment: ensure-watchdog
 	@echo -e "$(GREEN)🚀 Starting payment-service (gRPC)...$(NC)"
 	@cd $(SERVICES_DIR)/payment-service && nohup air > $(LOG_DIR)/payment-service.log 2>&1 & echo $$! > $(LOG_DIR)/payment-service.pid
 	@echo -e "$(GREEN)✅ payment-service started on port 50051 (logs: make logs-payment)$(NC)"
@@ -231,6 +262,14 @@ infra-down:
 	@cd $(BACKEND_DIR)/infrastructure && $(MAKE) down
 
 # ============================================
+# 📚 API DOCS
+# ============================================
+
+docs:
+	@echo -e "$(GREEN)📚 Serving API docs at http://localhost:8090/swagger-ui.html$(NC)"
+	@cd $(BACKEND_DIR)/docs && python3 serve.py 8090
+
+# ============================================
 # 🆘 HELP
 # ============================================
 
@@ -248,6 +287,8 @@ help:
 	@echo ""
 	@echo -e "$(YELLOW)📝 Log Commands:$(NC)"
 	@echo "  make logs            Tail all service logs"
+	@echo "  make rotate-logs     Trim logs exceeding 5MB"
+	@echo "  make clean-logs      Delete all log files"
 	@echo "  make logs-auth       Tail auth-service logs"
 	@echo "  make logs-staff      Tail staff-service logs"
 	@echo "  make logs-student    Tail student-service logs"
@@ -277,4 +318,7 @@ help:
 	@echo -e "$(GREEN)🏗️ Infrastructure:$(NC)"
 	@echo "  make infra           Start infrastructure (postgres, redis, rabbitmq)"
 	@echo "  make infra-down      Stop infrastructure"
+	@echo ""
+	@echo -e "$(BLUE)📚 Documentation:$(NC)"
+	@echo "  make docs            Serve API docs (Swagger UI) at http://localhost:8090"
 	@echo ""

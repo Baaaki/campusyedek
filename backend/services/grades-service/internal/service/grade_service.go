@@ -11,6 +11,7 @@ import (
 	"github.com/baaaki/mydreamcampus/grades-service/internal/errors"
 	"github.com/baaaki/mydreamcampus/grades-service/internal/repository"
 	"github.com/baaaki/mydreamcampus/shared/audit"
+	"github.com/baaaki/mydreamcampus/shared/client"
 	"github.com/baaaki/mydreamcampus/shared/clock"
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	sharedRepo "github.com/baaaki/mydreamcampus/shared/repository"
@@ -34,6 +35,7 @@ type GradeService struct {
 	outboxRepo       *repository.OutboxRepository
 	periodRepo       *sharedRepo.PeriodRepository
 	auditLogger      audit.Logger
+	semesterClient   *client.SemesterClient
 }
 
 func NewGradeService(
@@ -45,6 +47,7 @@ func NewGradeService(
 	outboxRepo *repository.OutboxRepository,
 	periodRepo *sharedRepo.PeriodRepository,
 	auditLogger audit.Logger,
+	semesterClient *client.SemesterClient,
 ) *GradeService {
 	return &GradeService{
 		pool:             pool,
@@ -55,6 +58,7 @@ func NewGradeService(
 		outboxRepo:       outboxRepo,
 		periodRepo:       periodRepo,
 		auditLogger:      auditLogger,
+		semesterClient:   semesterClient,
 	}
 }
 
@@ -789,6 +793,12 @@ func (s *GradeService) ProcessAppeal(ctx context.Context, req dto.AppealScoreReq
 		return nil, errors.ErrCourseNotFound
 	}
 
+	// Hard deadline check — admin appeal is still blocked after semester ends
+	editResult := s.checkCanEditGrade(ctx, completedCourse.Semester, nil, false, true)
+	if !editResult.Allowed {
+		return nil, errors.ErrGradingPeriodEnded
+	}
+
 	// 2. Parse existing assessment scores
 	var scores map[string]float64
 	if err := json.Unmarshal(completedCourse.AssessmentScores, &scores); err != nil {
@@ -942,6 +952,11 @@ func (s *GradeService) UnlockScore(ctx context.Context, registrationID uuid.UUID
 		return errors.ErrScoreNotFound
 	}
 
+	// Hard deadline check — even admin unlock is blocked after semester ends
+	if err := s.checkHardDeadlineByRegistration(ctx, registrationID); err != nil {
+		return err
+	}
+
 	if err := s.scoreRepo.UnlockScore(ctx, registrationID, slug); err != nil {
 		logger.Error("failed to unlock score", zap.Error(err))
 		return err
@@ -960,6 +975,11 @@ func (s *GradeService) LockScore(ctx context.Context, registrationID uuid.UUID, 
 		return errors.ErrScoreNotFound
 	}
 
+	// Hard deadline check — even admin lock is blocked after semester ends
+	if err := s.checkHardDeadlineByRegistration(ctx, registrationID); err != nil {
+		return err
+	}
+
 	if err := s.scoreRepo.LockScore(ctx, registrationID, slug); err != nil {
 		logger.Error("failed to lock score", zap.Error(err))
 		return err
@@ -972,23 +992,63 @@ func (s *GradeService) LockScore(ctx context.Context, registrationID uuid.UUID, 
 	return nil
 }
 
+// checkHardDeadlineByRegistration fetches the semester from a registration and checks hard_deadline.
+func (s *GradeService) checkHardDeadlineByRegistration(ctx context.Context, registrationID uuid.UUID) error {
+	if s.semesterClient == nil {
+		return nil
+	}
+
+	reg, err := s.registrationRepo.GetRegistrationByID(ctx, registrationID)
+	if err != nil {
+		return nil // graceful degradation
+	}
+
+	semesterInfo, err := s.semesterClient.GetSemesterInfo(ctx, reg.Semester)
+	if err != nil {
+		return nil // graceful degradation
+	}
+
+	if clock.Now().After(semesterInfo.HardDeadline) {
+		return errors.ErrGradingPeriodEnded
+	}
+
+	return nil
+}
+
 // ============================================
 // Grading Period Check
 // ============================================
 
-// checkCanEditGrade checks the 3-layer lock model: score lock + deadline + admin override.
+// checkCanEditGrade checks the 4-layer lock model: hard_deadline + score lock + deadline + admin override.
 // If no active period is defined, grading is allowed (no deadline enforced).
+// Semester enforcement: checks hard_deadline + admin bypass + period window.
+// Admin can override period but NOT hard_deadline.
+// See: docs/semester-wizard-plan.md
 func (s *GradeService) checkCanEditGrade(ctx context.Context, semester string, courseID *uuid.UUID, isLocked bool, isAdmin bool) rules.GradeEditResult {
+	// Fetch hard_deadline from catalog service
+	var hardDeadline *time.Time
+	if s.semesterClient != nil {
+		semesterInfo, err := s.semesterClient.GetSemesterInfo(ctx, semester)
+		if err == nil {
+			hardDeadline = &semesterInfo.HardDeadline
+		} else {
+			logger.Warn("failed to fetch semester info for hard_deadline check",
+				zap.String("semester", semester),
+				zap.Error(err),
+			)
+		}
+	}
+
 	period, err := s.periodRepo.GetEffectiveDeadline(ctx, semester, courseID)
 	if err != nil {
-		// No period defined — still check is_locked
-		if isLocked && !isAdmin {
-			return rules.GradeEditResult{
-				Allowed: false,
-				Reason:  "score is locked — admin must unlock it first",
-			}
-		}
-		return rules.GradeEditResult{Allowed: true, Reason: "no grading period defined — allowed by default"}
+		// No period defined — still check hard_deadline and is_locked
+		return rules.CanEditGrade(rules.GradeEditParams{
+			IsLocked:         isLocked,
+			GlobalDeadline:   clock.Now().Add(24 * time.Hour), // far future fallback — no period constraint
+			OverrideDeadline: nil,
+			IsAdminAction:    isAdmin,
+			HardDeadline:     hardDeadline,
+		})
 	}
 
 	var overrideDeadline *time.Time
@@ -1003,6 +1063,7 @@ func (s *GradeService) checkCanEditGrade(ctx context.Context, semester string, c
 				GlobalDeadline:   globalPeriod.PeriodEnd,
 				OverrideDeadline: overrideDeadline,
 				IsAdminAction:    isAdmin,
+				HardDeadline:     hardDeadline,
 			})
 		}
 	}
@@ -1012,5 +1073,6 @@ func (s *GradeService) checkCanEditGrade(ctx context.Context, semester string, c
 		GlobalDeadline:   period.PeriodEnd,
 		OverrideDeadline: nil,
 		IsAdminAction:    isAdmin,
+		HardDeadline:     hardDeadline,
 	})
 }

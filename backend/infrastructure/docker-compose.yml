@@ -10,8 +10,6 @@
 #   docker-compose down          # Stop all services
 #   docker-compose logs -f       # View logs
 
-version: '3.9'
-
 services:
   # PostgreSQL - Auth Service Database
   postgres-auth:
@@ -27,7 +25,8 @@ services:
     ports:
       - "5432:5432"
     networks:
-      - mydreamcampus-network
+      - db-network
+      - app-network
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 10s
@@ -53,7 +52,8 @@ services:
     ports:
       - "5433:5432"
     networks:
-      - mydreamcampus-network
+      - db-network
+      - app-network
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 10s
@@ -79,7 +79,8 @@ services:
     ports:
       - "5434:5432"
     networks:
-      - mydreamcampus-network
+      - db-network
+      - app-network
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 10s
@@ -105,7 +106,8 @@ services:
     ports:
       - "5435:5432"
     networks:
-      - mydreamcampus-network
+      - db-network
+      - app-network
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 10s
@@ -131,7 +133,8 @@ services:
     ports:
       - "5436:5432"
     networks:
-      - mydreamcampus-network
+      - db-network
+      - app-network
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 10s
@@ -157,7 +160,8 @@ services:
     ports:
       - "5437:5432"
     networks:
-      - mydreamcampus-network
+      - db-network
+      - app-network
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 10s
@@ -183,7 +187,8 @@ services:
     ports:
       - "5438:5432"
     networks:
-      - mydreamcampus-network
+      - db-network
+      - app-network
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 10s
@@ -209,7 +214,8 @@ services:
     ports:
       - "5439:5432"
     networks:
-      - mydreamcampus-network
+      - db-network
+      - app-network
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 10s
@@ -223,7 +229,7 @@ services:
 
   # RabbitMQ - Message Broker
   rabbitmq:
-    image: rabbitmq:4.0-management-alpine
+    image: rabbitmq:4.2-management-alpine
     container_name: mydreamcampus-rabbitmq
     restart: unless-stopped
     environment:
@@ -236,7 +242,8 @@ services:
       - "5672:5672" # AMQP
       - "15672:15672" # Management UI
     networks:
-      - mydreamcampus-network
+      - mq-network
+      - app-network
     healthcheck:
       test: [ "CMD", "rabbitmq-diagnostics", "ping" ]
       interval: 10s
@@ -250,17 +257,20 @@ services:
 
   # Redis - Cache
   redis:
-    image: redis:7.2-alpine
+    image: redis:8-alpine
     container_name: mydreamcampus-redis
     restart: unless-stopped
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
     volumes:
       - redis_data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
     ports:
       - "6379:6379"
     networks:
-      - mydreamcampus-network
+      - cache-network
+      - app-network
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -272,19 +282,19 @@ services:
 
   # Traefik - API Gateway / Reverse Proxy
   traefik:
-    image: traefik:v3.2
+    image: traefik:v3.6
     container_name: mydreamcampus-traefik
     restart: unless-stopped
     ports:
-      - "80:80" # HTTP
-      - "8080:8080" # Dashboard
+      - "80:80" # HTTP (redirects to HTTPS in production)
+      - "443:443" # HTTPS
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
       - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
       - traefik_logs:/var/log/traefik
     networks:
-      - mydreamcampus-network
+      - app-network
     extra_hosts:
       - "host.docker.internal:host-gateway" # Allow access to host machine
     healthcheck:
@@ -299,8 +309,17 @@ services:
         max-file: "3"
 
 networks:
-  mydreamcampus-network:
+  app-network:
     driver: bridge
+  db-network:
+    driver: bridge
+    internal: true
+  cache-network:
+    driver: bridge
+    internal: true
+  mq-network:
+    driver: bridge
+    internal: true
 
 volumes:
   postgres_auth_data:

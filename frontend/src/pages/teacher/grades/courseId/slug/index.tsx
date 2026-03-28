@@ -255,7 +255,7 @@ export default function GradeEntryPage() {
         <AlertCircle className="h-12 w-12 text-red-500" />
         <p className="text-red-600 dark:text-red-400">{error}</p>
         <Link
-          href="/teacher/grades"
+          to="/teacher/grades"
           className="text-sm text-blue-600 hover:underline dark:text-blue-400"
         >
           Not Girme sayfasına dön
@@ -270,7 +270,7 @@ export default function GradeEntryPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
           <Link
-            href="/teacher/grades"
+            to="/teacher/grades"
             className="inline-flex items-center gap-1 text-sm text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
           >
             <ArrowLeft className="h-4 w-4" />
