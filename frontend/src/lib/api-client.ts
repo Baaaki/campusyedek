@@ -16,6 +16,31 @@ function attachCSRFToken(request: Request): void {
   }
 }
 
+// Single-flight refresh: if multiple in-flight requests hit 401 concurrently,
+// they should all wait on one /auth/refresh call rather than racing.
+let refreshInFlight: Promise<boolean> | null = null;
+
+async function refreshAccessToken(): Promise<boolean> {
+  if (refreshInFlight) return refreshInFlight;
+  refreshInFlight = (async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      return res.ok;
+    } catch {
+      return false;
+    } finally {
+      // Reset on next tick so concurrent callers in the same microtask batch share this result.
+      setTimeout(() => {
+        refreshInFlight = null;
+      }, 0);
+    }
+  })();
+  return refreshInFlight;
+}
+
 // Create ky instance with default configuration
 const apiClient = ky.create({
   prefixUrl: API_BASE_URL,
@@ -53,22 +78,38 @@ const apiClient = ky.create({
     ],
     afterResponse: [
       async (request, _options, response) => {
-        // Handle 401 Unauthorized - token expired
-        if (response.status === 401) {
-          // Don't redirect on auth endpoints (401 = wrong credentials, not expired session)
-          const url = new URL(request.url);
-          if (url.pathname.includes('/auth/login') || url.pathname.includes('/auth/refresh')) {
-            return response;
-          }
+        if (response.status !== 401) return response;
 
+        // Don't try to refresh on the auth endpoints themselves —
+        // 401 there means the credentials/refresh token are bad.
+        const url = new URL(request.url);
+        if (url.pathname.includes('/auth/login') || url.pathname.includes('/auth/refresh')) {
+          return response;
+        }
+
+        // Avoid infinite retry loops: if we already retried this request, give up.
+        if (request.headers.get('X-Refresh-Retry') === '1') {
           if (typeof window !== 'undefined') {
-            // Clear UI-only localStorage data
             localStorage.removeItem('user');
-            // Redirect to login
             window.location.href = '/auth/login';
           }
+          return response;
         }
-        return response;
+
+        const refreshed = await refreshAccessToken();
+        if (!refreshed) {
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('user');
+            window.location.href = '/auth/login';
+          }
+          return response;
+        }
+
+        // Replay the original request with a marker so afterResponse won't loop.
+        const retryRequest = request.clone();
+        retryRequest.headers.set('X-Refresh-Retry', '1');
+        attachCSRFToken(retryRequest);
+        return fetch(retryRequest);
       },
     ],
   },

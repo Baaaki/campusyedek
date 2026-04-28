@@ -29,12 +29,13 @@ const (
 
 // Claims represents JWT claims structure
 type Claims struct {
-	UserID       string `json:"user_id"`
-	Role         string `json:"role"`
-	Department   string `json:"department,omitempty"`
-	TokenVersion int    `json:"token_version"`
-	TokenType    string `json:"token_type"`
-	JTI          string `json:"jti,omitempty"` // JWT ID for token blacklisting/revocation
+	UserID              string `json:"user_id"`
+	Role                string `json:"role"`
+	Department          string `json:"department,omitempty"`
+	TokenVersion        int    `json:"token_version"`
+	TokenType           string `json:"token_type"`
+	JTI                 string `json:"jti,omitempty"` // JWT ID for token blacklisting/revocation
+	ForcePasswordChange bool   `json:"force_password_change,omitempty"`
 	jwt.RegisteredClaims
 }
 

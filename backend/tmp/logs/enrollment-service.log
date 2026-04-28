@@ -22,22 +22,22 @@ watching sql/queries
 !exclude tmp
 building...
 running...
-10:31:48.388	[34mINFO[0m	cmd/main.go:43	starting enrollment-service	{"environment": "development", "port": "8005"}
-10:31:48.400	[34mINFO[0m	cmd/main.go:57	database connection established
-10:31:48.400	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
-10:31:48.403	[34mINFO[0m	redis/redis.go:41	redis connection established
-10:31:48.403	[34mINFO[0m	cmd/main.go:68	Redis connection established
-10:31:48.405	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
-10:31:48.407	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
-10:31:48.407	[34mINFO[0m	cmd/main.go:79	RabbitMQ connection established
-10:31:48.407	[34mINFO[0m	cmd/main.go:299	RabbitMQ exchange declared	{"exchange": "enrollment.events"}
-10:31:48.420	[34mINFO[0m	cmd/main.go:339	RabbitMQ queue bindings created	{"queue": "enrollment.events", "bindings": ["course.events", "student.events"]}
-10:31:48.432	[34mINFO[0m	cmd/main.go:364	downstream consumer queues pre-declared
-10:31:48.432	[34mINFO[0m	worker/event_consumer.go:58	starting event consumer
-10:31:48.432	[34mINFO[0m	worker/outbox_worker.go:39	starting outbox worker	{"interval": "5s", "batch_size": 10}
-10:31:48.432	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "enrollment.events"}
-10:31:48.432	[34mINFO[0m	worker/event_consumer.go:69	event consumer started successfully
-10:31:48.432	[34mINFO[0m	cmd/main.go:158	rate limiter configured
+13:36:48.555	[34mINFO[0m	cmd/main.go:43	starting enrollment-service	{"environment": "development", "port": "8005"}
+13:36:48.577	[34mINFO[0m	cmd/main.go:57	database connection established
+13:36:48.577	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+13:36:48.581	[34mINFO[0m	redis/redis.go:41	redis connection established
+13:36:48.581	[34mINFO[0m	cmd/main.go:68	Redis connection established
+13:36:48.581	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+13:36:48.590	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+13:36:48.590	[34mINFO[0m	cmd/main.go:79	RabbitMQ connection established
+13:36:48.590	[34mINFO[0m	cmd/main.go:299	RabbitMQ exchange declared	{"exchange": "enrollment.events"}
+13:36:48.618	[34mINFO[0m	cmd/main.go:339	RabbitMQ queue bindings created	{"queue": "enrollment.events", "bindings": ["course.events", "student.events"]}
+13:36:48.630	[34mINFO[0m	cmd/main.go:364	downstream consumer queues pre-declared
+13:36:48.630	[34mINFO[0m	worker/event_consumer.go:58	starting event consumer
+13:36:48.630	[34mINFO[0m	worker/outbox_worker.go:39	starting outbox worker	{"interval": "5s", "batch_size": 10}
+13:36:48.630	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "enrollment.events"}
+13:36:48.630	[34mINFO[0m	worker/event_consumer.go:69	event consumer started successfully
+13:36:48.630	[34mINFO[0m	cmd/main.go:158	rate limiter configured
 [GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
  - using env:	export GIN_MODE=release
  - using code:	gin.SetMode(gin.ReleaseMode)
@@ -60,9 +60,24 @@ running...
 [GIN-debug] PUT    /api/enrollment/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*SimplePeriodHandler).UpdatePeriod-fm (10 handlers)
 [GIN-debug] DELETE /api/enrollment/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*SimplePeriodHandler).DeletePeriod-fm (10 handlers)
 [GIN-debug] POST   /api/enrollment/internal/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandler).CreatePeriod-fm (7 handlers)
-10:31:48.432	[34mINFO[0m	cmd/main.go:181	server starting	{"port": "8005"}
-10:32:53.449	[35mDEBUG[0m	rabbitmq/consumer.go:71	message received	{"queue": "enrollment.events", "routing_key": "course.semester.created", "body_size": 776}
-10:32:53.449	[34mINFO[0m	worker/event_consumer.go:75	received event
-10:32:53.457	[34mINFO[0m	worker/event_consumer.go:140	processing course.semester.created event	{"event_id": "8082c8e0-3af5-4809-9846-754d700d6b90", "course_id": "019d335c-2663-763f-bd50-54f164a0afec"}
-10:32:53.472	[34mINFO[0m	worker/event_consumer.go:145	course semester created event processed successfully	{"service": "EventService", "method": "HandleCourseSemesterCreated", "event_id": "8082c8e0-3af5-4809-9846-754d700d6b90", "semester_course_id": "019d335c-2663-763f-bd50-54f164a0afec"}
-10:32:53.472	[34mINFO[0m	worker/event_consumer.go:154	course.semester.created event processed successfully	{"event_id": "8082c8e0-3af5-4809-9846-754d700d6b90"}
+[GIN-debug] DELETE /api/enrollment/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandler).DeletePeriodBySemester-fm (7 handlers)
+[GIN-debug] PUT    /api/enrollment/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandler).UpdatePeriodBySemester-fm (7 handlers)
+13:36:48.630	[34mINFO[0m	cmd/main.go:181	server starting	{"port": "8005"}
+23:04:49.549	[31mERROR[0m	rabbitmq/connection.go:94	rabbitmq connection lost	{"error": "Exception (320) Reason: \"CONNECTION_FORCED - broker forced connection closure with reason 'shutdown'\""}
+github.com/baaaki/mydreamcampus/shared/rabbitmq.(*Connection).handleReconnect
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/rabbitmq/connection.go:94
+23:04:49.549	[34mINFO[0m	rabbitmq/connection.go:99	attempting to reconnect to rabbitmq...
+23:04:54.549	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+23:04:54.550	[31mERROR[0m	rabbitmq/connection.go:103	rabbitmq reconnection failed	{"error": "failed to connect to rabbitmq: Exception (501) Reason: \"read tcp 127.0.0.1:55146->127.0.0.1:5672: read: connection reset by peer\""}
+github.com/baaaki/mydreamcampus/shared/rabbitmq.(*Connection).handleReconnect
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/rabbitmq/connection.go:103
+23:04:54.550	[34mINFO[0m	rabbitmq/connection.go:99	attempting to reconnect to rabbitmq...
+23:04:59.550	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+23:04:59.561	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+23:04:59.562	[34mINFO[0m	rabbitmq/connection.go:107	rabbitmq reconnection successful
+23:06:49.843	[31mERROR[0m	rabbitmq/connection.go:94	rabbitmq connection lost	{"error": "Exception (320) Reason: \"CONNECTION_FORCED - broker forced connection closure with reason 'shutdown'\""}
+github.com/baaaki/mydreamcampus/shared/rabbitmq.(*Connection).handleReconnect
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/rabbitmq/connection.go:94
+23:06:49.844	[34mINFO[0m	rabbitmq/connection.go:99	attempting to reconnect to rabbitmq...
+cleaning...
+see you again~

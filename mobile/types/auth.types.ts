@@ -14,10 +14,17 @@ export interface LoginRequest {
 
 export interface LoginResponse {
   access_token: string;
+  refresh_token: string;
   expires_in: number;
   user: User;
   force_password_change: boolean;
   message?: string;
+}
+
+export interface RefreshResponse {
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
 }
 
 export interface ChangePasswordRequest {
@@ -28,6 +35,7 @@ export interface ChangePasswordRequest {
 export interface ChangePasswordResponse {
   message: string;
   access_token: string;
+  refresh_token: string;
   expires_in: number;
 }
 

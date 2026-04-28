@@ -9,16 +9,18 @@ import (
 
 // Config holds all configuration for the course catalog service
 type Config struct {
-	Server            config.ServerConfig
-	Database          config.DatabaseConfig
-	RabbitMQ          config.RabbitMQConfig
-	Redis             config.RedisConfig
-	JWT               config.JWTConfig
-	StaffService      StaffServiceConfig
-	RateLimit         config.RateLimitConfig
-	EnrollmentService ServiceURLConfig
-	GradesService     ServiceURLConfig
-	AttendanceService ServiceURLConfig
+	Server                config.ServerConfig
+	Database              config.DatabaseConfig
+	RabbitMQ              config.RabbitMQConfig
+	Redis                 config.RedisConfig
+	JWT                   config.JWTConfig
+	StaffService          StaffServiceConfig
+	RateLimit             config.RateLimitConfig
+	InternalServiceSecret string
+	EnrollmentService     ServiceURLConfig
+	GradesService         ServiceURLConfig
+	AttendanceService     ServiceURLConfig
+	MealService           ServiceURLConfig
 }
 
 // StaffServiceConfig holds configuration for Staff Service integration
@@ -41,6 +43,7 @@ func Load() (*Config, error) {
 	viper.SetDefault("ENROLLMENT_SERVICE_URL", "http://localhost:"+config.EnrollmentServicePort)
 	viper.SetDefault("GRADES_SERVICE_URL", "http://localhost:"+config.GradesServicePort)
 	viper.SetDefault("ATTENDANCE_SERVICE_URL", "http://localhost:"+config.AttendanceServicePort)
+	viper.SetDefault("MEAL_SERVICE_URL", "http://localhost:"+config.MealServicePort)
 
 	// Setup Viper using shared helper
 	if err := config.SetupViper("course-catalog-service"); err != nil {
@@ -57,16 +60,18 @@ func Load() (*Config, error) {
 
 	// Build config struct
 	cfg := &Config{
-		Server:       server,
-		Database:     database,
-		RabbitMQ:     rabbitmq,
-		Redis:        redis,
-		JWT:          jwt,
-		StaffService: staffService,
-		RateLimit:    config.LoadRateLimitConfig(),
-		EnrollmentService: ServiceURLConfig{BaseURL: viper.GetString("ENROLLMENT_SERVICE_URL")},
-		GradesService:     ServiceURLConfig{BaseURL: viper.GetString("GRADES_SERVICE_URL")},
-		AttendanceService: ServiceURLConfig{BaseURL: viper.GetString("ATTENDANCE_SERVICE_URL")},
+		Server:                server,
+		Database:              database,
+		RabbitMQ:              rabbitmq,
+		Redis:                 redis,
+		JWT:                   jwt,
+		StaffService:          staffService,
+		RateLimit:             config.LoadRateLimitConfig(),
+		InternalServiceSecret: viper.GetString("INTERNAL_SERVICE_SECRET"),
+		EnrollmentService:     ServiceURLConfig{BaseURL: viper.GetString("ENROLLMENT_SERVICE_URL")},
+		GradesService:        ServiceURLConfig{BaseURL: viper.GetString("GRADES_SERVICE_URL")},
+		AttendanceService:    ServiceURLConfig{BaseURL: viper.GetString("ATTENDANCE_SERVICE_URL")},
+		MealService:          ServiceURLConfig{BaseURL: viper.GetString("MEAL_SERVICE_URL")},
 	}
 
 	// Validate config

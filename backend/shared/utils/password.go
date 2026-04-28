@@ -34,6 +34,61 @@ var DefaultParams = &Argon2Params{
 	KeyLength:   32,
 }
 
+// ErrWeakPassword is returned when a password fails policy checks.
+var ErrWeakPassword = errors.New("password does not meet policy: min 8 chars, at least one uppercase, one lowercase, one digit")
+
+// dummyHash is a real Argon2id hash of an unguessable random string,
+// computed once at startup. Use it via VerifyDummyPassword to keep
+// login response time uniform when the user does not exist, defeating
+// email enumeration via timing side-channel.
+var dummyHash string
+
+func init() {
+	// 32 random bytes is unguessable; the value never matches any real
+	// password and the resulting hash exercises the full Argon2id work
+	// factor that VerifyPassword would otherwise skip on a malformed hash.
+	random := make([]byte, 32)
+	if _, err := rand.Read(random); err != nil {
+		panic("failed to seed dummy password hash: " + err.Error())
+	}
+	h, err := HashPassword(base64.RawStdEncoding.EncodeToString(random))
+	if err != nil {
+		panic("failed to compute dummy password hash: " + err.Error())
+	}
+	dummyHash = h
+}
+
+// VerifyDummyPassword runs the full Argon2id verification against a
+// precomputed throwaway hash. Always returns false. Use on the
+// "user not found" branch of a login flow so the response time is
+// indistinguishable from the password-mismatch branch.
+func VerifyDummyPassword(password string) bool {
+	return VerifyPassword(dummyHash, password)
+}
+
+// ValidatePasswordPolicy enforces the password policy used across the system.
+// Frontend mirrors this rule; keep them in sync if you change it.
+func ValidatePasswordPolicy(password string) error {
+	if len(password) < 8 {
+		return ErrWeakPassword
+	}
+	var hasUpper, hasLower, hasDigit bool
+	for _, r := range password {
+		switch {
+		case r >= 'A' && r <= 'Z':
+			hasUpper = true
+		case r >= 'a' && r <= 'z':
+			hasLower = true
+		case r >= '0' && r <= '9':
+			hasDigit = true
+		}
+	}
+	if !hasUpper || !hasLower || !hasDigit {
+		return ErrWeakPassword
+	}
+	return nil
+}
+
 // HashPassword generates an Argon2id hash of the password
 // Returns format: $argon2id$v=19$m=65536,t=3,p=4$salt$hash
 func HashPassword(password string) (string, error) {

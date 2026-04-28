@@ -5,7 +5,9 @@ import { tr } from 'date-fns/locale';
 import {
   ShieldCheck, RefreshCw, Loader2, AlertTriangle, CalendarRange, Wand2,
   GraduationCap, BookOpen, ClipboardCheck, CalendarOff, Clock, Eye,
+  Trash2, Pencil
 } from 'lucide-react';
+
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,6 +15,10 @@ import { Badge } from '@/components/ui/badge';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import Toast from '@/components/enrollment/Toast';
 
 import type { Semester, SemesterStatus, AcademicPeriod, SimplePeriod, ClosedDay } from '@/lib/types';
@@ -21,6 +27,7 @@ import {
   listGradesPeriods,
   listSimplePeriods,
   listClosedDays,
+  deleteSemester,
 } from '@/lib/services/system-service';
 
 const STATUS_BADGE: Record<SemesterStatus, { label: string; className: string }> = {
@@ -98,6 +105,7 @@ export default function SemestersPage() {
   const [gradesPeriods, setGradesPeriods] = useState<AcademicPeriod[]>([]);
   const [enrollmentPeriods, setEnrollmentPeriods] = useState<SimplePeriod[]>([]);
   const [catalogPeriods, setCatalogPeriods] = useState<SimplePeriod[]>([]);
+  const [attendancePeriods, setAttendancePeriods] = useState<SimplePeriod[]>([]);
   const [closedDays, setClosedDays] = useState<ClosedDay[]>([]);
   const [periodsLoading, setPeriodsLoading] = useState(false);
   const [mockMode, setMockMode] = useState(false);
@@ -138,21 +146,24 @@ export default function SemestersPage() {
       setGradesPeriods([]);
       setEnrollmentPeriods([]);
       setCatalogPeriods([]);
+      setAttendancePeriods([]);
       setClosedDays([]);
       setMockAttendance(null);
       return;
     }
     setPeriodsLoading(true);
     try {
-      const [grades, enrollment, catalog, meals] = await Promise.allSettled([
+      const [grades, enrollment, catalog, attendance, meals] = await Promise.allSettled([
         listGradesPeriods(activeSemester.name),
         listSimplePeriods('enrollment', activeSemester.name),
         listSimplePeriods('catalog', activeSemester.name),
+        listSimplePeriods('attendance', activeSemester.name),
         listClosedDays(),
       ]);
       if (grades.status === 'fulfilled') setGradesPeriods(grades.value);
       if (enrollment.status === 'fulfilled') setEnrollmentPeriods(enrollment.value);
       if (catalog.status === 'fulfilled') setCatalogPeriods(catalog.value);
+      if (attendance.status === 'fulfilled') setAttendancePeriods(attendance.value);
       if (meals.status === 'fulfilled') setClosedDays(meals.value);
     } finally {
       setPeriodsLoading(false);
@@ -186,10 +197,31 @@ export default function SemestersPage() {
     }
   }, [mockMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Delete planned semester
+  const [deleteTarget, setDeleteTarget] = useState<Semester | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteSemester = useCallback(async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await deleteSemester(deleteTarget.id);
+      showToast(`${deleteTarget.name} dönemi silindi`, 'success');
+      setDeleteTarget(null);
+      fetchSemesters();
+    } catch {
+      showToast('Dönem silinemedi', 'error');
+    } finally {
+      setDeleting(false);
+    }
+  }, [deleteTarget, fetchSemesters, showToast]);
+
+
   // Helper: get the first (main) period for a simple period list
   const mainGradesPeriod = gradesPeriods.find(p => !p.course_id) || gradesPeriods[0];
   const mainEnrollmentPeriod = enrollmentPeriods[0];
   const mainCatalogPeriod = catalogPeriods[0];
+  const mainAttendancePeriod = attendancePeriods[0];
 
   return (
     <div className="space-y-6">
@@ -287,18 +319,19 @@ export default function SemestersPage() {
                   <TableHead>Hard Deadline</TableHead>
                   <TableHead>Aktifleştirilme</TableHead>
                   <TableHead>Oluşturulma</TableHead>
+                  <TableHead className="text-right">İşlemler</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-6">
+                    <TableCell colSpan={6} className="text-center py-6">
                       <Loader2 className="h-5 w-5 animate-spin mx-auto text-gray-400" />
                     </TableCell>
                   </TableRow>
                 ) : visibleSemesters.length === 0 && !expiredActiveSemester ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-6 text-gray-500">
+                    <TableCell colSpan={6} className="text-center py-6 text-gray-500">
                       Sistemde açık veya planlanan bir dönem bulunmuyor.
                     </TableCell>
                   </TableRow>
@@ -311,6 +344,7 @@ export default function SemestersPage() {
                         <TableCell className="text-sm line-through text-gray-400">{fmt(expiredActiveSemester.hard_deadline)}</TableCell>
                         <TableCell className="text-sm text-gray-500">{expiredActiveSemester.activated_at ? fmt(expiredActiveSemester.activated_at) : '—'}</TableCell>
                         <TableCell className="text-sm text-gray-500">{fmt(expiredActiveSemester.created_at)}</TableCell>
+                        <TableCell />
                       </TableRow>
                     )}
                     {visibleSemesters.map((sem) => {
@@ -322,6 +356,28 @@ export default function SemestersPage() {
                           <TableCell className="text-sm">{fmt(sem.hard_deadline)}</TableCell>
                           <TableCell className="text-sm text-gray-500 dark:text-gray-400">{sem.activated_at ? fmt(sem.activated_at) : '—'}</TableCell>
                           <TableCell className="text-sm text-gray-500 dark:text-gray-400">{fmt(sem.created_at)}</TableCell>
+                          <TableCell className="text-right">
+                            {sem.status === 'planned' && (
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => navigate(`/system/semesters/new?edit=${sem.id}`)}
+                                  className="h-8 w-8 p-0 text-gray-500 hover:text-blue-600"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setDeleteTarget(sem)}
+                                  className="h-8 w-8 p-0 text-gray-500 hover:text-red-600"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            )}
+                          </TableCell>
                         </TableRow>
                       );
                     })}
@@ -371,29 +427,56 @@ export default function SemestersPage() {
                   icon={<ClipboardCheck className="h-4 w-4" />}
                   label="Yoklama"
                   color="amber"
-                  period={mockAttendance}
-                  note="Yoklama periyodu wizard ile belirlenir"
+                  period={mainAttendancePeriod
+                    ? { start: mainAttendancePeriod.period_start, end: mainAttendancePeriod.period_end, active: mainAttendancePeriod.is_active }
+                    : mockAttendance}
                 />
 
                 {/* Closed Days — full width */}
                 <div className="md:col-span-2 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400">
-                      <CalendarOff className="h-4 w-4" />
-                    </div>
-                    <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400">
+                        <CalendarOff className="h-4 w-4" />
+                      </div>
                       <h4 className="font-medium text-sm">Yemekhane Kapalı Günler</h4>
                     </div>
+                    {closedDays.length > 0 && (
+                      <Badge variant="outline" className="text-xs">{closedDays.length} gün</Badge>
+                    )}
                   </div>
                   {closedDays.length === 0 ? (
                     <p className="text-sm text-gray-500 dark:text-gray-400">Tanımlı kapalı gün bulunamadı</p>
                   ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {closedDays.map((day) => (
-                        <Badge key={day.id} variant="secondary" className="text-xs">
-                          {format(new Date(day.date + 'T00:00:00'), 'dd MMM yyyy', { locale: tr })} — {day.reason}
-                        </Badge>
-                      ))}
+                    <div className="rounded-md border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-800">
+                      {[...closedDays]
+                        .sort((a, b) => a.date.localeCompare(b.date))
+                        .map((day) => {
+                          const d = new Date(day.date + 'T00:00:00');
+                          const isPast = d < new Date();
+                          return (
+                            <div
+                              key={day.id}
+                              className={`flex items-center px-3 py-2.5 text-sm ${isPast ? 'opacity-50' : ''}`}
+                            >
+                              <span className={`font-mono text-xs w-[85px] flex-shrink-0 ${
+                                isPast ? 'text-gray-400' : 'text-gray-600 dark:text-gray-300'
+                              }`}>
+                                {format(d, 'dd MMM yyyy', { locale: tr })}
+                              </span>
+                              <span className={`text-xs w-[80px] flex-shrink-0 ${
+                                isPast ? 'text-gray-400' : 'text-gray-400 dark:text-gray-500'
+                              }`}>
+                                {format(d, 'EEEE', { locale: tr })}
+                              </span>
+                              <span className={`flex-1 ${
+                                isPast ? 'text-gray-400' : 'text-gray-800 dark:text-gray-200'
+                              }`}>
+                                {day.reason}
+                              </span>
+                            </div>
+                          );
+                        })}
                     </div>
                   )}
                 </div>
@@ -402,6 +485,31 @@ export default function SemestersPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Dönemi Sil</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bu dönem ve tüm içeriği (dersler, periyotlar, kapalı günler) kalıcı olarak silinecek. Emin misiniz?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>İptal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteSemester}
+              disabled={deleting}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Sil
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+
 
       <Toast
         message={toast.message}

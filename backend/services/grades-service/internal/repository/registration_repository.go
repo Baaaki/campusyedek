@@ -32,6 +32,10 @@ func (r *RegistrationRepository) GetRegistrationsByCourse(ctx context.Context, c
 	return r.queries.GetRegistrationsByCourse(ctx, courseID)
 }
 
+func (r *RegistrationRepository) GetRegistrationsByIDs(ctx context.Context, ids []uuid.UUID) ([]db.GetRegistrationsByIDsRow, error) {
+	return r.queries.GetRegistrationsByIDs(ctx, ids)
+}
+
 func (r *RegistrationRepository) MarkAttendanceFailed(ctx context.Context, arg db.MarkAttendanceFailedParams) error {
 	return r.queries.MarkAttendanceFailed(ctx, arg)
 }
@@ -40,6 +44,14 @@ func (r *RegistrationRepository) CountRegistrationsByCourse(ctx context.Context,
 	return r.queries.CountRegistrationsByCourse(ctx, courseID)
 }
 
+func (r *RegistrationRepository) CountEligibleRegistrationsByCourse(ctx context.Context, courseID uuid.UUID) (int64, error) {
+	return r.queries.CountEligibleRegistrationsByCourse(ctx, courseID)
+}
+
 func (r *RegistrationRepository) DeleteRegistrationsByCourse(ctx context.Context, courseID uuid.UUID) error {
 	return r.queries.DeleteRegistrationsByCourse(ctx, courseID)
+}
+
+func (r *RegistrationRepository) GetActiveRegistrationsByStudent(ctx context.Context, studentID uuid.UUID) ([]db.GetActiveRegistrationsByStudentRow, error) {
+	return r.queries.GetActiveRegistrationsByStudent(ctx, studentID)
 }

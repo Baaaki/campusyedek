@@ -21,16 +21,12 @@ const (
 // Course Catalog Service Events
 const (
 	// Semester Course Events
-	EventCourseSemesterCreated         = "course.semester.created"
-	EventCourseSemesterUpdated         = "course.semester.updated"
-	EventCourseSemesterDeleted         = "course.semester.deleted"
-	EventCourseInstructorChanged       = "course.instructor.changed"
-	EventCourseScheduleChanged         = "course.schedule.changed"
-	EventCourseAssessmentSchemaChanged = "course.assessment.schema.changed"
+	EventCourseSemesterCreated = "course.semester.created"
+)
 
-	// Master Catalog Events
-	EventCourseCatalogCreated = "course.catalog.created"
-	EventCourseCatalogUpdated = "course.catalog.updated"
+// Grades Service Events
+const (
+	EventGradeStudentPrerequisitePassed = "grade.student.prerequisite.passed"
 )
 
 // Enrollment Service Events
@@ -39,6 +35,11 @@ const (
 	EventEnrollmentProgramApproved  = "enrollment.program.approved"
 	EventEnrollmentProgramRejected  = "enrollment.program.rejected"
 	EventEnrollmentProgramCancelled = "enrollment.program.cancelled"
+)
+
+// Attendance Service Events
+const (
+	EventAttendanceSemesterFailed = "attendance.semester.failed"
 )
 
 // ============================================================================
@@ -81,8 +82,6 @@ const (
 
 	// Course events routing keys
 	RoutingKeyCourseCreated = "course.*.created"
-	RoutingKeyCourseUpdated = "course.*.updated"
-	RoutingKeyCourseDeleted = "course.*.deleted"
 	RoutingKeyCourseAll     = "course.#"
 
 	// Enrollment events routing keys

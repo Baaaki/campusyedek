@@ -21,15 +21,15 @@ watching sql/queries
 !exclude tmp
 building...
 running...
-10:31:48.397	[34mINFO[0m	cmd/main.go:44	starting grades-service	{"environment": "development", "port": "8007"}
-10:31:48.405	[34mINFO[0m	cmd/main.go:56	database connection established
-10:31:48.406	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
-10:31:48.408	[34mINFO[0m	redis/redis.go:41	redis connection established
-10:31:48.408	[34mINFO[0m	cmd/main.go:74	rate limiter configured
-10:31:48.408	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
-10:31:48.411	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
-10:31:48.411	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
-10:31:48.411	[34mINFO[0m	cmd/main.go:267	RabbitMQ exchange declared	{"exchange": "grade.events"}
+13:36:48.558	[34mINFO[0m	cmd/main.go:44	starting grades-service	{"environment": "development", "port": "8007"}
+13:36:48.582	[34mINFO[0m	cmd/main.go:56	database connection established
+13:36:48.582	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+13:36:48.589	[34mINFO[0m	redis/redis.go:41	redis connection established
+13:36:48.589	[34mINFO[0m	cmd/main.go:74	rate limiter configured
+13:36:48.589	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+13:36:48.593	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+13:36:48.593	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
+13:36:48.594	[34mINFO[0m	cmd/main.go:267	RabbitMQ exchange declared	{"exchange": "grade.events"}
 [GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
  - using env:	export GIN_MODE=release
  - using code:	gin.SetMode(gin.ReleaseMode)
@@ -37,8 +37,6 @@ running...
 [GIN-debug] GET    /health                   --> main.setupRouter.func1 (6 handlers)
 [GIN-debug] GET    /api/grades/course/:course_id/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (10 handlers)
 [GIN-debug] GET    /api/grades/course/:course_id/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (10 handlers)
-10:31:48.411	[34mINFO[0m	worker/event_consumer.go:35	starting event consumer
-10:31:48.411	[34mINFO[0m	worker/outbox_worker.go:36	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
 [GIN-debug] POST   /api/grades/course/:course_id/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (10 handlers)
 [GIN-debug] POST   /api/grades/course/:course_id/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (10 handlers)
 [GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (9 handlers)
@@ -53,12 +51,1408 @@ running...
 [GIN-debug] GET    /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).ListPeriods-fm (10 handlers)
 [GIN-debug] PUT    /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).UpdatePeriod-fm (10 handlers)
 [GIN-debug] DELETE /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).DeletePeriod-fm (10 handlers)
-[GIN-debug] POST   /api/grades/internal/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).CreatePeriod-fm (10 handlers)
-10:31:48.411	[34mINFO[0m	cmd/main.go:150	server starting	{"port": "8007"}
-10:31:48.429	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
-10:31:48.458	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
-10:31:48.464	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
-10:31:48.469	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
-10:31:48.469	[34mINFO[0m	worker/event_consumer.go:101	event consumer started
-10:32:53.449	[35mDEBUG[0m	rabbitmq/consumer.go:71	message received	{"queue": "grades-service-course", "routing_key": "course.semester.created", "body_size": 776}
-10:32:53.449	[34mINFO[0m	worker/event_consumer.go:261	handling course.semester.created event	{"course_id": "019d335c-2663-763f-bd50-54f164a0afec"}
+[GIN-debug] POST   /api/grades/internal/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).CreatePeriod-fm (7 handlers)
+[GIN-debug] DELETE /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).DeletePeriodBySemester-fm (7 handlers)
+[GIN-debug] PUT    /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).UpdatePeriodBySemester-fm (7 handlers)
+13:36:48.594	[34mINFO[0m	worker/event_consumer.go:35	starting event consumer
+13:36:48.594	[34mINFO[0m	worker/outbox_worker.go:36	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
+13:36:48.594	[34mINFO[0m	cmd/main.go:150	server starting	{"port": "8007"}
+13:36:48.622	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
+13:36:48.627	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
+13:36:48.633	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
+13:36:48.638	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
+13:36:48.638	[34mINFO[0m	worker/event_consumer.go:97	event consumer started
+internal/worker/event_consumer.go has changed
+building...
+# github.com/baaaki/mydreamcampus/grades-service/internal/worker
+internal/worker/event_consumer.go:10:2: "github.com/baaaki/mydreamcampus/shared/events" imported and not used
+failed to build, error: exit status 1
+running...
+13:54:23.323	[34mINFO[0m	cmd/main.go:44	starting grades-service	{"environment": "development", "port": "8007"}
+13:54:23.328	[34mINFO[0m	cmd/main.go:56	database connection established
+13:54:23.328	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+13:54:23.329	[34mINFO[0m	redis/redis.go:41	redis connection established
+13:54:23.329	[34mINFO[0m	cmd/main.go:74	rate limiter configured
+13:54:23.329	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+13:54:23.332	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+13:54:23.332	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
+13:54:23.332	[34mINFO[0m	cmd/main.go:267	RabbitMQ exchange declared	{"exchange": "grade.events"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+13:54:23.332	[34mINFO[0m	worker/event_consumer.go:35	starting event consumer
+13:54:23.332	[34mINFO[0m	worker/outbox_worker.go:36	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (6 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (10 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (10 handlers)
+[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (9 handlers)
+[GIN-debug] GET    /api/grades/transcript/:student_id --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (9 handlers)
+[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/unlock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).UnlockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).CreatePeriod-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).ListPeriods-fm (10 handlers)
+[GIN-debug] PUT    /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).UpdatePeriod-fm (10 handlers)
+[GIN-debug] DELETE /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).DeletePeriod-fm (10 handlers)
+[GIN-debug] POST   /api/grades/internal/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).CreatePeriod-fm (7 handlers)
+[GIN-debug] DELETE /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).DeletePeriodBySemester-fm (7 handlers)
+[GIN-debug] PUT    /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).UpdatePeriodBySemester-fm (7 handlers)
+13:54:23.332	[34mINFO[0m	cmd/main.go:150	server starting	{"port": "8007"}
+13:54:23.347	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
+13:54:23.352	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
+13:54:23.358	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
+13:54:23.364	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
+13:54:23.364	[34mINFO[0m	worker/event_consumer.go:97	event consumer started
+internal/worker/event_consumer.go has changed
+building...
+running...
+13:54:28.889	[34mINFO[0m	cmd/main.go:44	starting grades-service	{"environment": "development", "port": "8007"}
+13:54:28.894	[34mINFO[0m	cmd/main.go:56	database connection established
+13:54:28.894	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+13:54:28.895	[34mINFO[0m	redis/redis.go:41	redis connection established
+13:54:28.895	[34mINFO[0m	cmd/main.go:74	rate limiter configured
+13:54:28.895	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+13:54:28.898	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+13:54:28.898	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
+13:54:28.898	[34mINFO[0m	cmd/main.go:267	RabbitMQ exchange declared	{"exchange": "grade.events"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+13:54:28.898	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+13:54:28.898	[34mINFO[0m	worker/outbox_worker.go:36	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (6 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (10 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (10 handlers)
+[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (9 handlers)
+[GIN-debug] GET    /api/grades/transcript/:student_id --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (9 handlers)
+[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/unlock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).UnlockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).CreatePeriod-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).ListPeriods-fm (10 handlers)
+[GIN-debug] PUT    /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).UpdatePeriod-fm (10 handlers)
+[GIN-debug] DELETE /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).DeletePeriod-fm (10 handlers)
+[GIN-debug] POST   /api/grades/internal/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).CreatePeriod-fm (7 handlers)
+[GIN-debug] DELETE /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).DeletePeriodBySemester-fm (7 handlers)
+[GIN-debug] PUT    /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).UpdatePeriodBySemester-fm (7 handlers)
+13:54:28.898	[34mINFO[0m	cmd/main.go:150	server starting	{"port": "8007"}
+13:54:28.915	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
+13:54:28.921	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
+13:54:28.929	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
+13:54:28.935	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
+13:54:28.935	[34mINFO[0m	worker/event_consumer.go:98	event consumer started
+internal/db/models.go has changed
+building...
+running...
+21:29:01.460	[34mINFO[0m	cmd/main.go:44	starting grades-service	{"environment": "development", "port": "8007"}
+21:29:01.465	[34mINFO[0m	cmd/main.go:56	database connection established
+21:29:01.465	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+21:29:01.466	[34mINFO[0m	redis/redis.go:41	redis connection established
+21:29:01.466	[34mINFO[0m	cmd/main.go:74	rate limiter configured
+21:29:01.466	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+21:29:01.468	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+21:29:01.468	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
+21:29:01.468	[34mINFO[0m	cmd/main.go:267	RabbitMQ exchange declared	{"exchange": "grade.events"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (6 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (10 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (10 handlers)
+[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (9 handlers)
+[GIN-debug] GET    /api/grades/transcript/:student_id --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (9 handlers)
+[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/unlock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).UnlockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (10 handlers)
+21:29:01.468	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+21:29:01.468	[34mINFO[0m	worker/outbox_worker.go:36	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
+[GIN-debug] POST   /api/grades/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).CreatePeriod-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).ListPeriods-fm (10 handlers)
+[GIN-debug] PUT    /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).UpdatePeriod-fm (10 handlers)
+[GIN-debug] DELETE /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).DeletePeriod-fm (10 handlers)
+[GIN-debug] POST   /api/grades/internal/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).CreatePeriod-fm (7 handlers)
+[GIN-debug] DELETE /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).DeletePeriodBySemester-fm (7 handlers)
+[GIN-debug] PUT    /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).UpdatePeriodBySemester-fm (7 handlers)
+21:29:01.468	[34mINFO[0m	cmd/main.go:150	server starting	{"port": "8007"}
+21:29:01.491	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
+21:29:01.496	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
+21:29:01.502	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
+21:29:01.508	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
+21:29:01.508	[34mINFO[0m	worker/event_consumer.go:98	event consumer started
+internal/repository/score_repository.go has changed
+building...
+running...
+21:29:18.128	[34mINFO[0m	cmd/main.go:44	starting grades-service	{"environment": "development", "port": "8007"}
+21:29:18.133	[34mINFO[0m	cmd/main.go:56	database connection established
+21:29:18.133	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+21:29:18.134	[34mINFO[0m	redis/redis.go:41	redis connection established
+21:29:18.134	[34mINFO[0m	cmd/main.go:74	rate limiter configured
+21:29:18.134	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+21:29:18.136	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+21:29:18.136	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
+21:29:18.136	[34mINFO[0m	cmd/main.go:267	RabbitMQ exchange declared	{"exchange": "grade.events"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+21:29:18.136	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (6 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (10 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (10 handlers)
+[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (9 handlers)
+[GIN-debug] GET    /api/grades/transcript/:student_id --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (9 handlers)
+[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/unlock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).UnlockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).CreatePeriod-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).ListPeriods-fm (10 handlers)
+[GIN-debug] PUT    /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).UpdatePeriod-fm (10 handlers)
+[GIN-debug] DELETE /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).DeletePeriod-fm (10 handlers)
+[GIN-debug] POST   /api/grades/internal/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).CreatePeriod-fm (7 handlers)
+[GIN-debug] DELETE /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).DeletePeriodBySemester-fm (7 handlers)
+[GIN-debug] PUT    /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).UpdatePeriodBySemester-fm (7 handlers)
+21:29:18.136	[34mINFO[0m	worker/outbox_worker.go:36	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
+21:29:18.137	[34mINFO[0m	cmd/main.go:150	server starting	{"port": "8007"}
+21:29:18.160	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
+21:29:18.166	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
+21:29:18.171	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
+21:29:18.177	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
+21:29:18.177	[34mINFO[0m	worker/event_consumer.go:98	event consumer started
+internal/errors/errors.go has changed
+building...
+running...
+21:29:28.030	[34mINFO[0m	cmd/main.go:44	starting grades-service	{"environment": "development", "port": "8007"}
+21:29:28.034	[34mINFO[0m	cmd/main.go:56	database connection established
+21:29:28.034	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+21:29:28.035	[34mINFO[0m	redis/redis.go:41	redis connection established
+21:29:28.035	[34mINFO[0m	cmd/main.go:74	rate limiter configured
+21:29:28.035	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+21:29:28.037	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+21:29:28.037	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
+21:29:28.038	[34mINFO[0m	cmd/main.go:267	RabbitMQ exchange declared	{"exchange": "grade.events"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (6 handlers)
+21:29:28.038	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+[GIN-debug] GET    /api/grades/course/:course_id/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (10 handlers)
+21:29:28.038	[34mINFO[0m	worker/outbox_worker.go:36	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
+[GIN-debug] GET    /api/grades/course/:course_id/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (10 handlers)
+[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (9 handlers)
+[GIN-debug] GET    /api/grades/transcript/:student_id --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (9 handlers)
+[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/unlock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).UnlockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).CreatePeriod-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).ListPeriods-fm (10 handlers)
+[GIN-debug] PUT    /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).UpdatePeriod-fm (10 handlers)
+[GIN-debug] DELETE /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).DeletePeriod-fm (10 handlers)
+[GIN-debug] POST   /api/grades/internal/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).CreatePeriod-fm (7 handlers)
+[GIN-debug] DELETE /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).DeletePeriodBySemester-fm (7 handlers)
+[GIN-debug] PUT    /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).UpdatePeriodBySemester-fm (7 handlers)
+21:29:28.038	[34mINFO[0m	cmd/main.go:150	server starting	{"port": "8007"}
+21:29:28.060	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
+21:29:28.065	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
+21:29:28.071	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
+21:29:28.076	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
+21:29:28.076	[34mINFO[0m	worker/event_consumer.go:98	event consumer started
+internal/db/students_cache.sql.go has changed
+building...
+running...
+21:30:37.911	[34mINFO[0m	cmd/main.go:44	starting grades-service	{"environment": "development", "port": "8007"}
+21:30:37.916	[34mINFO[0m	cmd/main.go:56	database connection established
+21:30:37.916	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+21:30:37.917	[34mINFO[0m	redis/redis.go:41	redis connection established
+21:30:37.917	[34mINFO[0m	cmd/main.go:74	rate limiter configured
+21:30:37.917	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+21:30:37.919	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+21:30:37.919	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
+21:30:37.919	[34mINFO[0m	cmd/main.go:267	RabbitMQ exchange declared	{"exchange": "grade.events"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (6 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (10 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (10 handlers)
+[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (9 handlers)
+[GIN-debug] GET    /api/grades/transcript/:student_id --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (9 handlers)
+[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/unlock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).UnlockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).CreatePeriod-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).ListPeriods-fm (10 handlers)
+[GIN-debug] PUT    /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).UpdatePeriod-fm (10 handlers)
+[GIN-debug] DELETE /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).DeletePeriod-fm (10 handlers)
+[GIN-debug] POST   /api/grades/internal/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).CreatePeriod-fm (7 handlers)
+[GIN-debug] DELETE /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).DeletePeriodBySemester-fm (7 handlers)
+[GIN-debug] PUT    /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).UpdatePeriodBySemester-fm (7 handlers)
+21:30:37.919	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+21:30:37.919	[34mINFO[0m	worker/outbox_worker.go:36	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
+21:30:37.919	[34mINFO[0m	cmd/main.go:150	server starting	{"port": "8007"}
+21:30:37.941	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
+21:30:37.947	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
+21:30:37.954	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
+21:30:37.960	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
+21:30:37.960	[34mINFO[0m	worker/event_consumer.go:98	event consumer started
+internal/repository/registration_repository.go has changed
+building...
+running...
+21:30:53.167	[34mINFO[0m	cmd/main.go:44	starting grades-service	{"environment": "development", "port": "8007"}
+21:30:53.172	[34mINFO[0m	cmd/main.go:56	database connection established
+21:30:53.172	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+21:30:53.173	[34mINFO[0m	redis/redis.go:41	redis connection established
+21:30:53.173	[34mINFO[0m	cmd/main.go:74	rate limiter configured
+21:30:53.173	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+21:30:53.175	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+21:30:53.175	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
+21:30:53.176	[34mINFO[0m	cmd/main.go:267	RabbitMQ exchange declared	{"exchange": "grade.events"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (6 handlers)
+21:30:53.176	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+21:30:53.176	[34mINFO[0m	worker/outbox_worker.go:36	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
+[GIN-debug] GET    /api/grades/course/:course_id/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (10 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (10 handlers)
+[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (9 handlers)
+[GIN-debug] GET    /api/grades/transcript/:student_id --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (9 handlers)
+[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/unlock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).UnlockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).CreatePeriod-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).ListPeriods-fm (10 handlers)
+[GIN-debug] PUT    /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).UpdatePeriod-fm (10 handlers)
+[GIN-debug] DELETE /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).DeletePeriod-fm (10 handlers)
+[GIN-debug] POST   /api/grades/internal/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).CreatePeriod-fm (7 handlers)
+[GIN-debug] DELETE /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).DeletePeriodBySemester-fm (7 handlers)
+[GIN-debug] PUT    /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).UpdatePeriodBySemester-fm (7 handlers)
+21:30:53.176	[34mINFO[0m	cmd/main.go:150	server starting	{"port": "8007"}
+21:30:53.198	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
+21:30:53.203	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
+21:30:53.208	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
+21:30:53.214	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
+21:30:53.214	[34mINFO[0m	worker/event_consumer.go:98	event consumer started
+internal/dto/grade_dto.go has changed
+building...
+running...
+21:31:08.552	[34mINFO[0m	cmd/main.go:44	starting grades-service	{"environment": "development", "port": "8007"}
+21:31:08.558	[34mINFO[0m	cmd/main.go:56	database connection established
+21:31:08.558	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+21:31:08.559	[34mINFO[0m	redis/redis.go:41	redis connection established
+21:31:08.559	[34mINFO[0m	cmd/main.go:74	rate limiter configured
+21:31:08.559	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+21:31:08.560	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+21:31:08.561	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
+21:31:08.561	[34mINFO[0m	cmd/main.go:267	RabbitMQ exchange declared	{"exchange": "grade.events"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (6 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (10 handlers)
+21:31:08.561	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+[GIN-debug] GET    /api/grades/course/:course_id/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (10 handlers)
+21:31:08.561	[34mINFO[0m	worker/outbox_worker.go:36	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
+[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (9 handlers)
+[GIN-debug] GET    /api/grades/transcript/:student_id --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (9 handlers)
+[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/unlock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).UnlockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).CreatePeriod-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).ListPeriods-fm (10 handlers)
+[GIN-debug] PUT    /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).UpdatePeriod-fm (10 handlers)
+[GIN-debug] DELETE /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).DeletePeriod-fm (10 handlers)
+[GIN-debug] POST   /api/grades/internal/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).CreatePeriod-fm (7 handlers)
+[GIN-debug] DELETE /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).DeletePeriodBySemester-fm (7 handlers)
+[GIN-debug] PUT    /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).UpdatePeriodBySemester-fm (7 handlers)
+21:31:08.561	[34mINFO[0m	cmd/main.go:150	server starting	{"port": "8007"}
+21:31:08.583	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
+21:31:08.588	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
+21:31:08.594	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
+21:31:08.599	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
+21:31:08.599	[34mINFO[0m	worker/event_consumer.go:98	event consumer started
+internal/service/grade_service.go has changed
+building...
+running...
+21:31:24.754	[34mINFO[0m	cmd/main.go:44	starting grades-service	{"environment": "development", "port": "8007"}
+21:31:24.759	[34mINFO[0m	cmd/main.go:56	database connection established
+21:31:24.759	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+21:31:24.760	[34mINFO[0m	redis/redis.go:41	redis connection established
+21:31:24.760	[34mINFO[0m	cmd/main.go:74	rate limiter configured
+21:31:24.760	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+21:31:24.763	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+21:31:24.763	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
+21:31:24.763	[34mINFO[0m	cmd/main.go:267	RabbitMQ exchange declared	{"exchange": "grade.events"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+21:31:24.763	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (6 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (10 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (10 handlers)
+[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (9 handlers)
+[GIN-debug] GET    /api/grades/transcript/:student_id --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (9 handlers)
+[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/unlock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).UnlockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).CreatePeriod-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).ListPeriods-fm (10 handlers)
+[GIN-debug] PUT    /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).UpdatePeriod-fm (10 handlers)
+[GIN-debug] DELETE /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).DeletePeriod-fm (10 handlers)
+[GIN-debug] POST   /api/grades/internal/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).CreatePeriod-fm (7 handlers)
+[GIN-debug] DELETE /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).DeletePeriodBySemester-fm (7 handlers)
+[GIN-debug] PUT    /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).UpdatePeriodBySemester-fm (7 handlers)
+21:31:24.763	[34mINFO[0m	worker/outbox_worker.go:36	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
+21:31:24.763	[34mINFO[0m	cmd/main.go:150	server starting	{"port": "8007"}
+21:31:24.788	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
+21:31:24.794	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
+21:31:24.799	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
+21:31:24.805	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
+21:31:24.805	[34mINFO[0m	worker/event_consumer.go:98	event consumer started
+internal/service/grade_service.go has changed
+building...
+running...
+21:31:42.080	[34mINFO[0m	cmd/main.go:44	starting grades-service	{"environment": "development", "port": "8007"}
+21:31:42.085	[34mINFO[0m	cmd/main.go:56	database connection established
+21:31:42.085	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+21:31:42.086	[34mINFO[0m	redis/redis.go:41	redis connection established
+21:31:42.086	[34mINFO[0m	cmd/main.go:74	rate limiter configured
+21:31:42.086	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+21:31:42.088	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+21:31:42.088	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
+21:31:42.088	[34mINFO[0m	cmd/main.go:267	RabbitMQ exchange declared	{"exchange": "grade.events"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+21:31:42.088	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (6 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (10 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (10 handlers)
+[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (9 handlers)
+[GIN-debug] GET    /api/grades/transcript/:student_id --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (9 handlers)
+[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/unlock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).UnlockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).CreatePeriod-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).ListPeriods-fm (10 handlers)
+[GIN-debug] PUT    /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).UpdatePeriod-fm (10 handlers)
+[GIN-debug] DELETE /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).DeletePeriod-fm (10 handlers)
+21:31:42.088	[34mINFO[0m	worker/outbox_worker.go:36	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
+[GIN-debug] POST   /api/grades/internal/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).CreatePeriod-fm (7 handlers)
+[GIN-debug] DELETE /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).DeletePeriodBySemester-fm (7 handlers)
+[GIN-debug] PUT    /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).UpdatePeriodBySemester-fm (7 handlers)
+21:31:42.089	[34mINFO[0m	cmd/main.go:150	server starting	{"port": "8007"}
+21:31:42.111	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
+21:31:42.116	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
+21:31:42.122	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
+21:31:42.127	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
+21:31:42.127	[34mINFO[0m	worker/event_consumer.go:98	event consumer started
+internal/handler/grade_handler.go has changed
+building...
+running...
+21:32:10.688	[34mINFO[0m	cmd/main.go:44	starting grades-service	{"environment": "development", "port": "8007"}
+21:32:10.692	[34mINFO[0m	cmd/main.go:56	database connection established
+21:32:10.692	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+21:32:10.693	[34mINFO[0m	redis/redis.go:41	redis connection established
+21:32:10.693	[34mINFO[0m	cmd/main.go:74	rate limiter configured
+21:32:10.693	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+21:32:10.695	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+21:32:10.695	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
+21:32:10.695	[34mINFO[0m	cmd/main.go:267	RabbitMQ exchange declared	{"exchange": "grade.events"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (6 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (10 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (10 handlers)
+21:32:10.695	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+21:32:10.696	[34mINFO[0m	worker/outbox_worker.go:36	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
+[GIN-debug] POST   /api/grades/course/:course_id/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (10 handlers)
+[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (9 handlers)
+[GIN-debug] GET    /api/grades/transcript/:student_id --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (9 handlers)
+[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/unlock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).UnlockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).CreatePeriod-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).ListPeriods-fm (10 handlers)
+[GIN-debug] PUT    /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).UpdatePeriod-fm (10 handlers)
+[GIN-debug] DELETE /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).DeletePeriod-fm (10 handlers)
+[GIN-debug] POST   /api/grades/internal/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).CreatePeriod-fm (7 handlers)
+[GIN-debug] DELETE /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).DeletePeriodBySemester-fm (7 handlers)
+[GIN-debug] PUT    /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).UpdatePeriodBySemester-fm (7 handlers)
+21:32:10.696	[34mINFO[0m	cmd/main.go:150	server starting	{"port": "8007"}
+21:32:10.717	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
+21:32:10.722	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
+21:32:10.727	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
+21:32:10.733	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
+21:32:10.733	[34mINFO[0m	worker/event_consumer.go:98	event consumer started
+cmd/main.go has changed
+building...
+running...
+21:32:17.814	[34mINFO[0m	cmd/main.go:44	starting grades-service	{"environment": "development", "port": "8007"}
+21:32:17.819	[34mINFO[0m	cmd/main.go:56	database connection established
+21:32:17.819	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+21:32:17.820	[34mINFO[0m	redis/redis.go:41	redis connection established
+21:32:17.820	[34mINFO[0m	cmd/main.go:74	rate limiter configured
+21:32:17.820	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+21:32:17.822	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+21:32:17.822	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
+21:32:17.822	[34mINFO[0m	cmd/main.go:268	RabbitMQ exchange declared	{"exchange": "grade.events"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (6 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (10 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/assessments/:slug/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockAssessment-fm (10 handlers)
+[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (9 handlers)
+[GIN-debug] GET    /api/grades/transcript/:student_id --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (9 handlers)
+[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/unlock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).UnlockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (10 handlers)
+21:32:17.822	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+[GIN-debug] POST   /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).CreatePeriod-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).ListPeriods-fm (10 handlers)
+[GIN-debug] PUT    /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).UpdatePeriod-fm (10 handlers)
+[GIN-debug] DELETE /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).DeletePeriod-fm (10 handlers)
+[GIN-debug] POST   /api/grades/internal/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).CreatePeriod-fm (7 handlers)
+[GIN-debug] DELETE /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).DeletePeriodBySemester-fm (7 handlers)
+[GIN-debug] PUT    /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).UpdatePeriodBySemester-fm (7 handlers)
+21:32:17.822	[34mINFO[0m	worker/outbox_worker.go:36	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
+21:32:17.823	[34mINFO[0m	cmd/main.go:150	server starting	{"port": "8007"}
+21:32:17.844	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
+21:32:17.849	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
+21:32:17.854	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
+21:32:17.860	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
+21:32:17.860	[34mINFO[0m	worker/event_consumer.go:98	event consumer started
+internal/service/grade_service.go has changed
+building...
+running...
+21:32:36.890	[34mINFO[0m	cmd/main.go:44	starting grades-service	{"environment": "development", "port": "8007"}
+21:32:36.895	[34mINFO[0m	cmd/main.go:56	database connection established
+21:32:36.895	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+21:32:36.896	[34mINFO[0m	redis/redis.go:41	redis connection established
+21:32:36.896	[34mINFO[0m	cmd/main.go:74	rate limiter configured
+21:32:36.896	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+21:32:36.898	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+21:32:36.898	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
+21:32:36.898	[34mINFO[0m	cmd/main.go:268	RabbitMQ exchange declared	{"exchange": "grade.events"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+21:32:36.898	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (6 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (10 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (10 handlers)
+21:32:36.898	[34mINFO[0m	worker/outbox_worker.go:36	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
+[GIN-debug] POST   /api/grades/course/:course_id/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/assessments/:slug/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockAssessment-fm (10 handlers)
+[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (9 handlers)
+[GIN-debug] GET    /api/grades/transcript/:student_id --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (9 handlers)
+[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/unlock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).UnlockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).CreatePeriod-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).ListPeriods-fm (10 handlers)
+[GIN-debug] PUT    /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).UpdatePeriod-fm (10 handlers)
+[GIN-debug] DELETE /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).DeletePeriod-fm (10 handlers)
+[GIN-debug] POST   /api/grades/internal/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).CreatePeriod-fm (7 handlers)
+[GIN-debug] DELETE /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).DeletePeriodBySemester-fm (7 handlers)
+[GIN-debug] PUT    /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).UpdatePeriodBySemester-fm (7 handlers)
+21:32:36.898	[34mINFO[0m	cmd/main.go:150	server starting	{"port": "8007"}
+21:32:36.920	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
+21:32:36.926	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
+21:32:36.931	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
+21:32:36.937	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
+21:32:36.937	[34mINFO[0m	worker/event_consumer.go:98	event consumer started
+internal/service/grade_service.go has changed
+building...
+running...
+21:32:45.067	[34mINFO[0m	cmd/main.go:44	starting grades-service	{"environment": "development", "port": "8007"}
+21:32:45.073	[34mINFO[0m	cmd/main.go:56	database connection established
+21:32:45.073	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+21:32:45.073	[34mINFO[0m	redis/redis.go:41	redis connection established
+21:32:45.073	[34mINFO[0m	cmd/main.go:74	rate limiter configured
+21:32:45.073	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+21:32:45.075	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+21:32:45.075	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
+21:32:45.075	[34mINFO[0m	cmd/main.go:268	RabbitMQ exchange declared	{"exchange": "grade.events"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+21:32:45.075	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+21:32:45.075	[34mINFO[0m	worker/outbox_worker.go:36	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (6 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (10 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/assessments/:slug/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockAssessment-fm (10 handlers)
+[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (9 handlers)
+[GIN-debug] GET    /api/grades/transcript/:student_id --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (9 handlers)
+[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/unlock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).UnlockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).CreatePeriod-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).ListPeriods-fm (10 handlers)
+[GIN-debug] PUT    /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).UpdatePeriod-fm (10 handlers)
+[GIN-debug] DELETE /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).DeletePeriod-fm (10 handlers)
+[GIN-debug] POST   /api/grades/internal/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).CreatePeriod-fm (7 handlers)
+[GIN-debug] DELETE /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).DeletePeriodBySemester-fm (7 handlers)
+[GIN-debug] PUT    /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).UpdatePeriodBySemester-fm (7 handlers)
+21:32:45.076	[34mINFO[0m	cmd/main.go:150	server starting	{"port": "8007"}
+21:32:45.097	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
+21:32:45.103	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
+21:32:45.108	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
+21:32:45.113	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
+21:32:45.113	[34mINFO[0m	worker/event_consumer.go:98	event consumer started
+internal/repository/score_repository.go has changed
+building...
+# github.com/baaaki/mydreamcampus/grades-service/internal/repository
+internal/repository/score_repository.go:5:2: "fmt" imported and not used
+internal/repository/score_repository.go:8:2: "github.com/baaaki/mydreamcampus/shared/errors" imported as sharedErrors and not used
+failed to build, error: exit status 1
+running...
+21:33:05.998	[34mINFO[0m	cmd/main.go:44	starting grades-service	{"environment": "development", "port": "8007"}
+21:33:06.006	[34mINFO[0m	cmd/main.go:56	database connection established
+21:33:06.006	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+21:33:06.007	[34mINFO[0m	redis/redis.go:41	redis connection established
+21:33:06.007	[34mINFO[0m	cmd/main.go:74	rate limiter configured
+21:33:06.007	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+21:33:06.009	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+21:33:06.009	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
+21:33:06.009	[34mINFO[0m	cmd/main.go:268	RabbitMQ exchange declared	{"exchange": "grade.events"}
+21:33:06.009	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+21:33:06.009	[34mINFO[0m	worker/outbox_worker.go:36	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (6 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (10 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/assessments/:slug/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockAssessment-fm (10 handlers)
+[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (9 handlers)
+[GIN-debug] GET    /api/grades/transcript/:student_id --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (9 handlers)
+[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/unlock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).UnlockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).CreatePeriod-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).ListPeriods-fm (10 handlers)
+[GIN-debug] PUT    /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).UpdatePeriod-fm (10 handlers)
+[GIN-debug] DELETE /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).DeletePeriod-fm (10 handlers)
+[GIN-debug] POST   /api/grades/internal/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).CreatePeriod-fm (7 handlers)
+[GIN-debug] DELETE /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).DeletePeriodBySemester-fm (7 handlers)
+[GIN-debug] PUT    /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).UpdatePeriodBySemester-fm (7 handlers)
+21:33:06.011	[34mINFO[0m	cmd/main.go:150	server starting	{"port": "8007"}
+21:33:06.026	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
+21:33:06.038	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
+21:33:06.046	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
+21:33:06.052	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
+21:33:06.052	[34mINFO[0m	worker/event_consumer.go:98	event consumer started
+internal/repository/score_repository.go has changed
+building...
+running...
+21:33:19.722	[34mINFO[0m	cmd/main.go:44	starting grades-service	{"environment": "development", "port": "8007"}
+21:33:19.728	[34mINFO[0m	cmd/main.go:56	database connection established
+21:33:19.728	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+21:33:19.728	[34mINFO[0m	redis/redis.go:41	redis connection established
+21:33:19.728	[34mINFO[0m	cmd/main.go:74	rate limiter configured
+21:33:19.728	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+21:33:19.731	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+21:33:19.731	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
+21:33:19.731	[34mINFO[0m	cmd/main.go:268	RabbitMQ exchange declared	{"exchange": "grade.events"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+21:33:19.731	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+21:33:19.731	[34mINFO[0m	worker/outbox_worker.go:36	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (6 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (10 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/assessments/:slug/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockAssessment-fm (10 handlers)
+[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (9 handlers)
+[GIN-debug] GET    /api/grades/transcript/:student_id --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (9 handlers)
+[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/unlock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).UnlockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).CreatePeriod-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).ListPeriods-fm (10 handlers)
+[GIN-debug] PUT    /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).UpdatePeriod-fm (10 handlers)
+[GIN-debug] DELETE /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).DeletePeriod-fm (10 handlers)
+[GIN-debug] POST   /api/grades/internal/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).CreatePeriod-fm (7 handlers)
+[GIN-debug] DELETE /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).DeletePeriodBySemester-fm (7 handlers)
+[GIN-debug] PUT    /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).UpdatePeriodBySemester-fm (7 handlers)
+21:33:19.731	[34mINFO[0m	cmd/main.go:150	server starting	{"port": "8007"}
+21:33:19.753	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
+21:33:19.759	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
+21:33:19.765	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
+21:33:19.770	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
+21:33:19.770	[34mINFO[0m	worker/event_consumer.go:98	event consumer started
+internal/service/grade_service.go has changed
+building...
+# github.com/baaaki/mydreamcampus/grades-service/internal/service
+internal/service/grade_service.go:139:22: undefined: buildGradeSubmittedEventParams
+failed to build, error: exit status 1
+running...
+21:34:17.524	[34mINFO[0m	cmd/main.go:44	starting grades-service	{"environment": "development", "port": "8007"}
+21:34:17.529	[34mINFO[0m	cmd/main.go:56	database connection established
+21:34:17.529	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+21:34:17.530	[34mINFO[0m	redis/redis.go:41	redis connection established
+21:34:17.530	[34mINFO[0m	cmd/main.go:74	rate limiter configured
+21:34:17.530	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+21:34:17.532	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+21:34:17.532	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
+21:34:17.532	[34mINFO[0m	cmd/main.go:268	RabbitMQ exchange declared	{"exchange": "grade.events"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (6 handlers)
+21:34:17.532	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+21:34:17.532	[34mINFO[0m	worker/outbox_worker.go:36	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
+[GIN-debug] GET    /api/grades/course/:course_id/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (10 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/assessments/:slug/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockAssessment-fm (10 handlers)
+[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (9 handlers)
+[GIN-debug] GET    /api/grades/transcript/:student_id --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (9 handlers)
+[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/unlock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).UnlockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).CreatePeriod-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).ListPeriods-fm (10 handlers)
+[GIN-debug] PUT    /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).UpdatePeriod-fm (10 handlers)
+[GIN-debug] DELETE /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).DeletePeriod-fm (10 handlers)
+[GIN-debug] POST   /api/grades/internal/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).CreatePeriod-fm (7 handlers)
+[GIN-debug] DELETE /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).DeletePeriodBySemester-fm (7 handlers)
+[GIN-debug] PUT    /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).UpdatePeriodBySemester-fm (7 handlers)
+21:34:17.532	[34mINFO[0m	cmd/main.go:150	server starting	{"port": "8007"}
+21:34:17.546	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
+21:34:17.552	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
+21:34:17.557	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
+21:34:17.563	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
+21:34:17.563	[34mINFO[0m	worker/event_consumer.go:98	event consumer started
+internal/service/grade_service.go has changed
+building...
+running...
+21:34:30.296	[34mINFO[0m	cmd/main.go:44	starting grades-service	{"environment": "development", "port": "8007"}
+21:34:30.301	[34mINFO[0m	cmd/main.go:56	database connection established
+21:34:30.301	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+21:34:30.301	[34mINFO[0m	redis/redis.go:41	redis connection established
+21:34:30.301	[34mINFO[0m	cmd/main.go:74	rate limiter configured
+21:34:30.301	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+21:34:30.304	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+21:34:30.304	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
+21:34:30.304	[34mINFO[0m	cmd/main.go:268	RabbitMQ exchange declared	{"exchange": "grade.events"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (6 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (10 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/assessments/:slug/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockAssessment-fm (10 handlers)
+[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (9 handlers)
+[GIN-debug] GET    /api/grades/transcript/:student_id --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (9 handlers)
+[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/unlock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).UnlockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).CreatePeriod-fm (10 handlers)
+21:34:30.304	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+[GIN-debug] GET    /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).ListPeriods-fm (10 handlers)
+[GIN-debug] PUT    /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).UpdatePeriod-fm (10 handlers)
+[GIN-debug] DELETE /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).DeletePeriod-fm (10 handlers)
+[GIN-debug] POST   /api/grades/internal/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).CreatePeriod-fm (7 handlers)
+[GIN-debug] DELETE /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).DeletePeriodBySemester-fm (7 handlers)
+[GIN-debug] PUT    /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).UpdatePeriodBySemester-fm (7 handlers)
+21:34:30.304	[34mINFO[0m	worker/outbox_worker.go:36	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
+21:34:30.304	[34mINFO[0m	cmd/main.go:150	server starting	{"port": "8007"}
+21:34:30.327	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
+21:34:30.332	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
+21:34:30.338	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
+21:34:30.344	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
+21:34:30.344	[34mINFO[0m	worker/event_consumer.go:98	event consumer started
+internal/dto/event_dto.go has changed
+building...
+running...
+21:35:53.077	[34mINFO[0m	cmd/main.go:44	starting grades-service	{"environment": "development", "port": "8007"}
+21:35:53.083	[34mINFO[0m	cmd/main.go:56	database connection established
+21:35:53.083	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+21:35:53.084	[34mINFO[0m	redis/redis.go:41	redis connection established
+21:35:53.084	[34mINFO[0m	cmd/main.go:74	rate limiter configured
+21:35:53.084	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+21:35:53.085	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+21:35:53.085	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
+21:35:53.085	[34mINFO[0m	cmd/main.go:268	RabbitMQ exchange declared	{"exchange": "grade.events"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (6 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (10 handlers)
+21:35:53.086	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+21:35:53.086	[34mINFO[0m	worker/outbox_worker.go:36	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
+[GIN-debug] GET    /api/grades/course/:course_id/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/assessments/:slug/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockAssessment-fm (10 handlers)
+[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (9 handlers)
+[GIN-debug] GET    /api/grades/transcript/:student_id --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (9 handlers)
+[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/unlock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).UnlockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).CreatePeriod-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).ListPeriods-fm (10 handlers)
+[GIN-debug] PUT    /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).UpdatePeriod-fm (10 handlers)
+[GIN-debug] DELETE /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).DeletePeriod-fm (10 handlers)
+[GIN-debug] POST   /api/grades/internal/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).CreatePeriod-fm (7 handlers)
+[GIN-debug] DELETE /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).DeletePeriodBySemester-fm (7 handlers)
+[GIN-debug] PUT    /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).UpdatePeriodBySemester-fm (7 handlers)
+21:35:53.086	[34mINFO[0m	cmd/main.go:150	server starting	{"port": "8007"}
+21:35:53.110	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
+21:35:53.115	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
+21:35:53.121	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
+21:35:53.126	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
+21:35:53.126	[34mINFO[0m	worker/event_consumer.go:98	event consumer started
+internal/service/grade_service.go has changed
+building...
+running...
+21:36:02.973	[34mINFO[0m	cmd/main.go:44	starting grades-service	{"environment": "development", "port": "8007"}
+21:36:02.977	[34mINFO[0m	cmd/main.go:56	database connection established
+21:36:02.977	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+21:36:02.978	[34mINFO[0m	redis/redis.go:41	redis connection established
+21:36:02.978	[34mINFO[0m	cmd/main.go:74	rate limiter configured
+21:36:02.978	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+21:36:02.980	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+21:36:02.980	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
+21:36:02.980	[34mINFO[0m	cmd/main.go:268	RabbitMQ exchange declared	{"exchange": "grade.events"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+21:36:02.980	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (6 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (10 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/assessments/:slug/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockAssessment-fm (10 handlers)
+[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (9 handlers)
+[GIN-debug] GET    /api/grades/transcript/:student_id --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (9 handlers)
+[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/unlock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).UnlockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).CreatePeriod-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).ListPeriods-fm (10 handlers)
+[GIN-debug] PUT    /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).UpdatePeriod-fm (10 handlers)
+[GIN-debug] DELETE /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).DeletePeriod-fm (10 handlers)
+[GIN-debug] POST   /api/grades/internal/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).CreatePeriod-fm (7 handlers)
+[GIN-debug] DELETE /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).DeletePeriodBySemester-fm (7 handlers)
+[GIN-debug] PUT    /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).UpdatePeriodBySemester-fm (7 handlers)
+21:36:02.980	[34mINFO[0m	worker/outbox_worker.go:36	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
+21:36:02.981	[34mINFO[0m	cmd/main.go:150	server starting	{"port": "8007"}
+21:36:03.003	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
+21:36:03.008	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
+21:36:03.014	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
+21:36:03.019	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
+21:36:03.019	[34mINFO[0m	worker/event_consumer.go:98	event consumer started
+internal/service/grade_service.go has changed
+building...
+running...
+21:36:14.274	[34mINFO[0m	cmd/main.go:44	starting grades-service	{"environment": "development", "port": "8007"}
+21:36:14.279	[34mINFO[0m	cmd/main.go:56	database connection established
+21:36:14.279	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+21:36:14.280	[34mINFO[0m	redis/redis.go:41	redis connection established
+21:36:14.280	[34mINFO[0m	cmd/main.go:74	rate limiter configured
+21:36:14.280	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+21:36:14.283	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+21:36:14.283	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
+21:36:14.283	[34mINFO[0m	cmd/main.go:268	RabbitMQ exchange declared	{"exchange": "grade.events"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+21:36:14.283	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (6 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (10 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/assessments/:slug/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockAssessment-fm (10 handlers)
+[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (9 handlers)
+[GIN-debug] GET    /api/grades/transcript/:student_id --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (9 handlers)
+[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/unlock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).UnlockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).CreatePeriod-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).ListPeriods-fm (10 handlers)
+[GIN-debug] PUT    /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).UpdatePeriod-fm (10 handlers)
+[GIN-debug] DELETE /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).DeletePeriod-fm (10 handlers)
+[GIN-debug] POST   /api/grades/internal/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).CreatePeriod-fm (7 handlers)
+[GIN-debug] DELETE /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).DeletePeriodBySemester-fm (7 handlers)
+[GIN-debug] PUT    /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).UpdatePeriodBySemester-fm (7 handlers)
+21:36:14.283	[34mINFO[0m	worker/outbox_worker.go:36	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
+21:36:14.283	[34mINFO[0m	cmd/main.go:150	server starting	{"port": "8007"}
+21:36:14.305	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
+21:36:14.311	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
+21:36:14.316	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
+21:36:14.322	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
+21:36:14.322	[34mINFO[0m	worker/event_consumer.go:98	event consumer started
+internal/service/grade_service.go has changed
+building...
+running...
+21:38:06.735	[34mINFO[0m	cmd/main.go:44	starting grades-service	{"environment": "development", "port": "8007"}
+21:38:06.739	[34mINFO[0m	cmd/main.go:56	database connection established
+21:38:06.739	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+21:38:06.740	[34mINFO[0m	redis/redis.go:41	redis connection established
+21:38:06.740	[34mINFO[0m	cmd/main.go:74	rate limiter configured
+21:38:06.740	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+21:38:06.744	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+21:38:06.744	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
+21:38:06.744	[34mINFO[0m	cmd/main.go:268	RabbitMQ exchange declared	{"exchange": "grade.events"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+21:38:06.744	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (6 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (10 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/assessments/:slug/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockAssessment-fm (10 handlers)
+[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (9 handlers)
+[GIN-debug] GET    /api/grades/transcript/:student_id --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (9 handlers)
+[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (10 handlers)
+21:38:06.744	[34mINFO[0m	worker/outbox_worker.go:36	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
+[GIN-debug] POST   /api/grades/admin/scores/unlock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).UnlockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).CreatePeriod-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).ListPeriods-fm (10 handlers)
+[GIN-debug] PUT    /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).UpdatePeriod-fm (10 handlers)
+[GIN-debug] DELETE /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).DeletePeriod-fm (10 handlers)
+[GIN-debug] POST   /api/grades/internal/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).CreatePeriod-fm (7 handlers)
+[GIN-debug] DELETE /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).DeletePeriodBySemester-fm (7 handlers)
+[GIN-debug] PUT    /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).UpdatePeriodBySemester-fm (7 handlers)
+21:38:06.744	[34mINFO[0m	cmd/main.go:150	server starting	{"port": "8007"}
+21:38:06.766	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
+21:38:06.771	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
+21:38:06.777	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
+21:38:06.782	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
+21:38:06.782	[34mINFO[0m	worker/event_consumer.go:98	event consumer started
+internal/worker/finalize_consumer.go has changed
+building...
+running...
+21:39:31.735	[34mINFO[0m	cmd/main.go:44	starting grades-service	{"environment": "development", "port": "8007"}
+21:39:31.741	[34mINFO[0m	cmd/main.go:56	database connection established
+21:39:31.741	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+21:39:31.742	[34mINFO[0m	redis/redis.go:41	redis connection established
+21:39:31.742	[34mINFO[0m	cmd/main.go:74	rate limiter configured
+21:39:31.742	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+21:39:31.744	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+21:39:31.744	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
+21:39:31.744	[34mINFO[0m	cmd/main.go:268	RabbitMQ exchange declared	{"exchange": "grade.events"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (6 handlers)
+21:39:31.744	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+21:39:31.744	[34mINFO[0m	worker/outbox_worker.go:36	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
+[GIN-debug] GET    /api/grades/course/:course_id/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (10 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/assessments/:slug/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockAssessment-fm (10 handlers)
+[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (9 handlers)
+[GIN-debug] GET    /api/grades/transcript/:student_id --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (9 handlers)
+[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/unlock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).UnlockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).CreatePeriod-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).ListPeriods-fm (10 handlers)
+[GIN-debug] PUT    /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).UpdatePeriod-fm (10 handlers)
+[GIN-debug] DELETE /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).DeletePeriod-fm (10 handlers)
+[GIN-debug] POST   /api/grades/internal/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).CreatePeriod-fm (7 handlers)
+[GIN-debug] DELETE /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).DeletePeriodBySemester-fm (7 handlers)
+[GIN-debug] PUT    /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).UpdatePeriodBySemester-fm (7 handlers)
+21:39:31.744	[34mINFO[0m	cmd/main.go:150	server starting	{"port": "8007"}
+21:39:31.766	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
+21:39:31.772	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
+21:39:31.777	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
+21:39:31.782	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
+21:39:31.782	[34mINFO[0m	worker/event_consumer.go:98	event consumer started
+cmd/main.go has changed
+building...
+running...
+21:39:41.423	[34mINFO[0m	cmd/main.go:44	starting grades-service	{"environment": "development", "port": "8007"}
+21:39:41.428	[34mINFO[0m	cmd/main.go:56	database connection established
+21:39:41.428	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+21:39:41.428	[34mINFO[0m	redis/redis.go:41	redis connection established
+21:39:41.428	[34mINFO[0m	cmd/main.go:74	rate limiter configured
+21:39:41.428	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+21:39:41.431	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+21:39:41.431	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
+21:39:41.431	[34mINFO[0m	cmd/main.go:276	RabbitMQ exchange declared	{"exchange": "grade.events"}
+21:39:41.431	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+21:39:41.431	[34mINFO[0m	worker/outbox_worker.go:36	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (6 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (10 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/assessments/:slug/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockAssessment-fm (10 handlers)
+21:39:41.431	[34mINFO[0m	worker/finalize_consumer.go:36	starting finalize consumer
+[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (9 handlers)
+[GIN-debug] GET    /api/grades/transcript/:student_id --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (9 handlers)
+[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/unlock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).UnlockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).CreatePeriod-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).ListPeriods-fm (10 handlers)
+[GIN-debug] PUT    /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).UpdatePeriod-fm (10 handlers)
+[GIN-debug] DELETE /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).DeletePeriod-fm (10 handlers)
+[GIN-debug] POST   /api/grades/internal/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).CreatePeriod-fm (7 handlers)
+[GIN-debug] DELETE /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).DeletePeriodBySemester-fm (7 handlers)
+[GIN-debug] PUT    /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).UpdatePeriodBySemester-fm (7 handlers)
+21:39:41.431	[34mINFO[0m	cmd/main.go:158	server starting	{"port": "8007"}
+21:39:41.465	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-finalize"}
+21:39:41.465	[34mINFO[0m	worker/finalize_consumer.go:49	finalize consumer started
+21:39:41.470	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
+21:39:41.476	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
+21:39:41.481	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
+21:39:41.487	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
+21:39:41.487	[34mINFO[0m	worker/event_consumer.go:98	event consumer started
+internal/db/models.go has changed
+building...
+running...
+21:41:29.018	[34mINFO[0m	cmd/main.go:44	starting grades-service	{"environment": "development", "port": "8007"}
+21:41:29.023	[34mINFO[0m	cmd/main.go:56	database connection established
+21:41:29.024	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+21:41:29.024	[34mINFO[0m	redis/redis.go:41	redis connection established
+21:41:29.024	[34mINFO[0m	cmd/main.go:74	rate limiter configured
+21:41:29.024	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+21:41:29.026	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+21:41:29.026	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
+21:41:29.026	[34mINFO[0m	cmd/main.go:276	RabbitMQ exchange declared	{"exchange": "grade.events"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+21:41:29.026	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (6 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (10 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/assessments/:slug/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockAssessment-fm (10 handlers)
+[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (9 handlers)
+[GIN-debug] GET    /api/grades/transcript/:student_id --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (9 handlers)
+[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/unlock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).UnlockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).CreatePeriod-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).ListPeriods-fm (10 handlers)
+[GIN-debug] PUT    /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).UpdatePeriod-fm (10 handlers)
+[GIN-debug] DELETE /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).DeletePeriod-fm (10 handlers)
+[GIN-debug] POST   /api/grades/internal/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).CreatePeriod-fm (7 handlers)
+[GIN-debug] DELETE /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).DeletePeriodBySemester-fm (7 handlers)
+[GIN-debug] PUT    /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).UpdatePeriodBySemester-fm (7 handlers)
+21:41:29.026	[34mINFO[0m	worker/finalize_consumer.go:36	starting finalize consumer
+21:41:29.027	[34mINFO[0m	cmd/main.go:158	server starting	{"port": "8007"}
+21:41:29.027	[34mINFO[0m	worker/outbox_worker.go:36	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
+21:41:29.049	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-finalize"}
+21:41:29.049	[34mINFO[0m	worker/finalize_consumer.go:49	finalize consumer started
+21:41:29.055	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
+21:41:29.060	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
+21:41:29.065	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
+21:41:29.071	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
+21:41:29.071	[34mINFO[0m	worker/event_consumer.go:98	event consumer started
+internal/db/assessment_scores.sql.go has changed
+building...
+running...
+21:41:32.222	[34mINFO[0m	cmd/main.go:44	starting grades-service	{"environment": "development", "port": "8007"}
+21:41:32.227	[34mINFO[0m	cmd/main.go:56	database connection established
+21:41:32.227	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+21:41:32.228	[34mINFO[0m	redis/redis.go:41	redis connection established
+21:41:32.228	[34mINFO[0m	cmd/main.go:74	rate limiter configured
+21:41:32.228	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+21:41:32.231	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+21:41:32.231	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
+21:41:32.231	[34mINFO[0m	cmd/main.go:276	RabbitMQ exchange declared	{"exchange": "grade.events"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+21:41:32.231	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+21:41:32.231	[34mINFO[0m	worker/outbox_worker.go:36	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (6 handlers)
+21:41:32.231	[34mINFO[0m	worker/finalize_consumer.go:36	starting finalize consumer
+[GIN-debug] GET    /api/grades/course/:course_id/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (10 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/assessments/:slug/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockAssessment-fm (10 handlers)
+[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (9 handlers)
+[GIN-debug] GET    /api/grades/transcript/:student_id --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (9 handlers)
+[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/unlock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).UnlockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).CreatePeriod-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).ListPeriods-fm (10 handlers)
+[GIN-debug] PUT    /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).UpdatePeriod-fm (10 handlers)
+[GIN-debug] DELETE /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).DeletePeriod-fm (10 handlers)
+[GIN-debug] POST   /api/grades/internal/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).CreatePeriod-fm (7 handlers)
+[GIN-debug] DELETE /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).DeletePeriodBySemester-fm (7 handlers)
+[GIN-debug] PUT    /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).UpdatePeriodBySemester-fm (7 handlers)
+21:41:32.231	[34mINFO[0m	cmd/main.go:158	server starting	{"port": "8007"}
+21:41:32.247	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-finalize"}
+21:41:32.247	[34mINFO[0m	worker/finalize_consumer.go:49	finalize consumer started
+21:41:32.252	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
+21:41:32.258	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
+21:41:32.263	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
+21:41:32.269	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
+21:41:32.269	[34mINFO[0m	worker/event_consumer.go:98	event consumer started
+internal/db/models.go has changed
+building...
+running...
+21:41:39.817	[34mINFO[0m	cmd/main.go:44	starting grades-service	{"environment": "development", "port": "8007"}
+21:41:39.821	[34mINFO[0m	cmd/main.go:56	database connection established
+21:41:39.822	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+21:41:39.822	[34mINFO[0m	redis/redis.go:41	redis connection established
+21:41:39.822	[34mINFO[0m	cmd/main.go:74	rate limiter configured
+21:41:39.822	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+21:41:39.825	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+21:41:39.825	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
+21:41:39.825	[34mINFO[0m	cmd/main.go:276	RabbitMQ exchange declared	{"exchange": "grade.events"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (6 handlers)
+21:41:39.825	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+21:41:39.825	[34mINFO[0m	worker/finalize_consumer.go:36	starting finalize consumer
+[GIN-debug] GET    /api/grades/course/:course_id/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (10 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/assessments/:slug/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockAssessment-fm (10 handlers)
+21:41:39.825	[34mINFO[0m	worker/outbox_worker.go:36	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
+[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (9 handlers)
+[GIN-debug] GET    /api/grades/transcript/:student_id --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (9 handlers)
+[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/unlock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).UnlockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).CreatePeriod-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).ListPeriods-fm (10 handlers)
+[GIN-debug] PUT    /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).UpdatePeriod-fm (10 handlers)
+[GIN-debug] DELETE /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).DeletePeriod-fm (10 handlers)
+[GIN-debug] POST   /api/grades/internal/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).CreatePeriod-fm (7 handlers)
+[GIN-debug] DELETE /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).DeletePeriodBySemester-fm (7 handlers)
+[GIN-debug] PUT    /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).UpdatePeriodBySemester-fm (7 handlers)
+21:41:39.826	[34mINFO[0m	cmd/main.go:158	server starting	{"port": "8007"}
+21:41:39.847	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-finalize"}
+21:41:39.847	[34mINFO[0m	worker/finalize_consumer.go:49	finalize consumer started
+21:41:39.856	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
+21:41:39.861	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
+21:41:39.867	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
+21:41:39.872	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
+21:41:39.872	[34mINFO[0m	worker/event_consumer.go:98	event consumer started
+internal/repository/registration_repository.go has changed
+building...
+running...
+21:42:04.209	[34mINFO[0m	cmd/main.go:44	starting grades-service	{"environment": "development", "port": "8007"}
+21:42:04.214	[34mINFO[0m	cmd/main.go:56	database connection established
+21:42:04.214	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+21:42:04.215	[34mINFO[0m	redis/redis.go:41	redis connection established
+21:42:04.215	[34mINFO[0m	cmd/main.go:74	rate limiter configured
+21:42:04.215	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+21:42:04.217	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+21:42:04.217	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
+21:42:04.217	[34mINFO[0m	cmd/main.go:276	RabbitMQ exchange declared	{"exchange": "grade.events"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (6 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (10 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/assessments/:slug/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockAssessment-fm (10 handlers)
+21:42:04.217	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (9 handlers)
+21:42:04.217	[34mINFO[0m	worker/finalize_consumer.go:36	starting finalize consumer
+[GIN-debug] GET    /api/grades/transcript/:student_id --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (9 handlers)
+[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/unlock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).UnlockScore-fm (10 handlers)
+21:42:04.217	[34mINFO[0m	worker/outbox_worker.go:36	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
+[GIN-debug] POST   /api/grades/admin/scores/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).CreatePeriod-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).ListPeriods-fm (10 handlers)
+[GIN-debug] PUT    /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).UpdatePeriod-fm (10 handlers)
+[GIN-debug] DELETE /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).DeletePeriod-fm (10 handlers)
+[GIN-debug] POST   /api/grades/internal/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).CreatePeriod-fm (7 handlers)
+[GIN-debug] DELETE /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).DeletePeriodBySemester-fm (7 handlers)
+[GIN-debug] PUT    /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).UpdatePeriodBySemester-fm (7 handlers)
+21:42:04.218	[34mINFO[0m	cmd/main.go:158	server starting	{"port": "8007"}
+21:42:04.240	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-finalize"}
+21:42:04.240	[34mINFO[0m	worker/finalize_consumer.go:49	finalize consumer started
+21:42:04.246	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
+21:42:04.251	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
+21:42:04.256	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
+21:42:04.262	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
+21:42:04.262	[34mINFO[0m	worker/event_consumer.go:98	event consumer started
+internal/repository/score_repository.go has changed
+building...
+running...
+21:42:23.426	[34mINFO[0m	cmd/main.go:44	starting grades-service	{"environment": "development", "port": "8007"}
+21:42:23.431	[34mINFO[0m	cmd/main.go:56	database connection established
+21:42:23.431	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+21:42:23.432	[34mINFO[0m	redis/redis.go:41	redis connection established
+21:42:23.432	[34mINFO[0m	cmd/main.go:74	rate limiter configured
+21:42:23.432	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+21:42:23.434	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+21:42:23.434	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
+21:42:23.434	[34mINFO[0m	cmd/main.go:276	RabbitMQ exchange declared	{"exchange": "grade.events"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+21:42:23.434	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (6 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (10 handlers)
+21:42:23.434	[34mINFO[0m	worker/finalize_consumer.go:36	starting finalize consumer
+[GIN-debug] GET    /api/grades/course/:course_id/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/assessments/:slug/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockAssessment-fm (10 handlers)
+[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (9 handlers)
+[GIN-debug] GET    /api/grades/transcript/:student_id --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (9 handlers)
+[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/unlock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).UnlockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockScore-fm (10 handlers)
+21:42:23.434	[34mINFO[0m	worker/outbox_worker.go:36	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
+[GIN-debug] POST   /api/grades/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).CreatePeriod-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).ListPeriods-fm (10 handlers)
+[GIN-debug] PUT    /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).UpdatePeriod-fm (10 handlers)
+[GIN-debug] DELETE /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).DeletePeriod-fm (10 handlers)
+[GIN-debug] POST   /api/grades/internal/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).CreatePeriod-fm (7 handlers)
+[GIN-debug] DELETE /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).DeletePeriodBySemester-fm (7 handlers)
+[GIN-debug] PUT    /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).UpdatePeriodBySemester-fm (7 handlers)
+21:42:23.435	[34mINFO[0m	cmd/main.go:158	server starting	{"port": "8007"}
+21:42:23.457	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-finalize"}
+21:42:23.457	[34mINFO[0m	worker/finalize_consumer.go:49	finalize consumer started
+21:42:23.462	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
+21:42:23.468	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
+21:42:23.473	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
+21:42:23.479	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
+21:42:23.479	[34mINFO[0m	worker/event_consumer.go:98	event consumer started
+internal/service/grade_service.go has changed
+building...
+running...
+21:43:12.753	[34mINFO[0m	cmd/main.go:44	starting grades-service	{"environment": "development", "port": "8007"}
+21:43:12.757	[34mINFO[0m	cmd/main.go:56	database connection established
+21:43:12.757	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+21:43:12.758	[34mINFO[0m	redis/redis.go:41	redis connection established
+21:43:12.758	[34mINFO[0m	cmd/main.go:74	rate limiter configured
+21:43:12.758	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+21:43:12.760	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+21:43:12.761	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
+21:43:12.761	[34mINFO[0m	cmd/main.go:276	RabbitMQ exchange declared	{"exchange": "grade.events"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+21:43:12.761	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+21:43:12.761	[34mINFO[0m	worker/outbox_worker.go:36	starting outbox worker	{"poll_interval": "5s", "batch_size": 10}
+21:43:12.761	[34mINFO[0m	worker/finalize_consumer.go:36	starting finalize consumer
+[GIN-debug] GET    /health                   --> main.setupRouter.func1 (6 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/status --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStatus-fm (10 handlers)
+[GIN-debug] GET    /api/grades/course/:course_id/students --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetCourseStudents-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).SubmitScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/scores/bulk --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).BulkSubmitScores-fm (10 handlers)
+[GIN-debug] POST   /api/grades/course/:course_id/assessments/:slug/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockAssessment-fm (10 handlers)
+[GIN-debug] GET    /api/grades/student/my    --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetMyGrades-fm (9 handlers)
+[GIN-debug] GET    /api/grades/transcript/:student_id --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).GetTranscript-fm (9 handlers)
+[GIN-debug] POST   /api/grades/admin/appeal  --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).ProcessAppeal-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/unlock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).UnlockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/scores/lock --> github.com/baaaki/mydreamcampus/grades-service/internal/handler.(*GradeHandler).LockScore-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (10 handlers)
+[GIN-debug] POST   /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).CreatePeriod-fm (10 handlers)
+[GIN-debug] GET    /api/grades/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).ListPeriods-fm (10 handlers)
+[GIN-debug] PUT    /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).UpdatePeriod-fm (10 handlers)
+[GIN-debug] DELETE /api/grades/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*PeriodHandler).DeletePeriod-fm (10 handlers)
+[GIN-debug] POST   /api/grades/internal/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).CreatePeriod-fm (7 handlers)
+[GIN-debug] DELETE /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).DeletePeriodBySemester-fm (7 handlers)
+[GIN-debug] PUT    /api/grades/internal/periods/by-semester/:semester --> github.com/baaaki/mydreamcampus/shared/handler.(*InternalPeriodHandlerFull).UpdatePeriodBySemester-fm (7 handlers)
+21:43:12.761	[34mINFO[0m	cmd/main.go:158	server starting	{"port": "8007"}
+21:43:12.783	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-finalize"}
+21:43:12.783	[34mINFO[0m	worker/finalize_consumer.go:49	finalize consumer started
+21:43:12.788	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-student"}
+21:43:12.794	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-course"}
+21:43:12.799	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-enrollment"}
+21:43:12.805	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "grades-service-attendance"}
+21:43:12.805	[34mINFO[0m	worker/event_consumer.go:98	event consumer started
+23:04:49.549	[31mERROR[0m	rabbitmq/connection.go:94	rabbitmq connection lost	{"error": "Exception (320) Reason: \"CONNECTION_FORCED - broker forced connection closure with reason 'shutdown'\""}
+github.com/baaaki/mydreamcampus/shared/rabbitmq.(*Connection).handleReconnect
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/rabbitmq/connection.go:94
+23:04:49.549	[34mINFO[0m	rabbitmq/connection.go:99	attempting to reconnect to rabbitmq...
+23:04:54.550	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+23:04:54.551	[31mERROR[0m	rabbitmq/connection.go:103	rabbitmq reconnection failed	{"error": "failed to connect to rabbitmq: Exception (501) Reason: \"read tcp 127.0.0.1:55166->127.0.0.1:5672: read: connection reset by peer\""}
+github.com/baaaki/mydreamcampus/shared/rabbitmq.(*Connection).handleReconnect
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/rabbitmq/connection.go:103
+23:04:54.551	[34mINFO[0m	rabbitmq/connection.go:99	attempting to reconnect to rabbitmq...
+23:04:59.551	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+23:04:59.561	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+23:04:59.562	[34mINFO[0m	rabbitmq/connection.go:107	rabbitmq reconnection successful
+23:06:49.843	[31mERROR[0m	rabbitmq/connection.go:94	rabbitmq connection lost	{"error": "Exception (320) Reason: \"CONNECTION_FORCED - broker forced connection closure with reason 'shutdown'\""}
+github.com/baaaki/mydreamcampus/shared/rabbitmq.(*Connection).handleReconnect
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/rabbitmq/connection.go:94
+23:06:49.843	[34mINFO[0m	rabbitmq/connection.go:99	attempting to reconnect to rabbitmq...
+23:06:50.002	[34mINFO[0m	cmd/main.go:169	shutting down server...
+23:06:50.002	[34mINFO[0m	cmd/main.go:182	server exited
+23:06:50.002	[34mINFO[0m	redis/redis.go:48	closing redis connection
+23:06:50.002	[34mINFO[0m	worker/outbox_worker.go:50	outbox worker stopped
+23:06:50.002	[34mINFO[0m	worker/event_consumer.go:102	event consumer stopped
+23:06:50.002	[34mINFO[0m	worker/finalize_consumer.go:52	finalize consumer stopped
+cleaning...
+see you again~

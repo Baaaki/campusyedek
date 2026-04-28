@@ -43,10 +43,6 @@ func (r *CacheRepository) GetCourseCacheByID(ctx context.Context, courseID uuid.
 	return r.queries.GetCourseCacheByID(ctx, utils.UUIDToPgUUID(courseID))
 }
 
-func (r *CacheRepository) DeleteCourseCache(ctx context.Context, courseID uuid.UUID) error {
-	return r.queries.DeleteCourseCache(ctx, utils.UUIDToPgUUID(courseID))
-}
-
 // Enrollment cache operations
 func (r *CacheRepository) CreateEnrollmentCache(ctx context.Context, studentID, courseID uuid.UUID, semester string) error {
 	return r.queries.CreateEnrollmentCache(ctx, db.CreateEnrollmentCacheParams{

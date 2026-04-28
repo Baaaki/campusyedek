@@ -40,8 +40,10 @@ type QRConfig struct {
 
 // ReservationConfig holds reservation settings
 type ReservationConfig struct {
-	TimeoutMinutes int     `mapstructure:"RESERVATION_TIMEOUT_MINUTES"`
-	MealPriceTRY   float64 `mapstructure:"MEAL_PRICE_TRY"`
+	TimeoutMinutes           int     `mapstructure:"RESERVATION_TIMEOUT_MINUTES"`
+	MealPriceTRY             float64 `mapstructure:"MEAL_PRICE_TRY"`
+	CancelCutoffHours        int     `mapstructure:"RESERVATION_CANCEL_CUTOFF_HOURS"`
+	QRValidityWindowSeconds  int     `mapstructure:"QR_VALIDITY_WINDOW_SECONDS"`
 }
 
 // MealTimeConfig holds meal time window configuration (UTC+3)
@@ -88,8 +90,10 @@ func Load() (*Config, error) {
 	}
 
 	reservation := ReservationConfig{
-		TimeoutMinutes: viper.GetInt("RESERVATION_TIMEOUT_MINUTES"),
-		MealPriceTRY:   viper.GetFloat64("MEAL_PRICE_TRY"),
+		TimeoutMinutes:          viper.GetInt("RESERVATION_TIMEOUT_MINUTES"),
+		MealPriceTRY:            viper.GetFloat64("MEAL_PRICE_TRY"),
+		CancelCutoffHours:       viper.GetInt("RESERVATION_CANCEL_CUTOFF_HOURS"),
+		QRValidityWindowSeconds: viper.GetInt("QR_VALIDITY_WINDOW_SECONDS"),
 	}
 
 	mealTime := MealTimeConfig{
@@ -142,6 +146,8 @@ func setMealDefaults() {
 	// Reservation settings
 	viper.SetDefault("RESERVATION_TIMEOUT_MINUTES", 15)
 	viper.SetDefault("MEAL_PRICE_TRY", 15.00)
+	viper.SetDefault("RESERVATION_CANCEL_CUTOFF_HOURS", 2)
+	viper.SetDefault("QR_VALIDITY_WINDOW_SECONDS", 30)
 
 	// Meal time windows (UTC+3)
 	viper.SetDefault("LUNCH_START_HOUR", 11)
@@ -181,6 +187,14 @@ func (c *Config) Validate() error {
 
 	if c.Reservation.MealPriceTRY <= 0 {
 		return fmt.Errorf("MEAL_PRICE_TRY must be positive")
+	}
+
+	if c.Reservation.CancelCutoffHours < 0 {
+		return fmt.Errorf("RESERVATION_CANCEL_CUTOFF_HOURS must be non-negative")
+	}
+
+	if c.Reservation.QRValidityWindowSeconds <= 0 {
+		return fmt.Errorf("QR_VALIDITY_WINDOW_SECONDS must be positive")
 	}
 
 	// Validate meal time windows

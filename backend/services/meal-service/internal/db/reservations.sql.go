@@ -65,6 +65,59 @@ func (q *Queries) CheckActiveReservation(ctx context.Context, arg CheckActiveRes
 	return i, err
 }
 
+const checkActiveReservationsForSlots = `-- name: CheckActiveReservationsForSlots :many
+SELECT r.id, r.reservation_date, r.meal_time, r.status, c.name AS cafeteria_name
+FROM reservations r
+JOIN cafeterias c ON r.cafeteria_id = c.id
+WHERE r.student_id = $1
+  AND r.status IN ('pending', 'confirmed')
+  AND (r.reservation_date, r.meal_time::text) IN (
+    SELECT unnest($2::date[]), unnest($3::text[])
+  )
+`
+
+type CheckActiveReservationsForSlotsParams struct {
+	StudentID pgtype.UUID   `json:"student_id"`
+	Dates     []pgtype.Date `json:"dates"`
+	MealTimes []string      `json:"meal_times"`
+}
+
+type CheckActiveReservationsForSlotsRow struct {
+	ID              pgtype.UUID           `json:"id"`
+	ReservationDate pgtype.Date           `json:"reservation_date"`
+	MealTime        MealTimeEnum          `json:"meal_time"`
+	Status          ReservationStatusEnum `json:"status"`
+	CafeteriaName   string                `json:"cafeteria_name"`
+}
+
+// Batch variant of CheckActiveReservation. Accepts parallel arrays of dates and
+// meal times and returns any existing active rows for (student_id, date, meal).
+func (q *Queries) CheckActiveReservationsForSlots(ctx context.Context, arg CheckActiveReservationsForSlotsParams) ([]CheckActiveReservationsForSlotsRow, error) {
+	rows, err := q.db.Query(ctx, checkActiveReservationsForSlots, arg.StudentID, arg.Dates, arg.MealTimes)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []CheckActiveReservationsForSlotsRow{}
+	for rows.Next() {
+		var i CheckActiveReservationsForSlotsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ReservationDate,
+			&i.MealTime,
+			&i.Status,
+			&i.CafeteriaName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const cleanupExpiredReservations = `-- name: CleanupExpiredReservations :exec
 WITH cleanup_batch AS (
     SELECT id FROM reservations

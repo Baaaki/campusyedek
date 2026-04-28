@@ -66,10 +66,13 @@ func (r *StaffRepository) CreateStaffWithEvent(ctx context.Context, params db.Cr
 	eventPayload["id"] = utils.PgtypeToUUIDString(staff.ID)
 
 	// Create outbox event
-	payload, _ := json.Marshal(eventPayload)
+	payload, err := json.Marshal(eventPayload)
+	if err != nil {
+		return db.Staff{}, fmt.Errorf("%w: failed to marshal event payload: %v", sharedErrors.ErrQueryFailed, err)
+	}
 	_, err = qtx.CreateOutboxEvent(ctx, db.CreateOutboxEventParams{
-		EventType:  "staff.created",
-		RoutingKey: "staff.created",
+		EventType:  events.EventStaffCreated,
+		RoutingKey: events.RoutingKeyStaffCreated,
 		Payload:    payload,
 	})
 	if err != nil {
@@ -129,10 +132,13 @@ func (r *StaffRepository) UpdateStaffWithEvent(ctx context.Context, id uuid.UUID
 	}
 
 	// Create outbox event
-	payload, _ := json.Marshal(eventPayload)
+	payload, err := json.Marshal(eventPayload)
+	if err != nil {
+		return db.Staff{}, fmt.Errorf("%w: failed to marshal event payload: %v", sharedErrors.ErrQueryFailed, err)
+	}
 	_, err = qtx.CreateOutboxEvent(ctx, db.CreateOutboxEventParams{
-		EventType:  "staff.updated",
-		RoutingKey: "staff.updated",
+		EventType:  events.EventStaffUpdated,
+		RoutingKey: events.RoutingKeyStaffUpdated,
 		Payload:    payload,
 	})
 	if err != nil {
@@ -166,7 +172,10 @@ func (r *StaffRepository) SoftDeleteStaffWithEvent(ctx context.Context, id uuid.
 	}
 
 	// Create outbox event
-	payload, _ := json.Marshal(eventPayload)
+	payload, err := json.Marshal(eventPayload)
+	if err != nil {
+		return fmt.Errorf("%w: failed to marshal event payload: %v", sharedErrors.ErrQueryFailed, err)
+	}
 	_, err = qtx.CreateOutboxEvent(ctx, db.CreateOutboxEventParams{
 		EventType:  events.EventStaffDeactivated,
 		RoutingKey: events.RoutingKeyStaffDeactivated,

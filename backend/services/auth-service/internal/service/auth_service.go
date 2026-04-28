@@ -63,8 +63,10 @@ func (s *AuthService) Login(ctx context.Context, req dto.LoginRequest, deviceInf
 	if err != nil {
 		// Check if user not found
 		if sharedErrors.Is(err, serviceErrors.ErrUserNotFoundRepo) {
-			// Timing-safe: perform dummy password verification to prevent email enumeration
-			utils.VerifyPassword("$argon2id$v=19$m=65536,t=3,p=4$dummysalt$dummyhash", req.Password)
+			// Timing-safe: run a real Argon2id verification against a
+			// precomputed dummy hash so response time matches the
+			// password-mismatch branch and email enumeration is closed.
+			utils.VerifyDummyPassword(req.Password)
 			serviceLogger.Warn("login attempt for non-existent user")
 			return dto.LoginResponse{}, "", serviceErrors.ErrInvalidCredentials
 		}
@@ -76,10 +78,13 @@ func (s *AuthService) Login(ctx context.Context, req dto.LoginRequest, deviceInf
 		return dto.LoginResponse{}, "", sharedErrors.Wrap(sharedErrors.ErrInternal, err)
 	}
 
-	// Check if account is active
+	// Check if account is active. Treat deactivated accounts identically
+	// to "user not found" externally to avoid leaking which emails exist
+	// in the system; only the audit trail records the real reason.
 	if !utils.DerefBool(user.IsActive, false) {
+		utils.VerifyDummyPassword(req.Password)
 		serviceLogger.Warn("login attempt for deactivated account")
-		return dto.LoginResponse{}, "", serviceErrors.ErrAccountDeactivated
+		return dto.LoginResponse{}, "", serviceErrors.ErrInvalidCredentials
 	}
 
 	// Check if account is locked
@@ -193,10 +198,20 @@ func (s *AuthService) Login(ctx context.Context, req dto.LoginRequest, deviceInf
 }
 
 // Logout invalidates the current session and blacklists the access token
-func (s *AuthService) Logout(ctx context.Context, refreshToken string, accessToken string) error {
+func (s *AuthService) Logout(ctx context.Context, refreshToken string, accessToken string, authenticatedUserID string) error {
 	// Parse refresh token without validation (even expired tokens should be processable)
 	claims, err := s.parseRefreshTokenWithoutValidation(refreshToken)
 	if err != nil {
+		return serviceErrors.ErrInvalidToken
+	}
+
+	// Verify refresh token ownership — prevent cross-user session deletion
+	tokenUserID, ok := claims["user_id"].(string)
+	if !ok || tokenUserID != authenticatedUserID {
+		logger.Warn("logout attempt with mismatched refresh token owner",
+			zap.String("authenticated_user", authenticatedUserID),
+			zap.String("token_user", tokenUserID),
+		)
 		return serviceErrors.ErrInvalidToken
 	}
 
@@ -464,9 +479,8 @@ func (s *AuthService) ChangePassword(ctx context.Context, userID uuid.UUID, req 
 		return dto.ChangePasswordResponse{}, "", sharedErrors.ErrUnauthorized
 	}
 
-	// Validate new password (TODO: implement password policy)
-	if len(req.NewPassword) < 8 {
-		return dto.ChangePasswordResponse{}, "", fmt.Errorf("password must be at least 8 characters")
+	if err := utils.ValidatePasswordPolicy(req.NewPassword); err != nil {
+		return dto.ChangePasswordResponse{}, "", err
 	}
 
 	// Hash new password
@@ -676,13 +690,14 @@ func (s *AuthService) generateAccessToken(user db.User) (string, error) {
 	jti := uuid.New().String() // Unique token ID for blacklist tracking
 
 	claims := jwt.MapClaims{
-		"user_id":       utils.PgtypeToUUID(user.ID).String(),
-		"role":          user.Role,
-		"department":    utils.StringPointerToString(user.Department),
-		"token_version": utils.DerefInt32(user.TokenVersion, 0),
-		"jti":           jti,
-		"exp":           expiresAt.Unix(),
-		"iat":           now.Unix(),
+		"user_id":               utils.PgtypeToUUID(user.ID).String(),
+		"role":                  user.Role,
+		"department":            utils.StringPointerToString(user.Department),
+		"token_version":         utils.DerefInt32(user.TokenVersion, 0),
+		"jti":                   jti,
+		"force_password_change": utils.DerefBool(user.ForcePasswordChange, false),
+		"exp":                   expiresAt.Unix(),
+		"iat":                   now.Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -732,11 +747,18 @@ func (s *AuthService) parseRefreshToken(tokenString string) (jwt.MapClaims, erro
 	return nil, fmt.Errorf("invalid token")
 }
 
-// parseRefreshTokenWithoutValidation parses token without expiry validation
+// parseRefreshTokenWithoutValidation parses token with signature validation but without expiry check
 func (s *AuthService) parseRefreshTokenWithoutValidation(tokenString string) (jwt.MapClaims, error) {
-	token, _ := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method")
+		}
 		return []byte(s.config.JWT.Secret), nil
-	})
+	}, jwt.WithoutClaimsValidation())
+
+	if err != nil {
+		return nil, err
+	}
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok {
 		return claims, nil

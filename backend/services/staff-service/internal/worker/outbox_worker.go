@@ -3,13 +3,12 @@ package worker
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"time"
 
-	"github.com/baaaki/mydreamcampus/shared/clock"
 	"github.com/baaaki/mydreamcampus/shared/events"
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	"github.com/baaaki/mydreamcampus/shared/rabbitmq"
+	"github.com/baaaki/mydreamcampus/shared/utils"
 	"github.com/baaaki/mydreamcampus/staff-service/internal/repository"
 	"go.uber.org/zap"
 )
@@ -59,30 +58,29 @@ func (w *OutboxWorker) Start(ctx context.Context) {
 	}
 }
 
-// processEvents retrieves and publishes unprocessed events
+// processEvents retrieves and publishes pending events
 func (w *OutboxWorker) processEvents(ctx context.Context) {
-	events, err := w.outboxRepo.GetUnprocessedEvents(ctx, w.batchSize)
+	pendingEvents, err := w.outboxRepo.GetPendingEvents(ctx, w.batchSize)
 	if err != nil {
-		logger.Error("failed to get unprocessed events",
+		logger.Error("failed to get pending events",
 			zap.Error(err),
 		)
 		return
 	}
 
-	if len(events) == 0 {
-		// Silently return when no events (avoid log spam)
+	if len(pendingEvents) == 0 {
 		return
 	}
 
 	logger.Info("processing outbox events",
-		zap.Int("count", len(events)),
+		zap.Int("count", len(pendingEvents)),
 	)
 
 	successCount := 0
 	failCount := 0
 
-	for _, event := range events {
-		eventID := fmt.Sprintf("%d", event.ID)
+	for _, event := range pendingEvents {
+		eventID := utils.PgtypeToUUIDString(event.ID)
 
 		// Parse payload to map for publishing
 		var payload map[string]any
@@ -91,6 +89,7 @@ func (w *OutboxWorker) processEvents(ctx context.Context) {
 				zap.Error(err),
 				zap.String("event_id", eventID),
 			)
+			w.outboxRepo.MarkEventFailed(ctx, utils.PgtypeToUUID(event.ID), err.Error())
 			failCount++
 			continue
 		}
@@ -102,7 +101,7 @@ func (w *OutboxWorker) processEvents(ctx context.Context) {
 		eventMessage := map[string]any{
 			"event_id":   eventID,
 			"event_type": event.EventType,
-			"timestamp":  clock.Now(),
+			"timestamp":  event.CreatedAt.Time,
 			"data":       payload,
 		}
 
@@ -115,12 +114,13 @@ func (w *OutboxWorker) processEvents(ctx context.Context) {
 				zap.String("event_type", event.EventType),
 				zap.String("routing_key", routingKey),
 			)
+			w.outboxRepo.MarkEventFailed(ctx, utils.PgtypeToUUID(event.ID), err.Error())
 			failCount++
 			continue
 		}
 
 		// Mark event as processed
-		err = w.outboxRepo.MarkEventProcessed(ctx, event.ID)
+		err = w.outboxRepo.MarkEventProcessed(ctx, utils.PgtypeToUUID(event.ID))
 		if err != nil {
 			logger.Error("failed to mark event as processed",
 				zap.Error(err),
@@ -140,8 +140,58 @@ func (w *OutboxWorker) processEvents(ctx context.Context) {
 	logger.Info("outbox processing completed",
 		zap.Int("success", successCount),
 		zap.Int("failed", failCount),
-		zap.Int("total", len(events)),
+		zap.Int("total", len(pendingEvents)),
 	)
+
+	// Process failed events that can be retried
+	w.processFailedEvents(ctx)
+}
+
+// processFailedEvents retries failed events
+func (w *OutboxWorker) processFailedEvents(ctx context.Context) {
+	failedEvents, err := w.outboxRepo.GetFailedEvents(ctx, w.batchSize)
+	if err != nil {
+		logger.Error("failed to get failed events",
+			zap.Error(err),
+		)
+		return
+	}
+
+	if len(failedEvents) == 0 {
+		return
+	}
+
+	logger.Info("retrying failed events",
+		zap.Int("count", len(failedEvents)),
+	)
+
+	for _, event := range failedEvents {
+		eventID := utils.PgtypeToUUIDString(event.ID)
+
+		// Check if max retries exceeded
+		if event.RetryCount.Int16 >= event.MaxRetries.Int16 {
+			logger.Warn("max retries exceeded for event",
+				zap.String("event_id", eventID),
+				zap.Int16("retry_count", event.RetryCount.Int16),
+			)
+			continue
+		}
+
+		// Reset to pending for retry
+		err := w.outboxRepo.ResetFailedEvent(ctx, utils.PgtypeToUUID(event.ID))
+		if err != nil {
+			logger.Error("failed to reset failed event",
+				zap.Error(err),
+				zap.String("event_id", eventID),
+			)
+			continue
+		}
+
+		logger.Info("event reset for retry",
+			zap.String("event_id", eventID),
+			zap.Int16("retry_count", event.RetryCount.Int16),
+		)
+	}
 }
 
 // getRoutingKey maps event type to routing key using shared events constants

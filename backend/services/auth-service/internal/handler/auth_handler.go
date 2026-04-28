@@ -21,6 +21,39 @@ const (
 	requestTimeout = 10 * time.Second
 )
 
+// setAuthCookie writes an access/refresh token cookie with the strictest
+// flags appropriate for production: HttpOnly, Secure (when running in
+// production), and SameSite=Strict so the cookie cannot ride along on
+// cross-site navigations or top-level requests.
+func (h *AuthHandler) setAuthCookie(c *gin.Context, name, value string, maxAgeSeconds int) {
+	c.SetSameSite(http.SameSiteStrictMode)
+	c.SetCookie(
+		name,
+		value,
+		maxAgeSeconds,
+		"/api",
+		"",
+		h.config.Server.Environment == "production",
+		true,
+	)
+}
+
+// clearAuthCookie deletes a previously-set auth cookie. Flags must
+// match those used when setting the cookie so the browser overwrites
+// the entry rather than leaving the original.
+func (h *AuthHandler) clearAuthCookie(c *gin.Context, name string) {
+	c.SetSameSite(http.SameSiteStrictMode)
+	c.SetCookie(
+		name,
+		"",
+		-1,
+		"/api",
+		"",
+		h.config.Server.Environment == "production",
+		true,
+	)
+}
+
 type AuthHandler struct {
 	authService *service.AuthService
 	config      *config.Config
@@ -67,6 +100,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	// Perform login
 	response, refreshToken, err := h.authService.Login(ctx, req, deviceInfo, ipAddress)
+
 	if err != nil {
 		reqLogger.Error("login failed",
 			zap.Error(err),
@@ -79,15 +113,6 @@ func (h *AuthHandler) Login(c *gin.Context) {
 			c.JSON(http.StatusTooManyRequests, dto.ErrorResponse{
 				Error:   "ACCOUNT_LOCKED",
 				Message: "Hesabınız çok fazla başarısız giriş denemesi nedeniyle geçici olarak kilitlendi. Lütfen 30 dakika sonra tekrar deneyin.",
-			})
-			return
-		}
-
-		if sharedErrors.Is(err, authErrors.ErrAccountDeactivated) {
-			audit.LogSecurityFromContextWithDetails(c, audit.EventLoginFailed, "failure", "", "account deactivated", map[string]string{"email": req.Email})
-			c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
-				Error:   "ACCOUNT_DEACTIVATED",
-				Message: "Hesabınız devre dışı bırakılmış",
 			})
 			return
 		}
@@ -115,24 +140,11 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	audit.LogSecurityFromContext(c, audit.EventLogin, "success", response.User.ID)
 
-	// Set access token as HttpOnly cookie
-	accessTokenMaxAge := h.config.JWT.AccessTokenExpiry * 60 // convert minutes to seconds
-	c.SetSameSite(http.SameSiteLaxMode)
-	c.SetCookie("access_token", response.AccessToken, accessTokenMaxAge, "/api", "", h.config.Server.Environment == "production", true)
+	h.setAuthCookie(c, "access_token", response.AccessToken, h.config.JWT.AccessTokenExpiry*60)
+	h.setAuthCookie(c, "refresh_token", refreshToken, h.config.JWT.RefreshTokenExpiry*3600)
 
-	// Set refresh token as HttpOnly cookie
-	maxAge := h.config.JWT.RefreshTokenExpiry * 3600 // convert hours to seconds
-	c.SetSameSite(http.SameSiteLaxMode)
-	c.SetCookie(
-		"refresh_token",
-		refreshToken,
-		maxAge,
-		"/api",
-		"",
-		h.config.Server.Environment == "production", // Secure flag (HTTPS only in production)
-		true, // HttpOnly
-	)
-
+	// Also return refresh token in body for non-cookie clients (mobile).
+	response.RefreshToken = refreshToken
 	c.JSON(http.StatusOK, response)
 }
 
@@ -146,6 +158,12 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 		zap.String("endpoint", "Logout"),
 		zap.String("handler", "AuthHandler"),
 	)
+
+	// Get authenticated user ID from JWT context
+	authenticatedUserID := ""
+	if uid, exists := c.Get("user_id"); exists {
+		authenticatedUserID = uid.(string)
+	}
 
 	// Get refresh token from cookie
 	refreshToken, err := c.Cookie("refresh_token")
@@ -175,7 +193,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	reqLogger.Info("logout attempt")
 
 	// Perform logout (also blacklists the access token)
-	err = h.authService.Logout(ctx, refreshToken, accessToken)
+	err = h.authService.Logout(ctx, refreshToken, accessToken, authenticatedUserID)
 	if err != nil {
 		reqLogger.Error("logout failed",
 			zap.Error(err),
@@ -183,21 +201,8 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 		// Don't fail logout even if there's an error
 	}
 
-	// Clear access token cookie
-	c.SetSameSite(http.SameSiteLaxMode)
-	c.SetCookie("access_token", "", -1, "/api", "", h.config.Server.Environment == "production", true)
-
-	// Clear refresh token cookie
-	c.SetSameSite(http.SameSiteLaxMode)
-	c.SetCookie(
-		"refresh_token",
-		"",
-		-1, // MaxAge -1 deletes the cookie
-		"/api",
-		"",
-		h.config.Server.Environment == "production",
-		true, // HttpOnly
-	)
+	h.clearAuthCookie(c, "access_token")
+	h.clearAuthCookie(c, "refresh_token")
 
 	reqLogger.Info("logout successful")
 
@@ -279,21 +284,8 @@ func (h *AuthHandler) LogoutAll(c *gin.Context) {
 
 	audit.LogSecurityFromContext(c, audit.EventLogoutAll, "success", userID.String())
 
-	// Clear access token cookie
-	c.SetSameSite(http.SameSiteLaxMode)
-	c.SetCookie("access_token", "", -1, "/api", "", h.config.Server.Environment == "production", true)
-
-	// Clear current refresh token cookie
-	c.SetSameSite(http.SameSiteLaxMode)
-	c.SetCookie(
-		"refresh_token",
-		"",
-		-1,
-		"/api",
-		"",
-		h.config.Server.Environment == "production",
-		true,
-	)
+	h.clearAuthCookie(c, "access_token")
+	h.clearAuthCookie(c, "refresh_token")
 
 	c.JSON(http.StatusOK, dto.MessageResponse{
 		Message: "Successfully logged out from all devices",
@@ -311,12 +303,15 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 		zap.String("handler", "AuthHandler"),
 	)
 
-	// Get refresh token from cookie
+	// Refresh token: cookie (web) or body (mobile/non-cookie clients).
 	refreshToken, err := c.Cookie("refresh_token")
-	if err != nil {
-		reqLogger.Warn("refresh token not found in cookie",
-			zap.Error(err),
-		)
+	if err != nil || refreshToken == "" {
+		var body dto.RefreshTokenRequest
+		_ = c.ShouldBindJSON(&body) // body is optional; we already checked cookie
+		refreshToken = body.RefreshToken
+	}
+	if refreshToken == "" {
+		reqLogger.Warn("refresh token not found in cookie or body")
 		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
 			Error:   "MISSING_REFRESH_TOKEN",
 			Message: "Refresh token not found",
@@ -352,24 +347,11 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 
 	audit.LogSecurityFromContext(c, audit.EventTokenRefresh, "success", "")
 
-	// Set new access token as HttpOnly cookie
-	accessTokenMaxAge := h.config.JWT.AccessTokenExpiry * 60 // convert minutes to seconds
-	c.SetSameSite(http.SameSiteLaxMode)
-	c.SetCookie("access_token", response.AccessToken, accessTokenMaxAge, "/api", "", h.config.Server.Environment == "production", true)
+	h.setAuthCookie(c, "access_token", response.AccessToken, h.config.JWT.AccessTokenExpiry*60)
+	h.setAuthCookie(c, "refresh_token", newRefreshToken, h.config.JWT.RefreshTokenExpiry*3600)
 
-	// Set new refresh token cookie
-	maxAge := h.config.JWT.RefreshTokenExpiry * 3600 // convert hours to seconds
-	c.SetSameSite(http.SameSiteLaxMode)
-	c.SetCookie(
-		"refresh_token",
-		newRefreshToken,
-		maxAge,
-		"/api",
-		"",
-		h.config.Server.Environment == "production",
-		true, // HttpOnly
-	)
-
+	// Also return rotated refresh token in body for non-cookie clients.
+	response.RefreshToken = newRefreshToken
 	c.JSON(http.StatusOK, response)
 }
 
@@ -433,24 +415,11 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 
 	audit.LogSecurityFromContext(c, audit.EventPasswordChange, "success", userID.String())
 
-	// Set new access token as HttpOnly cookie
-	accessTokenMaxAge := h.config.JWT.AccessTokenExpiry * 60
-	c.SetSameSite(http.SameSiteLaxMode)
-	c.SetCookie("access_token", response.AccessToken, accessTokenMaxAge, "/api", "", h.config.Server.Environment == "production", true)
+	h.setAuthCookie(c, "access_token", response.AccessToken, h.config.JWT.AccessTokenExpiry*60)
+	h.setAuthCookie(c, "refresh_token", newRefreshToken, h.config.JWT.RefreshTokenExpiry*3600)
 
-	// Set new refresh token cookie
-	maxAge := h.config.JWT.RefreshTokenExpiry * 3600
-	c.SetSameSite(http.SameSiteLaxMode)
-	c.SetCookie(
-		"refresh_token",
-		newRefreshToken,
-		maxAge,
-		"/api",
-		"",
-		h.config.Server.Environment == "production",
-		true,
-	)
-
+	// Also return refresh token in body for non-cookie clients.
+	response.RefreshToken = newRefreshToken
 	c.JSON(http.StatusOK, response)
 }
 
@@ -510,6 +479,17 @@ func (h *AuthHandler) Verify(c *gin.Context) {
 	if !exists {
 		c.AbortWithStatus(http.StatusUnauthorized)
 		return
+	}
+
+	// Block downstream service access until password is changed
+	if fpc, ok := c.Get("force_password_change"); ok {
+		if mustChange, _ := fpc.(bool); mustChange {
+			c.JSON(http.StatusForbidden, dto.ErrorResponse{
+				Error:   "FORCE_PASSWORD_CHANGE",
+				Message: "Şifrenizi değiştirmeden diğer servislere erişemezsiniz",
+			})
+			return
+		}
 	}
 
 	role, _ := c.Get("role")

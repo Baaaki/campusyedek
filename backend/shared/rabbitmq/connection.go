@@ -1,6 +1,8 @@
 package rabbitmq
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -132,4 +134,17 @@ func (c *Connection) Close() error {
 // IsConnected returns connection status
 func (c *Connection) IsConnected() bool {
 	return c.connected
+}
+
+// Ping verifies the RabbitMQ connection is alive.
+// The amqp library doesn't expose a network round-trip, so we check
+// the underlying conn for liveness flags.
+func (c *Connection) Ping(ctx context.Context) error {
+	if !c.connected || c.conn == nil {
+		return errors.New("rabbitmq not connected")
+	}
+	if c.conn.IsClosed() {
+		return errors.New("rabbitmq connection is closed")
+	}
+	return nil
 }

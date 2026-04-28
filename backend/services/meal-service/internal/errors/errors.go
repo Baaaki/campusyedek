@@ -31,7 +31,7 @@ var (
 	ErrReservationAlreadyUsed   = sharedErrors.New("RESERVATION_ALREADY_USED", "This reservation has already been used", http.StatusBadRequest)
 	ErrInvalidStatusForCancel   = sharedErrors.New("INVALID_STATUS_FOR_CANCEL", "Only confirmed reservations can be cancelled", http.StatusBadRequest)
 	ErrNotOwner                 = sharedErrors.New("NOT_OWNER", "This reservation does not belong to you", http.StatusForbidden)
-	ErrRoleNotAllowed           = sharedErrors.New("ROLE_NOT_ALLOWED", "Only students can make reservations", http.StatusForbidden)
+	ErrCancelCutoffPassed       = sharedErrors.New("CANCEL_CUTOFF_PASSED", "Cancellation window has closed for this reservation", http.StatusBadRequest)
 
 	// Student cache errors
 	ErrStudentDeactivated = sharedErrors.New("STUDENT_DEACTIVATED", "Student account has been deactivated", http.StatusForbidden)

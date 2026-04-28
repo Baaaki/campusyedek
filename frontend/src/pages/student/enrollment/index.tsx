@@ -1,10 +1,32 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { enrollmentApi } from '@/lib/api-client';
-import type { AvailableCourse, MyEnrollmentsResponse, LatestRejectionResponse, RejectionDetail } from '@/lib/types';
+import type { AvailableCourse, MyEnrollmentsResponse, EnrollmentProgramResponse, LatestRejectionResponse, RejectionDetail } from '@/lib/types';
 import CourseList from '@/components/enrollment/CourseList';
 import WeeklyScheduleGrid from '@/components/enrollment/WeeklyScheduleGrid';
 import Toast from '@/components/enrollment/Toast';
+
+// Determine current semester based on date:
+// Sep-Jan → Fall, Feb-Jun → Spring, Jul-Aug → Summer
+function getCurrentSemester(): string {
+  const now = new Date();
+  const month = now.getMonth() + 1; // 1-12
+  const year = now.getFullYear();
+
+  if (month >= 9) {
+    // Fall semester: Sep-Jan → "2025-2026-Fall"
+    return `${year}-${year + 1}-Fall`;
+  } else if (month <= 1) {
+    // Still Fall semester from previous year: Jan → "2024-2025-Fall"
+    return `${year - 1}-${year}-Fall`;
+  } else if (month >= 2 && month <= 6) {
+    // Spring semester: Feb-Jun → "2025-2026-Spring"
+    return `${year - 1}-${year}-Spring`;
+  } else {
+    // Summer semester: Jul-Aug → "2025-2026-Summer"
+    return `${year - 1}-${year}-Summer`;
+  }
+}
 
 interface AvailableCoursesResponse {
   student_id: string;
@@ -42,8 +64,7 @@ export default function StudentEnrollmentPage() {
 
   const fetchCourses = async () => {
     try {
-      const currentYear = new Date().getFullYear();
-      const semesterParam = `${currentYear}-${currentYear+1}-Fall`; 
+      const semesterParam = getCurrentSemester(); 
 
       const response = await enrollmentApi
         .get(`available-courses?semester=${semesterParam}`)
@@ -65,8 +86,7 @@ export default function StudentEnrollmentPage() {
 
   const fetchEnrollmentStatus = async () => {
     try {
-      const currentYear = new Date().getFullYear();
-      const semesterParam = `${currentYear}-${currentYear+1}-Fall`;
+      const semesterParam = getCurrentSemester();
 
       const response = await enrollmentApi
         .get(`my-enrollments?semester=${semesterParam}`)
@@ -125,8 +145,7 @@ export default function StudentEnrollmentPage() {
 
   const fetchLatestRejection = async () => {
     try {
-      const currentYear = new Date().getFullYear();
-      const semesterParam = `${currentYear}-${currentYear+1}-Fall`;
+      const semesterParam = getCurrentSemester();
 
       const response = await enrollmentApi
         .get(`latest-rejection?semester=${semesterParam}`)
@@ -231,24 +250,49 @@ export default function StudentEnrollmentPage() {
     }
 
     try {
-      const currentYear = new Date().getFullYear();
-      const semesterParam = `${currentYear}-${currentYear+1}-Fall`;
+      const semesterParam = getCurrentSemester();
 
-      await enrollmentApi.post('programs', {
-        json: {
-          semester: semesterParam,
-          course_ids: selectedCourseIds
-        }
+      // Apply the returned program directly — avoids a follow-up GET that can miss the
+      // write on a read replica or expose a brief "no enrollment" flicker.
+      const program = await enrollmentApi
+        .post('programs', {
+          json: {
+            semester: semesterParam,
+            course_ids: selectedCourseIds,
+          },
+        })
+        .json<EnrollmentProgramResponse>();
+
+      setEnrollmentStatus(program.status);
+      setRejectionInfo(null);
+
+      const enrolledAsAvailable: AvailableCourse[] = program.courses.map(c => ({
+        id: c.id,
+        course_code: c.course_code,
+        course_name: c.course_name,
+        credits: c.credits,
+        schedule_sessions: c.schedule_sessions || [],
+        max_capacity: 0,
+        current_enrollment: 0,
+        available_seats: 0,
+        instructor: c.instructor || '',
+      }));
+      setEnrolledCourses(enrolledAsAvailable);
+
+      const newCourseIds = program.courses.map(c => c.id);
+      setSelectedCourseIds(newCourseIds);
+      const newColorMap: Record<string, number> = {};
+      newCourseIds.forEach((id, index) => {
+        newColorMap[id] = index;
       });
+      setCourseColorMap(newColorMap);
+      setNextColorIndex(newCourseIds.length);
 
       setToast({
         message: 'Ders kaydı başarıyla oluşturuldu',
         type: 'success',
         isVisible: true
       });
-      
-      // Refresh status
-      await fetchEnrollmentStatus();
 
     } catch (err: any) {
       setToast({
@@ -269,8 +313,7 @@ export default function StudentEnrollmentPage() {
     // Call DELETE API for both pending enrollment and rejected state
     if (enrollmentStatus === 'pending' || rejectionInfo) {
       try {
-        const currentYear = new Date().getFullYear();
-        const semesterParam = `${currentYear}-${currentYear+1}-Fall`;
+        const semesterParam = getCurrentSemester();
 
         await enrollmentApi.delete(`programs?semester=${semesterParam}`);
 

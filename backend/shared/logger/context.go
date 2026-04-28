@@ -11,9 +11,21 @@ type contextKey string
 
 const requestIDKey contextKey = "request_id"
 
-// WithRequestID adds a request ID to the context
+// WithRequestID adds a freshly generated request ID to the context.
+// Use WithRequestIDValue to attach an inbound ID propagated from an
+// upstream service.
 func WithRequestID(ctx context.Context) context.Context {
 	requestID := uuid.New().String()
+	return context.WithValue(ctx, requestIDKey, requestID)
+}
+
+// WithRequestIDValue attaches an explicit request ID to the context.
+// If the supplied value is empty, a fresh UUID is generated so callers
+// can pass an incoming X-Request-ID header through unconditionally.
+func WithRequestIDValue(ctx context.Context, requestID string) context.Context {
+	if requestID == "" {
+		requestID = uuid.New().String()
+	}
 	return context.WithValue(ctx, requestIDKey, requestID)
 }
 

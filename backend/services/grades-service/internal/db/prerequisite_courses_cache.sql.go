@@ -7,14 +7,7 @@ package db
 
 import (
 	"context"
-
-	"github.com/google/uuid"
 )
-
-type BulkInsertPrerequisiteCoursesParams struct {
-	CourseCode string    `json:"course_code"`
-	CourseID   uuid.UUID `json:"course_id"`
-}
 
 const isPrerequisiteCourse = `-- name: IsPrerequisiteCourse :one
 SELECT EXISTS(
@@ -28,13 +21,4 @@ func (q *Queries) IsPrerequisiteCourse(ctx context.Context, courseCode string) (
 	var is_prerequisite bool
 	err := row.Scan(&is_prerequisite)
 	return is_prerequisite, err
-}
-
-const truncatePrerequisiteCourses = `-- name: TruncatePrerequisiteCourses :exec
-TRUNCATE TABLE prerequisite_courses_cache
-`
-
-func (q *Queries) TruncatePrerequisiteCourses(ctx context.Context) error {
-	_, err := q.db.Exec(ctx, truncatePrerequisiteCourses)
-	return err
 }

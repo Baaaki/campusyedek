@@ -291,10 +291,13 @@ func (r *StudentRepository) CreateStudentWithEvent(ctx context.Context, params d
 	eventPayload["id"] = utils.PgtypeToUUIDString(student.ID)
 
 	// Create outbox event
-	payload, _ := json.Marshal(eventPayload)
+	payload, err := json.Marshal(eventPayload)
+	if err != nil {
+		return db.Student{}, fmt.Errorf("%w: failed to marshal event payload: %v", sharedErrors.ErrQueryFailed, err)
+	}
 	_, err = qtx.CreateOutboxEvent(ctx, db.CreateOutboxEventParams{
-		EventType:  "student.created",
-		RoutingKey: "student.created",
+		EventType:  events.EventStudentCreated,
+		RoutingKey: events.RoutingKeyStudentCreated,
 		Payload:    payload,
 	})
 	if err != nil {
@@ -366,10 +369,13 @@ func (r *StudentRepository) UpdateStudentWithEvent(ctx context.Context, id uuid.
 	}
 
 	// Create outbox event
-	payload, _ := json.Marshal(eventPayload)
+	payload, err := json.Marshal(eventPayload)
+	if err != nil {
+		return db.Student{}, fmt.Errorf("%w: failed to marshal event payload: %v", sharedErrors.ErrQueryFailed, err)
+	}
 	_, err = qtx.CreateOutboxEvent(ctx, db.CreateOutboxEventParams{
-		EventType:  "student.updated",
-		RoutingKey: "student.updated",
+		EventType:  events.EventStudentUpdated,
+		RoutingKey: events.RoutingKeyStudentUpdated,
 		Payload:    payload,
 	})
 	if err != nil {
@@ -403,7 +409,10 @@ func (r *StudentRepository) SoftDeleteStudentWithEvent(ctx context.Context, id u
 	}
 
 	// Create outbox event
-	payload, _ := json.Marshal(eventPayload)
+	payload, err := json.Marshal(eventPayload)
+	if err != nil {
+		return fmt.Errorf("%w: failed to marshal event payload: %v", sharedErrors.ErrQueryFailed, err)
+	}
 	_, err = qtx.CreateOutboxEvent(ctx, db.CreateOutboxEventParams{
 		EventType:  events.EventStudentDeactivated,
 		RoutingKey: events.RoutingKeyStudentDeactivated,
@@ -495,10 +504,13 @@ func (r *StudentRepository) BulkAssignAdvisor(ctx context.Context, studentIDs []
 
 	// Create outbox events for each student
 	for _, eventPayload := range eventPayloads {
-		payload, _ := json.Marshal(eventPayload)
+		payload, err := json.Marshal(eventPayload)
+		if err != nil {
+			return fmt.Errorf("%w: failed to marshal event payload: %v", sharedErrors.ErrQueryFailed, err)
+		}
 		_, err = qtx.CreateOutboxEvent(ctx, db.CreateOutboxEventParams{
-			EventType:  "student.updated",
-			RoutingKey: "student.updated",
+			EventType:  events.EventStudentUpdated,
+			RoutingKey: events.RoutingKeyStudentUpdated,
 			Payload:    payload,
 		})
 		if err != nil {

@@ -42,4 +42,11 @@ var (
 	ErrInvalidSemester       = errors.New("invalid semester format")
 	ErrNoCourses             = errors.New("no courses provided in enrollment request")
 	ErrInvalidCourseID       = errors.New("invalid course ID")
+	ErrTooManyCourses        = errors.New("too many courses selected for enrollment")
+	ErrDuplicateCourse       = errors.New("duplicate course in enrollment request")
+)
+
+// Enrollment business limits
+const (
+	MaxCoursesPerEnrollment = 10
 )

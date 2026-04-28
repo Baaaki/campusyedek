@@ -53,6 +53,15 @@ func (q *Queries) DeletePeriod(ctx context.Context, id pgtype.UUID) error {
 	return err
 }
 
+const deletePeriodsBySemester = `-- name: DeletePeriodsBySemester :exec
+DELETE FROM academic_periods WHERE semester = $1
+`
+
+func (q *Queries) DeletePeriodsBySemester(ctx context.Context, semester string) error {
+	_, err := q.db.Exec(ctx, deletePeriodsBySemester, semester)
+	return err
+}
+
 const getActivePeriodBySemester = `-- name: GetActivePeriodBySemester :one
 SELECT id, semester, period_start, period_end, is_active, created_at, updated_at
 FROM academic_periods
@@ -83,6 +92,25 @@ WHERE id = $1
 
 func (q *Queries) GetPeriodByID(ctx context.Context, id pgtype.UUID) (AcademicPeriod, error) {
 	row := q.db.QueryRow(ctx, getPeriodByID, id)
+	var i AcademicPeriod
+	err := row.Scan(
+		&i.ID,
+		&i.Semester,
+		&i.PeriodStart,
+		&i.PeriodEnd,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getPeriodBySemester = `-- name: GetPeriodBySemester :one
+SELECT id, semester, period_start, period_end, is_active, created_at, updated_at FROM academic_periods WHERE semester = $1 LIMIT 1
+`
+
+func (q *Queries) GetPeriodBySemester(ctx context.Context, semester string) (AcademicPeriod, error) {
+	row := q.db.QueryRow(ctx, getPeriodBySemester, semester)
 	var i AcademicPeriod
 	err := row.Scan(
 		&i.ID,
@@ -182,6 +210,34 @@ type UpdatePeriodParams struct {
 
 func (q *Queries) UpdatePeriod(ctx context.Context, arg UpdatePeriodParams) (AcademicPeriod, error) {
 	row := q.db.QueryRow(ctx, updatePeriod, arg.PeriodEnd, arg.IsActive, arg.ID)
+	var i AcademicPeriod
+	err := row.Scan(
+		&i.ID,
+		&i.Semester,
+		&i.PeriodStart,
+		&i.PeriodEnd,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updatePeriodBySemesterSQL = `-- name: UpdatePeriodBySemesterSQL :one
+UPDATE academic_periods
+SET period_start = $2, period_end = $3, updated_at = NOW()
+WHERE semester = $1
+RETURNING id, semester, period_start, period_end, is_active, created_at, updated_at
+`
+
+type UpdatePeriodBySemesterSQLParams struct {
+	Semester    string             `json:"semester"`
+	PeriodStart pgtype.Timestamptz `json:"period_start"`
+	PeriodEnd   pgtype.Timestamptz `json:"period_end"`
+}
+
+func (q *Queries) UpdatePeriodBySemesterSQL(ctx context.Context, arg UpdatePeriodBySemesterSQLParams) (AcademicPeriod, error) {
+	row := q.db.QueryRow(ctx, updatePeriodBySemesterSQL, arg.Semester, arg.PeriodStart, arg.PeriodEnd)
 	var i AcademicPeriod
 	err := row.Scan(
 		&i.ID,

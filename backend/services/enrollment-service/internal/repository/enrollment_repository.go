@@ -8,11 +8,13 @@ import (
 	"github.com/baaaki/mydreamcampus/enrollment-service/internal/db"
 	sharedErrors "github.com/baaaki/mydreamcampus/shared/errors"
 	"github.com/baaaki/mydreamcampus/shared/events"
+	"github.com/baaaki/mydreamcampus/shared/logger"
 	"github.com/baaaki/mydreamcampus/shared/utils"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.uber.org/zap"
 )
 
 type EnrollmentRepository struct {
@@ -78,15 +80,21 @@ func (r *EnrollmentRepository) CreateProgramWithCoursesAndEvent(
 			return db.EnrollmentProgram{}, fmt.Errorf("%w: failed to add course to program: %v", sharedErrors.ErrQueryFailed, err)
 		}
 
-		// Increment enrollment count
-		err = qtx.IncrementEnrollment(ctx, utils.UUIDToPgtype(courseID))
+		// Increment enrollment count (returns 0 rows if capacity is full)
+		rowsAffected, err := qtx.IncrementEnrollment(ctx, utils.UUIDToPgtype(courseID))
 		if err != nil {
 			return db.EnrollmentProgram{}, fmt.Errorf("%w: failed to increment enrollment: %v", sharedErrors.ErrQueryFailed, err)
+		}
+		if rowsAffected == 0 {
+			return db.EnrollmentProgram{}, fmt.Errorf("%w: course capacity is full", sharedErrors.ErrConflict)
 		}
 	}
 
 	// Create outbox event
-	payload, _ := json.Marshal(eventPayload)
+	payload, err := json.Marshal(eventPayload)
+	if err != nil {
+		return db.EnrollmentProgram{}, fmt.Errorf("%w: failed to marshal submitted event payload: %v", sharedErrors.ErrInternal, err)
+	}
 	_, err = qtx.CreateOutboxEvent(ctx, db.CreateOutboxEventParams{
 		EventType:   events.EventEnrollmentProgramSubmitted,
 		AggregateID: program.ID,
@@ -194,7 +202,10 @@ func (r *EnrollmentRepository) ApproveProgramWithEvent(
 	}
 
 	// Create outbox event
-	payload, _ := json.Marshal(eventPayload)
+	payload, err := json.Marshal(eventPayload)
+	if err != nil {
+		return db.EnrollmentProgram{}, fmt.Errorf("%w: failed to marshal approved event payload: %v", sharedErrors.ErrInternal, err)
+	}
 	_, err = qtx.CreateOutboxEvent(ctx, db.CreateOutboxEventParams{
 		EventType:   events.EventEnrollmentProgramApproved,
 		AggregateID: utils.UUIDToPgtype(programID),
@@ -227,6 +238,12 @@ func (r *EnrollmentRepository) RejectProgramWithEventAndLog(
 
 	qtx := r.queries.WithTx(tx)
 
+	// Lock the program row — prevents concurrent reject/cancel causing double decrement
+	_, err = qtx.LockPendingProgram(ctx, utils.UUIDToPgtype(programID))
+	if err != nil {
+		return fmt.Errorf("%w: program not found or not pending: %v", sharedErrors.ErrNotFound, err)
+	}
+
 	// Create rejection log
 	_, err = qtx.CreateRejectionLog(ctx, rejectionLogParams)
 	if err != nil {
@@ -235,9 +252,16 @@ func (r *EnrollmentRepository) RejectProgramWithEventAndLog(
 
 	// Decrement enrollment counts
 	for _, courseID := range courseIDs {
-		err = qtx.DecrementEnrollment(ctx, utils.UUIDToPgtype(courseID))
+		rowsAffected, err := qtx.DecrementEnrollment(ctx, utils.UUIDToPgtype(courseID))
 		if err != nil {
 			return fmt.Errorf("%w: failed to decrement enrollment: %v", sharedErrors.ErrQueryFailed, err)
+		}
+		if rowsAffected == 0 {
+			logger.Warn("decrement enrollment affected 0 rows — possible counter inconsistency",
+				zap.String("course_id", courseID.String()),
+				zap.String("program_id", programID.String()),
+				zap.String("context", "reject"),
+			)
 		}
 	}
 
@@ -248,7 +272,10 @@ func (r *EnrollmentRepository) RejectProgramWithEventAndLog(
 	}
 
 	// Create outbox event
-	payload, _ := json.Marshal(eventPayload)
+	payload, err := json.Marshal(eventPayload)
+	if err != nil {
+		return fmt.Errorf("%w: failed to marshal rejected event payload: %v", sharedErrors.ErrInternal, err)
+	}
 	_, err = qtx.CreateOutboxEvent(ctx, db.CreateOutboxEventParams{
 		EventType:   events.EventEnrollmentProgramRejected,
 		AggregateID: utils.UUIDToPgtype(programID),
@@ -340,11 +367,25 @@ func (r *EnrollmentRepository) CancelProgramWithEvent(
 
 	qtx := r.queries.WithTx(tx)
 
+	// Lock the program row — ensures only one concurrent request can cancel
+	_, err = qtx.LockPendingProgram(ctx, utils.UUIDToPgtype(programID))
+	if err != nil {
+		// Program already cancelled/approved by another request
+		return fmt.Errorf("%w: program not found or not pending: %v", sharedErrors.ErrNotFound, err)
+	}
+
 	// Decrement enrollment counts
 	for _, courseID := range courseIDs {
-		err = qtx.DecrementEnrollment(ctx, utils.UUIDToPgtype(courseID))
+		rowsAffected, err := qtx.DecrementEnrollment(ctx, utils.UUIDToPgtype(courseID))
 		if err != nil {
 			return fmt.Errorf("%w: failed to decrement enrollment: %v", sharedErrors.ErrQueryFailed, err)
+		}
+		if rowsAffected == 0 {
+			logger.Warn("decrement enrollment affected 0 rows — possible counter inconsistency",
+				zap.String("course_id", courseID.String()),
+				zap.String("program_id", programID.String()),
+				zap.String("context", "cancel"),
+			)
 		}
 	}
 
@@ -355,7 +396,10 @@ func (r *EnrollmentRepository) CancelProgramWithEvent(
 	}
 
 	// Create outbox event
-	payload, _ := json.Marshal(eventPayload)
+	payload, err := json.Marshal(eventPayload)
+	if err != nil {
+		return fmt.Errorf("%w: failed to marshal cancelled event payload: %v", sharedErrors.ErrInternal, err)
+	}
 	_, err = qtx.CreateOutboxEvent(ctx, db.CreateOutboxEventParams{
 		EventType:   events.EventEnrollmentProgramCancelled,
 		AggregateID: utils.UUIDToPgtype(programID),

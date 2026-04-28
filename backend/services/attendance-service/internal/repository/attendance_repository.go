@@ -6,6 +6,7 @@ import (
 	"github.com/baaaki/mydreamcampus/attendance-service/internal/db"
 	"github.com/baaaki/mydreamcampus/shared/utils"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -23,6 +24,40 @@ func NewAttendanceRepository(pool *pgxpool.Pool) *AttendanceRepository {
 
 func (r *AttendanceRepository) CreateAttendanceRecordQR(ctx context.Context, params db.CreateAttendanceRecordQRParams) error {
 	return r.queries.CreateAttendanceRecordQR(ctx, params)
+}
+
+// BatchCreateAttendanceRecordsQR inserts many QR attendance records in a single query via UNNEST.
+// ON CONFLICT DO NOTHING makes the call idempotent so flush retries are safe.
+func (r *AttendanceRepository) BatchCreateAttendanceRecordsQR(ctx context.Context, records []db.CreateAttendanceRecordQRParams) error {
+	if len(records) == 0 {
+		return nil
+	}
+
+	params := db.BatchCreateAttendanceRecordsQRParams{
+		SessionIds:   make([]pgtype.UUID, len(records)),
+		StudentIds:   make([]pgtype.UUID, len(records)),
+		CourseIds:    make([]pgtype.UUID, len(records)),
+		Semesters:    make([]string, len(records)),
+		WeekNumbers:  make([]int16, len(records)),
+		ScannedAts:   make([]pgtype.Timestamp, len(records)),
+		QrTimestamps: make([]int64, len(records)),
+		SessionTypes: make([]db.SessionTypeEnum, len(records)),
+	}
+
+	for i, rec := range records {
+		params.SessionIds[i] = rec.SessionID
+		params.StudentIds[i] = rec.StudentID
+		params.CourseIds[i] = rec.CourseID
+		params.Semesters[i] = rec.Semester
+		params.WeekNumbers[i] = rec.WeekNumber
+		params.ScannedAts[i] = rec.ScannedAt
+		if rec.QrTimestamp.Valid {
+			params.QrTimestamps[i] = rec.QrTimestamp.Int64
+		}
+		params.SessionTypes[i] = rec.SessionType
+	}
+
+	return r.queries.BatchCreateAttendanceRecordsQR(ctx, params)
 }
 
 func (r *AttendanceRepository) CreateAttendanceRecordManual(ctx context.Context, params db.CreateAttendanceRecordManualParams) (db.AttendanceRecord, error) {

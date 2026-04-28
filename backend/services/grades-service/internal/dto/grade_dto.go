@@ -196,6 +196,16 @@ type ScoreLockRequest struct {
 	Slug           string    `json:"slug" binding:"required"`
 }
 
+// LockAssessmentResponse is the result of an instructor locking an entire
+// assessment (all students for a given slug). When every slug of the course
+// is locked, the course auto-finalizes and FinalizeTriggered is true.
+type LockAssessmentResponse struct {
+	CourseID          uuid.UUID `json:"course_id"`
+	Slug              string    `json:"slug"`
+	LockedCount       int       `json:"locked_count"`
+	FinalizeTriggered bool      `json:"finalize_triggered,omitempty"`
+}
+
 // ============================================
 // Appeal (İtiraz) DTOs
 // ============================================

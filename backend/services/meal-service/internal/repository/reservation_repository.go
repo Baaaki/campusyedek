@@ -115,6 +115,15 @@ func (r *ReservationRepository) CheckActiveReservation(ctx context.Context, para
 	return &reservation, nil
 }
 
+// CheckActiveReservationsForSlots resolves the entire batch in one query.
+func (r *ReservationRepository) CheckActiveReservationsForSlots(ctx context.Context, params db.CheckActiveReservationsForSlotsParams) ([]db.CheckActiveReservationsForSlotsRow, error) {
+	rows, err := r.queries.CheckActiveReservationsForSlots(ctx, params)
+	if err != nil {
+		return nil, fmt.Errorf("%w: failed to check active reservations for slots: %v", sharedErrors.ErrQueryFailed, err)
+	}
+	return rows, nil
+}
+
 // GetStudentReservations returns all reservations for a student
 func (r *ReservationRepository) GetStudentReservations(ctx context.Context, studentID uuid.UUID) ([]db.GetStudentReservationsRow, error) {
 	reservations, err := r.queries.GetStudentReservations(ctx, utils.UUIDToPgtype(studentID))

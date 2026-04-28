@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -19,15 +20,29 @@ import (
 	sharedErrors "github.com/baaaki/mydreamcampus/shared/errors"
 	"github.com/baaaki/mydreamcampus/shared/utils"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
 )
+
+// isUniqueViolation returns true if err is a Postgres unique constraint violation (23505).
+func isUniqueViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23505"
+}
+
+// ClosedDaysReader is the slice of ClosedDaysRepository that the reservation
+// hot path needs. It is an interface so that a caching wrapper can be swapped
+// in transparently.
+type ClosedDaysReader interface {
+	IsDateClosed(ctx context.Context, date pgtype.Date) (bool, error)
+}
 
 type ReservationService struct {
 	reservationRepo  *repository.ReservationRepository
 	cafeteriaRepo    *repository.CafeteriaRepository
 	studentCacheRepo *repository.StudentCacheRepository
-	closedDaysRepo   *repository.ClosedDaysRepository
+	closedDaysRepo   ClosedDaysReader
 	paymentClient    *PaymentClient
 	cfg              *config.Config
 	logger           *zap.Logger
@@ -37,7 +52,7 @@ func NewReservationService(
 	reservationRepo *repository.ReservationRepository,
 	cafeteriaRepo *repository.CafeteriaRepository,
 	studentCacheRepo *repository.StudentCacheRepository,
-	closedDaysRepo *repository.ClosedDaysRepository,
+	closedDaysRepo ClosedDaysReader,
 	paymentClient *PaymentClient,
 	cfg *config.Config,
 	logger *zap.Logger,
@@ -69,23 +84,18 @@ func (s *ReservationService) CreateReservation(ctx context.Context, studentID uu
 		return nil, serviceErrors.ErrStudentDeactivated
 	}
 
-	// 2. Validate reservation window (Monday 08:00 - Friday 13:00 UTC+3)
-	if err := s.validateReservationWindow(); err != nil {
-		return nil, err
-	}
-
-	// 3. Parse and validate date
+	// 2. Parse and validate date
 	reservationDate, err := time.Parse("2006-01-02", req.Date)
 	if err != nil {
 		return nil, sharedErrors.ErrBadRequest
 	}
 
-	// 4. Validate date is in next week (Monday-Friday)
+	// 3. Check the date is open (not a closed day)
 	if err := s.validateReservationDate(ctx, reservationDate); err != nil {
 		return nil, err
 	}
 
-	// 5. Parse cafeteria ID
+	// 4. Parse cafeteria ID
 	cafeteriaID, err := uuid.Parse(req.CafeteriaID)
 	if err != nil {
 		return nil, sharedErrors.ErrBadRequest
@@ -124,24 +134,10 @@ func (s *ReservationService) CreateReservation(ctx context.Context, studentID uu
 		return nil, serviceErrors.ErrActiveReservationExists
 	}
 
-	// 9. Call Payment Service FIRST (before saving to DB)
+	// 9. Create reservation as pending (before calling payment).
+	//    The partial unique index on (student_id, date, meal_time) WHERE status IN ('pending','confirmed')
+	//    is the source of truth for duplicate prevention.
 	menuTypeEnum, _ := s.parseMenuTypeEnum(req.MenuType)
-	reservationID := uuid.New()
-	referenceID := fmt.Sprintf("res_%s", reservationID.String())
-
-	paymentResp, err := s.paymentClient.InitiatePayment(ctx, dto.InitiatePaymentRequest{
-		ReferenceID: referenceID,
-		Amount:      s.cfg.Reservation.MealPriceTRY,
-		Currency:    "TRY",
-		Description: fmt.Sprintf("Meal reservation - %s %s", req.Date, req.MealTime),
-		StudentID:   studentID.String(),
-	})
-	if err != nil {
-		s.logger.Error("payment initiation failed", zap.Error(err), zap.String("reference_id", referenceID))
-		return nil, err
-	}
-
-	// 10. Payment successful - now save reservation to DB
 	expiresAt := clock.Now().Add(time.Duration(s.cfg.Reservation.TimeoutMinutes) * time.Minute)
 
 	reservation, err := s.reservationRepo.CreateReservation(ctx, db.CreateReservationParams{
@@ -151,15 +147,41 @@ func (s *ReservationService) CreateReservation(ctx context.Context, studentID uu
 		ReservationDate: pgtype.Date{Time: reservationDate, Valid: true},
 		MealTime:        mealTimeEnum,
 		MenuType:        menuTypeEnum,
-		Status:          db.ReservationStatusEnumConfirmed,
+		Status:          db.ReservationStatusEnumPending,
 		ExpiresAt:       pgtype.Timestamptz{Time: expiresAt, Valid: true},
 	})
 	if err != nil {
-		s.logger.Error("failed to create reservation after payment", zap.Error(err))
+		if isUniqueViolation(err) {
+			return nil, serviceErrors.ErrActiveReservationExists
+		}
+		s.logger.Error("failed to create pending reservation", zap.Error(err))
 		return nil, err
 	}
 
-	s.logger.Info("reservation created after successful payment",
+	// 10. Initiate payment. On failure, compensate by cancelling the pending row.
+	referenceID := fmt.Sprintf("res_%s", reservation.ID.String())
+	paymentResp, err := s.paymentClient.InitiatePayment(ctx, dto.InitiatePaymentRequest{
+		ReferenceID: referenceID,
+		Amount:      s.cfg.Reservation.MealPriceTRY,
+		Currency:    "TRY",
+		Description: fmt.Sprintf("Meal reservation - %s %s", req.Date, req.MealTime),
+		StudentID:   studentID.String(),
+	})
+	if err != nil {
+		s.logger.Error("payment initiation failed, rolling back pending reservation",
+			zap.Error(err), zap.String("reservation_id", reservation.ID.String()))
+		if _, rbErr := s.reservationRepo.UpdateReservationByID(ctx, db.UpdateReservationByIDParams{
+			ID:        reservation.ID,
+			Status:    db.ReservationStatusEnumCancelled,
+			ExpiresAt: pgtype.Timestamptz{Valid: false},
+		}); rbErr != nil {
+			s.logger.Error("rollback failed, pending row will be expired by worker",
+				zap.Error(rbErr), zap.String("reservation_id", reservation.ID.String()))
+		}
+		return nil, err
+	}
+
+	s.logger.Info("pending reservation created, awaiting payment.completed event",
 		zap.String("reservation_id", reservation.ID.String()),
 		zap.String("student_id", studentID.String()),
 		zap.String("payment_id", paymentResp.PaymentID),
@@ -201,12 +223,7 @@ func (s *ReservationService) CreateBatchReservation(ctx context.Context, student
 		return nil, serviceErrors.ErrStudentDeactivated
 	}
 
-	// 2. Validate reservation window
-	if err := s.validateReservationWindow(); err != nil {
-		return nil, err
-	}
-
-	// 3. Validate all reservations (collect all errors)
+	// 2. Validate all reservations (collect all errors)
 	validationErrors := make([]dto.ValidationError, 0)
 	conflicts := make([]dto.ReservationConflict, 0)
 
@@ -301,29 +318,8 @@ func (s *ReservationService) CreateBatchReservation(ctx context.Context, student
 			continue
 		}
 
-		// Check for conflicts
+		// Stage param; conflicts are resolved in one query after the loop.
 		mealTimeEnum, _ := s.parseMealTimeEnum(r.MealTime)
-		existing, err := s.reservationRepo.CheckActiveReservation(ctx, db.CheckActiveReservationParams{
-			StudentID:       utils.UUIDToPgtype(studentID),
-			ReservationDate: pgtype.Date{Time: reservationDate, Valid: true},
-			MealTime:        mealTimeEnum,
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		if existing != nil {
-			conflicts = append(conflicts, dto.ReservationConflict{
-				Date:                  r.Date,
-				MealTime:              r.MealTime,
-				ExistingReservationID: existing.ID.String(),
-				CafeteriaName:         cafeteria.Name,
-				Status:                string(existing.Status),
-			})
-			continue
-		}
-
-		// Add to batch
 		menuTypeEnum, _ := s.parseMenuTypeEnum(r.MenuType)
 		reservationParams = append(reservationParams, db.CreateReservationParams{
 			BatchID:         pgtype.UUID{Bytes: batchID, Valid: true},
@@ -332,7 +328,7 @@ func (s *ReservationService) CreateBatchReservation(ctx context.Context, student
 			ReservationDate: pgtype.Date{Time: reservationDate, Valid: true},
 			MealTime:        mealTimeEnum,
 			MenuType:        menuTypeEnum,
-			Status:          db.ReservationStatusEnumConfirmed, // Auto-confirmed (mock payment)
+			Status:          db.ReservationStatusEnumPending, // Confirmed by payment.completed event
 			ExpiresAt:       pgtype.Timestamptz{Time: expiresAt, Valid: true},
 		})
 	}
@@ -343,13 +339,54 @@ func (s *ReservationService) CreateBatchReservation(ctx context.Context, student
 		return nil, fmt.Errorf("%w", serviceErrors.ErrValidationErrors)
 	}
 
+	// Batch conflict check in a single query. Replaces the previous N+1 probe.
+	if len(reservationParams) > 0 {
+		dates := make([]pgtype.Date, 0, len(reservationParams))
+		mealTimes := make([]string, 0, len(reservationParams))
+		for _, p := range reservationParams {
+			dates = append(dates, p.ReservationDate)
+			mealTimes = append(mealTimes, string(p.MealTime))
+		}
+
+		existingRows, err := s.reservationRepo.CheckActiveReservationsForSlots(ctx, db.CheckActiveReservationsForSlotsParams{
+			StudentID: utils.UUIDToPgtype(studentID),
+			Dates:     dates,
+			MealTimes: mealTimes,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		for _, row := range existingRows {
+			conflicts = append(conflicts, dto.ReservationConflict{
+				Date:                  row.ReservationDate.Time.Format("2006-01-02"),
+				MealTime:              string(row.MealTime),
+				ExistingReservationID: row.ID.String(),
+				CafeteriaName:         row.CafeteriaName,
+				Status:                string(row.Status),
+			})
+		}
+	}
+
 	// If there are any conflicts, return them
 	if len(conflicts) > 0 {
 		s.logger.Error("batch reservation conflicts found", zap.Any("conflicts", conflicts))
 		return nil, fmt.Errorf("%w", serviceErrors.ErrReservationConflicts)
 	}
 
-	// Call Payment Service FIRST (before saving to DB)
+	// Persist as pending FIRST (one transaction). The partial unique index on
+	// (student_id, date, meal_time) WHERE status IN ('pending','confirmed') is the
+	// authoritative duplicate guard.
+	reservations, err := s.reservationRepo.CreateBatchReservations(ctx, reservationParams)
+	if err != nil {
+		if isUniqueViolation(err) {
+			return nil, serviceErrors.ErrReservationConflicts
+		}
+		s.logger.Error("failed to create pending batch reservations", zap.Error(err))
+		return nil, err
+	}
+
+	// Initiate payment. On failure, cancel the whole batch.
 	totalAmount := s.cfg.Reservation.MealPriceTRY * float64(len(reservationParams))
 	referenceID := fmt.Sprintf("bat_%s", batchID.String())
 	paymentResp, err := s.paymentClient.InitiatePayment(ctx, dto.InitiatePaymentRequest{
@@ -360,14 +397,16 @@ func (s *ReservationService) CreateBatchReservation(ctx context.Context, student
 		StudentID:   studentID.String(),
 	})
 	if err != nil {
-		s.logger.Error("payment initiation failed for batch", zap.Error(err), zap.String("batch_id", batchID.String()))
-		return nil, err
-	}
-
-	// Payment successful - now save reservations to DB
-	reservations, err := s.reservationRepo.CreateBatchReservations(ctx, reservationParams)
-	if err != nil {
-		s.logger.Error("failed to create batch reservations after payment", zap.Error(err))
+		s.logger.Error("payment initiation failed for batch, rolling back pending rows",
+			zap.Error(err), zap.String("batch_id", batchID.String()))
+		if rbErr := s.reservationRepo.UpdateReservationsByBatchID(ctx, db.UpdateReservationsByBatchIDParams{
+			BatchID:   pgtype.UUID{Bytes: batchID, Valid: true},
+			Status:    db.ReservationStatusEnumCancelled,
+			ExpiresAt: pgtype.Timestamptz{Valid: false},
+		}); rbErr != nil {
+			s.logger.Error("batch rollback failed, rows will be expired by worker",
+				zap.Error(rbErr), zap.String("batch_id", batchID.String()))
+		}
 		return nil, err
 	}
 
@@ -554,12 +593,7 @@ func (s *ReservationService) CancelReservation(ctx context.Context, studentID uu
 		return nil, serviceErrors.ErrStudentDeactivated
 	}
 
-	// 3. Validate reservation window
-	if err := s.validateReservationWindow(); err != nil {
-		return nil, err
-	}
-
-	// 4. Get reservation
+	// 3. Get reservation
 	reservation, err := s.reservationRepo.GetReservationByID(ctx, resID)
 	if err != nil {
 		if errors.Is(err, serviceErrors.ErrReservationNotFoundRepo) {
@@ -583,7 +617,13 @@ func (s *ReservationService) CancelReservation(ctx context.Context, studentID uu
 		return nil, serviceErrors.ErrReservationAlreadyUsed
 	}
 
-	// 8. Request refund synchronously
+	// 8. Enforce the cancellation cut-off: meals cannot be cancelled once the
+	//    cut-off window before the meal's start has passed.
+	if err := s.validateCancelCutoff(reservation.ReservationDate.Time, reservation.MealTime); err != nil {
+		return nil, err
+	}
+
+	// 9. Request refund synchronously
 	refundResp, err := s.paymentClient.RequestRefund(ctx, dto.RefundRequest{
 		ReferenceID: resID.String(),
 		Amount:      s.cfg.Reservation.MealPriceTRY,
@@ -628,13 +668,13 @@ func (s *ReservationService) CancelReservation(ctx context.Context, studentID uu
 // UseReservation validates QR and marks reservation as used
 func (s *ReservationService) UseReservation(ctx context.Context, studentID uuid.UUID, req dto.UseReservationRequest) (*dto.UseReservationResponse, error) {
 	// 1. Parse QR payload
-	cafeteriaID, date, mealTime, signature, err := s.parseQRPayload(req.QRPayload)
+	cafeteriaID, date, mealTime, window, signature, err := s.parseQRPayload(req.QRPayload)
 	if err != nil {
 		return nil, serviceErrors.ErrInvalidQR
 	}
 
-	// 2. Verify signature
-	if !s.verifyQRSignature(cafeteriaID, date, mealTime, signature) {
+	// 2. Verify signature (and that the rotating window is still fresh)
+	if !s.verifyQRSignature(cafeteriaID, date, mealTime, window, signature) {
 		return nil, serviceErrors.ErrInvalidQR
 	}
 
@@ -751,55 +791,7 @@ func (s *ReservationService) GenerateQR(ctx context.Context, cafeteriaID string,
 // HELPER METHODS
 // ============================================================================
 
-func (s *ReservationService) validateReservationWindow() error {
-	// DISABLED FOR TESTING: Allow reservations at any time
-	// now := time.Now().In(time.FixedZone("UTC+3", 3*3600))
-	// weekday := now.Weekday()
-	// hour := now.Hour()
-
-	// // Must be Monday-Friday
-	// if weekday == time.Saturday || weekday == time.Sunday {
-	// 	return serviceErrors.ErrOutsideReservationWindow
-	// }
-
-	// // Monday 08:00 - Friday 13:00
-	// if weekday == time.Monday && hour < 8 {
-	// 	return serviceErrors.ErrOutsideReservationWindow
-	// }
-	// if weekday == time.Friday && hour >= 13 {
-	// 	return serviceErrors.ErrOutsideReservationWindow
-	// }
-
-	return nil
-}
-
 func (s *ReservationService) validateReservationDate(ctx context.Context, date time.Time) error {
-	// DISABLED FOR TESTING: Allow reservations for any date
-	// // Get next Monday
-	// now := time.Now().In(time.FixedZone("UTC+3", 3*3600))
-	// daysUntilMonday := (8 - int(now.Weekday())) % 7
-	// if daysUntilMonday == 0 {
-	// 	daysUntilMonday = 7
-	// }
-	// nextMonday := now.AddDate(0, 0, daysUntilMonday)
-	// nextFriday := nextMonday.AddDate(0, 0, 4)
-
-	// // Reset to start of day for comparison
-	// nextMonday = time.Date(nextMonday.Year(), nextMonday.Month(), nextMonday.Day(), 0, 0, 0, 0, nextMonday.Location())
-	// nextFriday = time.Date(nextFriday.Year(), nextFriday.Month(), nextFriday.Day(), 23, 59, 59, 0, nextFriday.Location())
-	// date = time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
-
-	// if date.Before(nextMonday) || date.After(nextFriday) {
-	// 	return serviceErrors.ErrInvalidDateRange
-	// }
-
-	// // Must be Monday-Friday
-	// weekday := date.Weekday()
-	// if weekday == time.Saturday || weekday == time.Sunday {
-	// 	return serviceErrors.ErrInvalidDateRange
-	// }
-
-	// Check if the date is a closed day (holiday)
 	isClosed, err := s.closedDaysRepo.IsDateClosed(ctx, pgtype.Date{Time: date, Valid: true})
 	if err != nil {
 		s.logger.Error("failed to check closed day", zap.Error(err), zap.Time("date", date))
@@ -832,6 +824,33 @@ func (s *ReservationService) validateMealTimeAndMenu(mealTime, menuType string, 
 	return nil
 }
 
+// validateCancelCutoff rejects cancellations submitted after the configured
+// cut-off window before the meal's scheduled start time (UTC+3).
+func (s *ReservationService) validateCancelCutoff(reservationDate time.Time, mealTime db.MealTimeEnum) error {
+	loc := time.FixedZone("UTC+3", 3*3600)
+
+	var mealStartHour int
+	switch mealTime {
+	case db.MealTimeEnumLunch:
+		mealStartHour = s.cfg.MealTime.LunchStartHour
+	case db.MealTimeEnumDinner:
+		mealStartHour = s.cfg.MealTime.DinnerStartHour
+	default:
+		return serviceErrors.ErrInvalidMealTime
+	}
+
+	mealStart := time.Date(
+		reservationDate.Year(), reservationDate.Month(), reservationDate.Day(),
+		mealStartHour, 0, 0, 0, loc,
+	)
+	cutoff := mealStart.Add(-time.Duration(s.cfg.Reservation.CancelCutoffHours) * time.Hour)
+
+	if clock.Now().In(loc).After(cutoff) {
+		return serviceErrors.ErrCancelCutoffPassed
+	}
+	return nil
+}
+
 func (s *ReservationService) validateMealTimeWindow(mealTime string) error {
 	now := clock.Now().In(time.FixedZone("UTC+3", 3*3600))
 	hour := now.Hour()
@@ -849,8 +868,16 @@ func (s *ReservationService) validateMealTimeWindow(mealTime string) error {
 	return nil
 }
 
+// qrWindow returns the current rotating window bucket for QR signatures.
+// A new bucket starts every QRValidityWindowSeconds, which shortens the
+// blast radius if a QR image leaks out of the cafeteria.
+func (s *ReservationService) qrWindow() int64 {
+	return clock.Now().Unix() / int64(s.cfg.Reservation.QRValidityWindowSeconds)
+}
+
 func (s *ReservationService) generateQRPayload(cafeteriaID, date, mealTime string) string {
-	payload := fmt.Sprintf("%s:%s:%s", cafeteriaID, date, mealTime)
+	window := s.qrWindow()
+	payload := fmt.Sprintf("%s:%s:%s:%d", cafeteriaID, date, mealTime, window)
 	signature := s.signQRPayload(payload)
 	return fmt.Sprintf("%s:%s", payload, signature)
 }
@@ -861,18 +888,28 @@ func (s *ReservationService) signQRPayload(payload string) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-func (s *ReservationService) parseQRPayload(qrPayload string) (cafeteriaID, date, mealTime, signature string, err error) {
+func (s *ReservationService) parseQRPayload(qrPayload string) (cafeteriaID, date, mealTime, window, signature string, err error) {
 	parts := strings.Split(qrPayload, ":")
-	if len(parts) != 4 {
-		return "", "", "", "", fmt.Errorf("invalid QR format")
+	if len(parts) != 5 {
+		return "", "", "", "", "", fmt.Errorf("invalid QR format")
 	}
-	return parts[0], parts[1], parts[2], parts[3], nil
+	return parts[0], parts[1], parts[2], parts[3], parts[4], nil
 }
 
-func (s *ReservationService) verifyQRSignature(cafeteriaID, date, mealTime, signature string) bool {
-	payload := fmt.Sprintf("%s:%s:%s", cafeteriaID, date, mealTime)
-	expectedSignature := s.signQRPayload(payload)
-	return hmac.Equal([]byte(signature), []byte(expectedSignature))
+// verifyQRSignature accepts the current bucket or the immediately previous
+// bucket so that a scan at a bucket boundary is not rejected.
+func (s *ReservationService) verifyQRSignature(cafeteriaID, date, mealTime, window, signature string) bool {
+	parsed, err := strconv.ParseInt(window, 10, 64)
+	if err != nil {
+		return false
+	}
+	current := s.qrWindow()
+	if parsed != current && parsed != current-1 {
+		return false
+	}
+	payload := fmt.Sprintf("%s:%s:%s:%s", cafeteriaID, date, mealTime, window)
+	expected := s.signQRPayload(payload)
+	return hmac.Equal([]byte(signature), []byte(expected))
 }
 
 func (s *ReservationService) parseMealTimeEnum(mealTime string) (db.MealTimeEnum, error) {

@@ -65,6 +65,11 @@ func (c *SemesterClient) GetSemesterInfo(ctx context.Context, semesterName strin
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
+	// Forward request ID so a single trace spans caller → catalog.
+	if rid := logger.GetRequestID(ctx); rid != "" {
+		req.Header.Set("X-Request-ID", rid)
+	}
+
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch semester info: %w", err)

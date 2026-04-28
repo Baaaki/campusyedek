@@ -1,4 +1,4 @@
-.PHONY: sqlc migrate-create migrate-up migrate-down migrate-status build run check-infra dev test
+.PHONY: sqlc migrate-create migrate-up migrate-down migrate-status build run check-infra dev test delete-semesters
 
 # Load .env if exists
 ifneq (,$(wildcard .env))
@@ -42,6 +42,15 @@ check-infra:
 
 # Development workflow
 dev: check-infra migrate-up run
+
+# Delete all semesters (test cleanup)
+delete-semesters:
+	@echo "Deleting all semesters from catalog database..."
+	@sudo docker exec mydreamcampus-postgres-catalog psql -U postgres -d mydreamcampus_catalog -c "\
+		DELETE FROM course_schedule_sessions; \
+		DELETE FROM semester_courses; \
+		DELETE FROM semesters;"
+	@echo "Done."
 
 # Quick test
 test:

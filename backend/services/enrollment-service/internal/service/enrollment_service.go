@@ -10,7 +10,6 @@ import (
 	"github.com/baaaki/mydreamcampus/enrollment-service/internal/dto"
 	serviceErrors "github.com/baaaki/mydreamcampus/enrollment-service/internal/errors"
 	"github.com/baaaki/mydreamcampus/enrollment-service/internal/repository"
-	"github.com/baaaki/mydreamcampus/shared/clock"
 	sharedErrors "github.com/baaaki/mydreamcampus/shared/errors"
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	sharedRepo "github.com/baaaki/mydreamcampus/shared/repository"
@@ -154,9 +153,12 @@ func (s *EnrollmentService) CreateEnrollmentProgram(ctx context.Context, req dto
 		zap.Int("course_count", len(req.CourseIDs)),
 	)
 
-	// Validate request
-	if len(req.CourseIDs) == 0 {
-		return dto.EnrollmentProgramResponse{}, serviceErrors.ErrNoCourses
+	if err := validateCourseSelection(req.CourseIDs); err != nil {
+		serviceLogger.Warn("course selection invalid",
+			zap.Error(err),
+			zap.Int("requested", len(req.CourseIDs)),
+		)
+		return dto.EnrollmentProgramResponse{}, err
 	}
 
 	// Enrollment uses STRICT period lock — different from grades/attendance.
@@ -230,16 +232,14 @@ func (s *EnrollmentService) CreateEnrollmentProgram(ctx context.Context, req dto
 				oldCourseIDs[i] = utils.PgtypeToUUID(row.CourseID)
 			}
 
-			// Create cancel event payload
-			cancelEventPayload := map[string]any{
-				"program_id":   utils.PgtypeToUUID(existingProgram.ID).String(),
-				"student_id":   req.StudentID.String(),
-				"semester":     req.Semester,
-				"course_ids":   oldCourseIDs,
-				"cancelled_by": "student",
-				"cancel_type":  "auto_replace",
-				"cancelled_at": clock.Now(),
-			}
+			cancelEventPayload := buildEnrollmentCancelledPayload(EnrollmentCancelledInputs{
+				ProgramID:   utils.PgtypeToUUID(existingProgram.ID),
+				StudentID:   req.StudentID,
+				Semester:    req.Semester,
+				CourseIDs:   oldCourseIDs,
+				CancelledBy: "student",
+				CancelType:  "auto_replace",
+			})
 
 			// Delete old program (with transaction)
 			err = s.enrollmentRepo.CancelProgramWithEvent(ctx, utils.PgtypeToUUID(existingProgram.ID), oldCourseIDs, cancelEventPayload)
@@ -276,28 +276,13 @@ func (s *EnrollmentService) CreateEnrollmentProgram(ctx context.Context, req dto
 		return dto.EnrollmentProgramResponse{}, serviceErrors.ErrCourseNotFound
 	}
 
-	// Validate department and class level
-	studentDept := utils.PgTextToString(student.Department)
-	studentClassLevel := student.ClassLevel.Int16
-	for _, course := range courses {
-		courseDept := utils.PgTextToString(course.Department)
-		if courseDept != studentDept {
-			serviceLogger.Warn("course not from student's department",
-				zap.String("course_code", course.CourseCode),
-				zap.String("course_dept", courseDept),
-				zap.String("student_dept", studentDept),
-			)
-			return dto.EnrollmentProgramResponse{}, serviceErrors.ErrInvalidDepartment
-		}
-
-		if course.ClassLevel.Int16 > studentClassLevel {
-			serviceLogger.Warn("course class level exceeds student's level",
-				zap.String("course_code", course.CourseCode),
-				zap.Int16("course_level", course.ClassLevel.Int16),
-				zap.Int16("student_level", studentClassLevel),
-			)
-			return dto.EnrollmentProgramResponse{}, serviceErrors.ErrInvalidClassLevel
-		}
+	if err := validateCoursesAgainstStudent(courses, utils.PgTextToString(student.Department), student.ClassLevel.Int16); err != nil {
+		serviceLogger.Warn("course list rejected against student profile",
+			zap.Error(err),
+			zap.String("student_dept", utils.PgTextToString(student.Department)),
+			zap.Int16("student_level", student.ClassLevel.Int16),
+		)
+		return dto.EnrollmentProgramResponse{}, err
 	}
 
 	// Check prerequisites
@@ -311,14 +296,26 @@ func (s *EnrollmentService) CreateEnrollmentProgram(ctx context.Context, req dto
 		}
 	}
 
-	// Check schedule conflicts
+	// Check schedule conflicts among new courses
 	conflicts, err := s.courseRepo.CheckScheduleConflict(ctx, req.CourseIDs)
 	if err != nil {
 		return dto.EnrollmentProgramResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
 	}
 	if len(conflicts) > 0 {
-		serviceLogger.Warn("schedule conflict detected",
+		serviceLogger.Warn("schedule conflict detected among new courses",
 			zap.Int("conflicts", len(conflicts)),
+		)
+		return dto.EnrollmentProgramResponse{}, serviceErrors.ErrScheduleConflict
+	}
+
+	// Check schedule conflicts with student's already approved enrollments
+	existingConflicts, err := s.courseRepo.CheckScheduleConflictWithExisting(ctx, req.CourseIDs, req.StudentID)
+	if err != nil {
+		return dto.EnrollmentProgramResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
+	}
+	if len(existingConflicts) > 0 {
+		serviceLogger.Warn("schedule conflict with approved enrollment",
+			zap.Int("conflicts", len(existingConflicts)),
 		)
 		return dto.EnrollmentProgramResponse{}, serviceErrors.ErrScheduleConflict
 	}
@@ -372,15 +369,11 @@ func (s *EnrollmentService) createProgramWithCapacityCheck(ctx context.Context, 
 		},
 	}
 
-	// Create event payload
-	eventPayload := map[string]any{
-		"program_id":    nil, // Will be set after creation
-		"student_id":    req.StudentID.String(),
-		"semester":      req.Semester,
-		"course_ids":    req.CourseIDs,
-		"total_courses": len(req.CourseIDs),
-		"submitted_at":  clock.Now(),
-	}
+	eventPayload := buildEnrollmentSubmittedPayload(EnrollmentSubmittedInputs{
+		StudentID: req.StudentID,
+		Semester:  req.Semester,
+		CourseIDs: req.CourseIDs,
+	})
 
 	// Create program with courses and event (atomic transaction)
 	program, err := s.enrollmentRepo.CreateProgramWithCoursesAndEvent(ctx, programParams, req.CourseIDs, eventPayload)
@@ -460,16 +453,14 @@ func (s *EnrollmentService) CancelMyEnrollment(ctx context.Context, studentID uu
 		courseIDs[i] = utils.PgtypeToUUID(row.CourseID)
 	}
 
-	// Create cancel event payload
-	cancelEventPayload := map[string]any{
-		"program_id":   utils.PgtypeToUUID(existingProgram.ID).String(),
-		"student_id":   studentID.String(),
-		"semester":     semester,
-		"course_ids":   courseIDs,
-		"cancelled_by": "student",
-		"cancel_type":  "manual",
-		"cancelled_at": clock.Now(),
-	}
+	cancelEventPayload := buildEnrollmentCancelledPayload(EnrollmentCancelledInputs{
+		ProgramID:   utils.PgtypeToUUID(existingProgram.ID),
+		StudentID:   studentID,
+		Semester:    semester,
+		CourseIDs:   courseIDs,
+		CancelledBy: "student",
+		CancelType:  "manual",
+	})
 
 	// Cancel program (decrement enrollments, delete program, create event)
 	err = s.enrollmentRepo.CancelProgramWithEvent(ctx, utils.PgtypeToUUID(existingProgram.ID), courseIDs, cancelEventPayload)

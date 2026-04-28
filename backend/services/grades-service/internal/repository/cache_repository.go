@@ -42,40 +42,6 @@ func (r *CacheRepository) GetCourseCacheByID(ctx context.Context, id uuid.UUID) 
 	return r.queries.GetCourseCacheByID(ctx, id)
 }
 
-func (r *CacheRepository) DeleteCourseCache(ctx context.Context, id uuid.UUID) error {
-	return r.queries.DeleteCourseCache(ctx, id)
-}
-
-func (r *CacheRepository) UpdateCourseInstructor(ctx context.Context, arg db.UpdateCourseInstructorParams) error {
-	return r.queries.UpdateCourseInstructor(ctx, arg)
-}
-
-// Prerequisite Courses
-func (r *CacheRepository) SyncPrerequisiteCourses(ctx context.Context, prerequisites []db.BulkInsertPrerequisiteCoursesParams) error {
-	// Start transaction
-	tx, err := r.pool.Begin(ctx)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback(ctx)
-
-	qtx := r.queries.WithTx(tx)
-
-	// Truncate existing
-	if err := qtx.TruncatePrerequisiteCourses(ctx); err != nil {
-		return err
-	}
-
-	// Bulk insert
-	if len(prerequisites) > 0 {
-		if _, err := qtx.BulkInsertPrerequisiteCourses(ctx, prerequisites); err != nil {
-			return err
-		}
-	}
-
-	return tx.Commit(ctx)
-}
-
 func (r *CacheRepository) IsPrerequisiteCourse(ctx context.Context, courseCode string) (bool, error) {
 	return r.queries.IsPrerequisiteCourse(ctx, courseCode)
 }

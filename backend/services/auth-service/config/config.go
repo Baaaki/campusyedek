@@ -86,14 +86,17 @@ func (c *Config) Validate() error {
 	}
 
 	// Validate auth-specific config
-	if c.Redis.Addr == "" {
-		return fmt.Errorf("REDIS_ADDR is required")
+	if err := config.ValidateRedisConfig(c.Server, c.Redis); err != nil {
+		return err
 	}
 	if c.Admin.Email == "" {
 		return fmt.Errorf("ADMIN_EMAIL is required")
 	}
 	if c.Admin.InitialPassword == "" {
 		return fmt.Errorf("ADMIN_INITIAL_PASSWORD is required")
+	}
+	if c.Server.Environment == "production" && c.Admin.InitialPassword == "Admin123!" {
+		return fmt.Errorf("ADMIN_INITIAL_PASSWORD must be changed in production")
 	}
 
 	return nil

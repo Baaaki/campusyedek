@@ -54,6 +54,23 @@ WHERE sc.semester = sqlc.arg('semester')
   AND (sqlc.narg('course_type')::course_type_enum IS NULL OR cc.course_type = sqlc.narg('course_type'))
   AND (sqlc.narg('class_level')::SMALLINT IS NULL OR sc.class_level = sqlc.narg('class_level'));
 
+-- name: ListSemesterCoursesForActivation :many
+SELECT
+    sc.*,
+    cc.name AS course_name,
+    cc.faculty,
+    cc.course_type,
+    json_agg(json_build_object(
+        'day_of_week', css.day_of_week,
+        'slot_number', css.slot_number,
+        'session_type', css.session_type
+    )) AS schedule_sessions
+FROM semester_courses sc
+JOIN course_catalog cc ON cc.course_code = sc.course_code
+LEFT JOIN course_schedule_sessions css ON css.semester_course_id = sc.id
+WHERE sc.semester = $1
+GROUP BY sc.id, cc.name, cc.faculty, cc.course_type;
+
 -- name: GetTeacherCourses :many
 SELECT
     sc.id,

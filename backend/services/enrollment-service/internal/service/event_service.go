@@ -146,7 +146,7 @@ func (s *EventService) HandleStudentDeactivated(ctx context.Context, event dto.S
 	)
 
 	// Check if already processed
-	processed, err := s.processedEventsRepo.IsEventProcessed(ctx, event.StudentID)
+	processed, err := s.processedEventsRepo.IsEventProcessed(ctx, event.EventID)
 	if err != nil {
 		return sharedErrors.Wrap(sharedErrors.ErrInternal, err)
 	}
@@ -219,78 +219,25 @@ func (s *EventService) HandleCourseSemesterCreated(ctx context.Context, event dt
 		Prerequisites:       prerequisitesJSON,
 	}
 
-	_, err = s.courseRepo.UpsertSemesterCourse(ctx, courseParams)
-	if err != nil {
-		return sharedErrors.Wrap(sharedErrors.ErrInternal, err)
-	}
-
-	// Delete existing sessions
-	if err := s.courseRepo.DeleteCourseSessionsByCourseID(ctx, event.SemesterCourseID); err != nil {
-		return sharedErrors.Wrap(sharedErrors.ErrInternal, err)
-	}
-
-	// Create new sessions
+	// Build session params up-front, then commit course + sessions + processed_event atomically.
+	// Before: separate queries could leave cached state half-synced after a crash.
+	sessionParamsList := make([]db.UpsertCourseSessionParams, 0, len(event.ScheduleSessions))
 	for _, session := range event.ScheduleSessions {
 		for _, slotNumber := range session.SlotNumbers {
-			sessionParams := db.UpsertCourseSessionParams{
+			sessionParamsList = append(sessionParamsList, db.UpsertCourseSessionParams{
 				ID:         utils.UUIDToPgtype(uuid.New()),
 				CourseID:   utils.UUIDToPgtype(event.SemesterCourseID),
 				DayOfWeek:  db.DayOfWeekEnum(session.DayOfWeek),
 				SlotNumber: int32(slotNumber),
-			}
-
-			_, err := s.courseRepo.UpsertCourseSession(ctx, sessionParams)
-			if err != nil {
-				return sharedErrors.Wrap(sharedErrors.ErrInternal, err)
-			}
+			})
 		}
 	}
 
-	// Mark as processed
-	if err := s.processedEventsRepo.CreateProcessedEvent(ctx, event.EventID, event.EventType); err != nil {
+	if err := s.courseRepo.UpsertCourseWithSessionsAndProcessedEvent(ctx, courseParams, sessionParamsList, event.EventID, event.EventType); err != nil {
 		return sharedErrors.Wrap(sharedErrors.ErrInternal, err)
 	}
 
 	serviceLogger.Info("course semester created event processed successfully")
-	return nil
-}
-
-// HandleCourseSemesterUpdated handles course.semester.updated event
-func (s *EventService) HandleCourseSemesterUpdated(ctx context.Context, event dto.CourseSemesterUpdatedEvent) error {
-	// Same logic as HandleCourseSemesterCreated since we use upsert
-	return s.HandleCourseSemesterCreated(ctx, dto.CourseSemesterCreatedEvent(event))
-}
-
-// HandleCourseSemesterDeleted handles course.semester.deleted event
-func (s *EventService) HandleCourseSemesterDeleted(ctx context.Context, event dto.CourseSemesterDeletedEvent) error {
-	serviceLogger := logger.WithContextAndFields(ctx,
-		zap.String("service", "EventService"),
-		zap.String("method", "HandleCourseSemesterDeleted"),
-		zap.String("event_id", event.EventID.String()),
-		zap.String("semester_course_id", event.SemesterCourseID.String()),
-	)
-
-	// Check if already processed
-	processed, err := s.processedEventsRepo.IsEventProcessed(ctx, event.EventID)
-	if err != nil {
-		return sharedErrors.Wrap(sharedErrors.ErrInternal, err)
-	}
-	if processed {
-		serviceLogger.Info("event already processed, skipping")
-		return nil
-	}
-
-	// Delete semester course (cascade will delete sessions)
-	if err := s.courseRepo.DeleteSemesterCourse(ctx, event.SemesterCourseID); err != nil {
-		return sharedErrors.Wrap(sharedErrors.ErrInternal, err)
-	}
-
-	// Mark as processed
-	if err := s.processedEventsRepo.CreateProcessedEvent(ctx, event.EventID, event.EventType); err != nil {
-		return sharedErrors.Wrap(sharedErrors.ErrInternal, err)
-	}
-
-	serviceLogger.Info("course semester deleted event processed successfully")
 	return nil
 }
 

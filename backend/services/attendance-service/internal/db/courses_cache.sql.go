@@ -11,15 +11,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const deleteCourseCache = `-- name: DeleteCourseCache :exec
-DELETE FROM courses_cache WHERE id = $1
-`
-
-func (q *Queries) DeleteCourseCache(ctx context.Context, id pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, deleteCourseCache, id)
-	return err
-}
-
 const getCourseCacheByID = `-- name: GetCourseCacheByID :one
 SELECT id, course_code, course_name, credits, semester, department,
        instructor_id, instructor_fullname, total_weeks, has_lab, synced_at

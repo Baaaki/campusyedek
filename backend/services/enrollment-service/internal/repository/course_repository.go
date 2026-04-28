@@ -63,24 +63,16 @@ func (r *CourseRepository) UpsertSemesterCourse(ctx context.Context, params db.U
 	return course, nil
 }
 
-func (r *CourseRepository) DeleteSemesterCourse(ctx context.Context, id uuid.UUID) error {
-	err := r.queries.DeleteSemesterCourse(ctx, utils.UUIDToPgtype(id))
+func (r *CourseRepository) IncrementEnrollment(ctx context.Context, courseID uuid.UUID) (int64, error) {
+	rowsAffected, err := r.queries.IncrementEnrollment(ctx, utils.UUIDToPgtype(courseID))
 	if err != nil {
-		return fmt.Errorf("%w: failed to delete semester course: %v", sharedErrors.ErrQueryFailed, err)
+		return 0, fmt.Errorf("%w: failed to increment enrollment: %v", sharedErrors.ErrQueryFailed, err)
 	}
-	return nil
-}
-
-func (r *CourseRepository) IncrementEnrollment(ctx context.Context, courseID uuid.UUID) error {
-	err := r.queries.IncrementEnrollment(ctx, utils.UUIDToPgtype(courseID))
-	if err != nil {
-		return fmt.Errorf("%w: failed to increment enrollment: %v", sharedErrors.ErrQueryFailed, err)
-	}
-	return nil
+	return rowsAffected, nil
 }
 
 func (r *CourseRepository) DecrementEnrollment(ctx context.Context, courseID uuid.UUID) error {
-	err := r.queries.DecrementEnrollment(ctx, utils.UUIDToPgtype(courseID))
+	_, err := r.queries.DecrementEnrollment(ctx, utils.UUIDToPgtype(courseID))
 	if err != nil {
 		return fmt.Errorf("%w: failed to decrement enrollment: %v", sharedErrors.ErrQueryFailed, err)
 	}
@@ -113,6 +105,17 @@ func (r *CourseRepository) CheckScheduleConflict(ctx context.Context, courseIDs 
 	return conflicts, nil
 }
 
+func (r *CourseRepository) CheckScheduleConflictWithExisting(ctx context.Context, courseIDs []uuid.UUID, studentID uuid.UUID) ([]db.CheckScheduleConflictRow, error) {
+	conflicts, err := r.queries.CheckScheduleConflictWithExisting(ctx, db.CheckScheduleConflictWithExistingParams{
+		Dollar1:   utils.UUIDArrayToPgtype(courseIDs),
+		StudentID: utils.UUIDToPgtype(studentID),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("%w: failed to check schedule conflict with existing: %v", sharedErrors.ErrQueryFailed, err)
+	}
+	return conflicts, nil
+}
+
 func (r *CourseRepository) UpsertCourseSession(ctx context.Context, params db.UpsertCourseSessionParams) (db.CourseSessionsCache, error) {
 	session, err := r.queries.UpsertCourseSession(ctx, params)
 	if err != nil {
@@ -125,6 +128,51 @@ func (r *CourseRepository) DeleteCourseSessionsByCourseID(ctx context.Context, c
 	err := r.queries.DeleteCourseSessionsByCourseID(ctx, utils.UUIDToPgtype(courseID))
 	if err != nil {
 		return fmt.Errorf("%w: failed to delete course sessions: %v", sharedErrors.ErrQueryFailed, err)
+	}
+	return nil
+}
+
+// UpsertCourseWithSessionsAndProcessedEvent atomically upserts a semester course, replaces its
+// sessions, and marks the originating event as processed. Either all changes commit or none —
+// so a crash mid-sync cannot leave cached course/session/processed-event state inconsistent.
+func (r *CourseRepository) UpsertCourseWithSessionsAndProcessedEvent(
+	ctx context.Context,
+	courseParams db.UpsertSemesterCourseParams,
+	sessionParams []db.UpsertCourseSessionParams,
+	eventID uuid.UUID,
+	eventType string,
+) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("%w: failed to begin transaction: %v", sharedErrors.ErrQueryFailed, err)
+	}
+	defer tx.Rollback(ctx)
+
+	qtx := r.queries.WithTx(tx)
+
+	if _, err := qtx.UpsertSemesterCourse(ctx, courseParams); err != nil {
+		return fmt.Errorf("%w: failed to upsert semester course: %v", sharedErrors.ErrQueryFailed, err)
+	}
+
+	if err := qtx.DeleteCourseSessionsByCourseID(ctx, courseParams.ID); err != nil {
+		return fmt.Errorf("%w: failed to delete course sessions: %v", sharedErrors.ErrQueryFailed, err)
+	}
+
+	for _, sp := range sessionParams {
+		if _, err := qtx.UpsertCourseSession(ctx, sp); err != nil {
+			return fmt.Errorf("%w: failed to upsert course session: %v", sharedErrors.ErrQueryFailed, err)
+		}
+	}
+
+	if _, err := qtx.CreateProcessedEvent(ctx, db.CreateProcessedEventParams{
+		EventID:   utils.UUIDToPgtype(eventID),
+		EventType: eventType,
+	}); err != nil {
+		return fmt.Errorf("%w: failed to mark event processed: %v", sharedErrors.ErrQueryFailed, err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("%w: failed to commit transaction: %v", sharedErrors.ErrQueryFailed, err)
 	}
 	return nil
 }

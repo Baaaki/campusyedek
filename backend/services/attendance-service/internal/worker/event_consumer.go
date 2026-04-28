@@ -35,8 +35,11 @@ func NewEventConsumer(
 func (w *EventConsumer) Start(ctx context.Context) error {
 	logger.Info("Event consumer started")
 
-	// Start consuming from the queue
-	if err := w.consumer.Consume("attendance.events", w.handleMessage); err != nil {
+	// Start consuming from the queue. The closure captures the root ctx so
+	// in-flight event processing is canceled on graceful shutdown.
+	if err := w.consumer.Consume("attendance.events", func(body []byte) error {
+		return w.handleMessage(ctx, body)
+	}); err != nil {
 		logger.Error("failed to start consuming", zap.Error(err))
 		return err
 	}
@@ -49,14 +52,12 @@ func (w *EventConsumer) Start(ctx context.Context) error {
 	return nil
 }
 
-func (w *EventConsumer) handleMessage(body []byte) error {
+func (w *EventConsumer) handleMessage(ctx context.Context, body []byte) error {
 	var event dto.BaseEvent
 	if err := json.Unmarshal(body, &event); err != nil {
 		logger.Error("failed to unmarshal event", zap.Error(err))
 		return err
 	}
-
-	ctx := context.Background()
 
 	// Check if already processed (idempotency)
 	eventID, err := uuid.Parse(event.EventID.String())
@@ -91,10 +92,6 @@ func (w *EventConsumer) handleMessage(body []byte) error {
 		return w.handleStudentDeactivated(ctx, body, eventID)
 	case "course.semester.created":
 		return w.handleCourseSemesterCreated(ctx, body, eventID)
-	case "course.semester.updated":
-		return w.handleCourseSemesterUpdated(ctx, body, eventID)
-	case "course.semester.deleted":
-		return w.handleCourseSemesterDeleted(ctx, body, eventID)
 	case "enrollment.program.approved":
 		return w.handleEnrollmentProgramApproved(ctx, body, eventID)
 	default:
@@ -105,17 +102,8 @@ func (w *EventConsumer) handleMessage(body []byte) error {
 }
 
 func (w *EventConsumer) handleStudentCreated(ctx context.Context, body []byte, eventID uuid.UUID) error {
-	// Two-step unwrap: BaseEvent wraps the actual data in "data" field
-	var baseEvent dto.BaseEvent
-	if err := json.Unmarshal(body, &baseEvent); err != nil {
-		return err
-	}
-	dataBytes, err := json.Marshal(baseEvent.Data)
+	eventData, err := unwrapEventData[dto.StudentCreatedEventData](body)
 	if err != nil {
-		return err
-	}
-	var eventData dto.StudentCreatedEventData
-	if err := json.Unmarshal(dataBytes, &eventData); err != nil {
 		return err
 	}
 
@@ -245,67 +233,6 @@ func (w *EventConsumer) handleCourseSemesterCreated(ctx context.Context, body []
 	)
 
 	return w.eventRepo.MarkEventProcessed(ctx, eventID, "course.semester.created")
-}
-
-func (w *EventConsumer) handleCourseSemesterUpdated(ctx context.Context, body []byte, eventID uuid.UUID) error {
-	var eventData dto.CourseSemesterUpdatedEventData
-	if err := json.Unmarshal(body, &eventData); err != nil {
-		return err
-	}
-
-	// Check if any schedule session has type "lab"
-	hasLab := false
-	for _, s := range eventData.ScheduleSessions {
-		if s.SessionType == "lab" {
-			hasLab = true
-			break
-		}
-	}
-
-	// Upsert course to cache
-	err := w.cacheRepo.UpsertCourseCache(ctx, db.UpsertCourseCacheParams{
-		ID:                 utils.UUIDToPgUUID(eventData.SemesterCourseID),
-		CourseCode:         eventData.CourseCode,
-		CourseName:         eventData.CourseName,
-		Credits:            eventData.Credits,
-		Semester:           eventData.Semester,
-		Department:         utils.StringToPgText(eventData.Department),
-		InstructorID:       utils.UUIDToPgUUID(eventData.InstructorID),
-		InstructorFullname: utils.StringToPgText(eventData.InstructorFullname),
-		TotalWeeks:         utils.Int16ToPgInt2(14), // default, catalog doesn't send this
-		HasLab:             hasLab,
-	})
-	if err != nil {
-		logger.Error("failed to upsert course cache", zap.Error(err))
-		return err
-	}
-
-	logger.Info("course cache updated",
-		zap.String("course_id", eventData.SemesterCourseID.String()),
-		zap.String("course_code", eventData.CourseCode),
-	)
-
-	return w.eventRepo.MarkEventProcessed(ctx, eventID, "course.semester.updated")
-}
-
-func (w *EventConsumer) handleCourseSemesterDeleted(ctx context.Context, body []byte, eventID uuid.UUID) error {
-	var eventData dto.CourseSemesterDeletedEventData
-	if err := json.Unmarshal(body, &eventData); err != nil {
-		return err
-	}
-
-	// Delete course from cache
-	if err := w.cacheRepo.DeleteCourseCache(ctx, eventData.SemesterCourseID); err != nil {
-		logger.Error("failed to delete course cache", zap.Error(err))
-		return err
-	}
-
-	logger.Info("course cache deleted",
-		zap.String("course_id", eventData.SemesterCourseID.String()),
-		zap.String("course_code", eventData.CourseCode),
-	)
-
-	return w.eventRepo.MarkEventProcessed(ctx, eventID, "course.semester.deleted")
 }
 
 func (w *EventConsumer) handleEnrollmentProgramApproved(ctx context.Context, body []byte, eventID uuid.UUID) error {

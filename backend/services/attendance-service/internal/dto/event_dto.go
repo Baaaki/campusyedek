@@ -62,26 +62,6 @@ type CourseSemesterCreatedEventData struct {
 	ScheduleSessions   []ScheduleSessionInfo `json:"schedule_sessions"`
 }
 
-// CourseSemesterUpdatedEvent is consumed from course catalog service
-type CourseSemesterUpdatedEventData struct {
-	SemesterCourseID   uuid.UUID            `json:"semester_course_id"`
-	CourseCode         string               `json:"course_code"`
-	CourseName         string               `json:"course_name"`
-	Credits            int16                `json:"credits"`
-	Semester           string               `json:"semester"`
-	Department         string               `json:"department"`
-	InstructorID       uuid.UUID            `json:"instructor_id"`
-	InstructorFullname string               `json:"instructor_fullname"`
-	ScheduleSessions   []ScheduleSessionInfo `json:"schedule_sessions"`
-}
-
-// CourseSemesterDeletedEvent is consumed from course catalog service
-type CourseSemesterDeletedEventData struct {
-	SemesterCourseID uuid.UUID `json:"semester_course_id"`
-	CourseCode       string    `json:"course_code"`
-	Semester         string    `json:"semester"`
-}
-
 // EnrollmentProgramApprovedEventData is consumed from enrollment service
 // Wrapped in BaseEvent: { event_id, event_type, timestamp, data: { ... } }
 type EnrollmentProgramApprovedEventData struct {

@@ -143,6 +143,17 @@ func main() {
 	// Setup Gin router
 	router := setupRouter(studentHandler, timeHandler, cfg.Server.Environment)
 
+	// Health: liveness (process up). Ready: deps reachable.
+	healthChecks := map[string]sharedHandler.HealthCheck{
+		"database": pool.Ping,
+		"rabbitmq": rabbitConn.Ping,
+	}
+	if redisClient != nil {
+		healthChecks["redis"] = redisClient.Ping
+	}
+	router.GET("/health", sharedHandler.LivenessHandler("student-service"))
+	router.GET("/ready", sharedHandler.ReadinessHandler("student-service", healthChecks))
+
 	// Start HTTP server
 	srv := &http.Server{
 		Addr:    ":" + cfg.Server.Port,
@@ -172,7 +183,7 @@ func main() {
 	cancel()
 
 	// Shutdown HTTP server with timeout
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutdownCancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
@@ -196,18 +207,13 @@ func setupRouter(studentHandler *handler.StudentHandler, timeHandler *sharedHand
 
 	// Global middleware
 	router.Use(sharedMiddleware.Recovery())
+	router.Use(sharedMiddleware.SecurityHeaders())
 	router.Use(sharedMiddleware.CORS())
 	router.Use(sharedMiddleware.RequestLogger())
 	router.Use(sharedMiddleware.IPRateLimit())
 	router.Use(sharedMiddleware.SetCSRFToken(env == "production"))
 
-	// Health check
-	router.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"status":  "healthy",
-			"service": "student-service",
-		})
-	})
+	// Health endpoints registered in main() with dependency checks
 
 	// API routes - All routes are protected via Traefik forward-auth
 	// User info is extracted from X-User-* headers set by Traefik

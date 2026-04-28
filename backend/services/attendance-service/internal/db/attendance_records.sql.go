@@ -11,6 +11,53 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const batchCreateAttendanceRecordsQR = `-- name: BatchCreateAttendanceRecordsQR :exec
+INSERT INTO attendance_records (
+    session_id, student_id, course_id, semester, week_number,
+    marked_via, scanned_at, qr_timestamp, session_type
+)
+SELECT
+    session_id, student_id, course_id, semester, week_number,
+    'qr_scan', scanned_at, qr_timestamp, session_type
+FROM (
+    SELECT
+        unnest($1::uuid[])            AS session_id,
+        unnest($2::uuid[])            AS student_id,
+        unnest($3::uuid[])             AS course_id,
+        unnest($4::text[])              AS semester,
+        unnest($5::smallint[])       AS week_number,
+        unnest($6::timestamp[])       AS scanned_at,
+        unnest($7::bigint[])        AS qr_timestamp,
+        unnest($8::session_type_enum[]) AS session_type
+) AS input
+ON CONFLICT (session_id, student_id) DO NOTHING
+`
+
+type BatchCreateAttendanceRecordsQRParams struct {
+	SessionIds   []pgtype.UUID      `json:"session_ids"`
+	StudentIds   []pgtype.UUID      `json:"student_ids"`
+	CourseIds    []pgtype.UUID      `json:"course_ids"`
+	Semesters    []string           `json:"semesters"`
+	WeekNumbers  []int16            `json:"week_numbers"`
+	ScannedAts   []pgtype.Timestamp `json:"scanned_ats"`
+	QrTimestamps []int64            `json:"qr_timestamps"`
+	SessionTypes []SessionTypeEnum  `json:"session_types"`
+}
+
+func (q *Queries) BatchCreateAttendanceRecordsQR(ctx context.Context, arg BatchCreateAttendanceRecordsQRParams) error {
+	_, err := q.db.Exec(ctx, batchCreateAttendanceRecordsQR,
+		arg.SessionIds,
+		arg.StudentIds,
+		arg.CourseIds,
+		arg.Semesters,
+		arg.WeekNumbers,
+		arg.ScannedAts,
+		arg.QrTimestamps,
+		arg.SessionTypes,
+	)
+	return err
+}
+
 const createAttendanceRecordManual = `-- name: CreateAttendanceRecordManual :one
 INSERT INTO attendance_records (
     session_id, student_id, course_id, semester, week_number,

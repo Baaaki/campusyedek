@@ -5,17 +5,66 @@
 package db
 
 import (
+	"database/sql/driver"
+	"fmt"
+
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type OutboxStatusEnum string
+
+const (
+	OutboxStatusEnumPending   OutboxStatusEnum = "pending"
+	OutboxStatusEnumProcessed OutboxStatusEnum = "processed"
+	OutboxStatusEnumFailed    OutboxStatusEnum = "failed"
+)
+
+func (e *OutboxStatusEnum) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = OutboxStatusEnum(s)
+	case string:
+		*e = OutboxStatusEnum(s)
+	default:
+		return fmt.Errorf("unsupported scan type for OutboxStatusEnum: %T", src)
+	}
+	return nil
+}
+
+type NullOutboxStatusEnum struct {
+	OutboxStatusEnum OutboxStatusEnum `json:"outbox_status_enum"`
+	Valid            bool             `json:"valid"` // Valid is true if OutboxStatusEnum is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullOutboxStatusEnum) Scan(value interface{}) error {
+	if value == nil {
+		ns.OutboxStatusEnum, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.OutboxStatusEnum.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullOutboxStatusEnum) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.OutboxStatusEnum), nil
+}
+
 type OutboxEvent struct {
-	ID          int32            `json:"id"`
-	EventType   string           `json:"event_type"`
-	RoutingKey  string           `json:"routing_key"`
-	Payload     []byte           `json:"payload"`
-	Processed   bool             `json:"processed"`
-	CreatedAt   pgtype.Timestamp `json:"created_at"`
-	ProcessedAt pgtype.Timestamp `json:"processed_at"`
+	EventType    string               `json:"event_type"`
+	RoutingKey   string               `json:"routing_key"`
+	Payload      []byte               `json:"payload"`
+	CreatedAt    pgtype.Timestamp     `json:"created_at"`
+	ProcessedAt  pgtype.Timestamp     `json:"processed_at"`
+	Status       NullOutboxStatusEnum `json:"status"`
+	RetryCount   pgtype.Int2          `json:"retry_count"`
+	MaxRetries   pgtype.Int2          `json:"max_retries"`
+	ErrorMessage pgtype.Text          `json:"error_message"`
+	ID           pgtype.UUID          `json:"id"`
 }
 
 type Staff struct {

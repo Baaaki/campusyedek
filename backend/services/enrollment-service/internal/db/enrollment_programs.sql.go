@@ -39,6 +39,26 @@ func (q *Queries) CreateEnrollmentProgram(ctx context.Context, arg CreateEnrollm
 	return i, err
 }
 
+const lockPendingProgram = `-- name: LockPendingProgram :one
+SELECT id, student_id, semester, status, created_at
+FROM enrollment_programs
+WHERE id = $1 AND status = 'pending'
+FOR UPDATE
+`
+
+func (q *Queries) LockPendingProgram(ctx context.Context, id pgtype.UUID) (EnrollmentProgram, error) {
+	row := q.db.QueryRow(ctx, lockPendingProgram, id)
+	var i EnrollmentProgram
+	err := row.Scan(
+		&i.ID,
+		&i.StudentID,
+		&i.Semester,
+		&i.Status,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const deleteEnrollmentProgram = `-- name: DeleteEnrollmentProgram :exec
 DELETE FROM enrollment_programs
 WHERE id = $1

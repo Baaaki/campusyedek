@@ -83,9 +83,12 @@ func main() {
 			UserLimit:  cfg.RateLimit.UserLimit,
 			UserWindow: time.Duration(cfg.RateLimit.UserWindowSecs) * time.Second,
 			EndpointLimits: map[string]sharedMiddleware.EndpointLimit{
-				"login":    {Limit: cfg.RateLimit.LoginLimit, Window: time.Duration(cfg.RateLimit.LoginWindowSecs) * time.Second},
-				"refresh":  {Limit: cfg.RateLimit.RefreshLimit, Window: time.Duration(cfg.RateLimit.RefreshWindowSecs) * time.Second},
-				"password": {Limit: cfg.RateLimit.PasswordLimit, Window: time.Duration(cfg.RateLimit.PasswordWindowSecs) * time.Second},
+				// FailClosed: bypassing rate limit on auth-critical paths
+				// is unacceptable; if Redis is down we'd rather return 503
+				// than allow brute force.
+				"login":    {Limit: cfg.RateLimit.LoginLimit, Window: time.Duration(cfg.RateLimit.LoginWindowSecs) * time.Second, FailClosed: true},
+				"refresh":  {Limit: cfg.RateLimit.RefreshLimit, Window: time.Duration(cfg.RateLimit.RefreshWindowSecs) * time.Second, FailClosed: true},
+				"password": {Limit: cfg.RateLimit.PasswordLimit, Window: time.Duration(cfg.RateLimit.PasswordWindowSecs) * time.Second, FailClosed: true},
 			},
 		}
 		rateLimiter := sharedMiddleware.NewRateLimiter(redisClient, rlConfig)
@@ -160,6 +163,14 @@ func main() {
 	// Setup Gin router
 	router := setupRouter(authHandler, timeHandler, cfg.Server.Environment)
 
+	// Health checks: /health is liveness (process up), /ready pings deps
+	router.GET("/health", sharedHandler.LivenessHandler("auth-service"))
+	router.GET("/ready", sharedHandler.ReadinessHandler("auth-service", map[string]sharedHandler.HealthCheck{
+		"database": pool.Ping,
+		"redis":    redisClient.Ping,
+		"rabbitmq": rabbitConn.Ping,
+	}))
+
 	// Start HTTP server
 	srv := &http.Server{
 		Addr:    ":" + cfg.Server.Port,
@@ -190,7 +201,7 @@ func main() {
 	consumerCancel()
 
 	// Shutdown HTTP server with timeout
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutdownCancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
@@ -211,18 +222,11 @@ func setupRouter(authHandler *handler.AuthHandler, timeHandler *sharedHandler.Ti
 
 	// Global middleware
 	router.Use(sharedMiddleware.Recovery())
+	router.Use(sharedMiddleware.SecurityHeaders())
 	router.Use(sharedMiddleware.CORS())
 	router.Use(sharedMiddleware.RequestLogger())
 	router.Use(sharedMiddleware.IPRateLimit())
 	router.Use(sharedMiddleware.SetCSRFToken(env == "production"))
-
-	// Health check
-	router.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"status":  "healthy",
-			"service": "auth-service",
-		})
-	})
 
 	// API routes
 	api := router.Group("/api/auth")
@@ -239,7 +243,15 @@ func setupRouter(authHandler *handler.AuthHandler, timeHandler *sharedHandler.Ti
 		{
 			protected.POST("/logout", authHandler.Logout)
 			protected.POST("/logout-all", authHandler.LogoutAll)
-			protected.POST("/change-password", sharedMiddleware.EndpointRateLimit("password"), authHandler.ChangePassword)
+			// Password change is sensitive: re-run JWT auth in fail-closed
+			// mode so a stale/blacklisted token cannot slip through if Redis
+			// is unreachable. The earlier JWTAuth() above already populated
+			// claims; this layer only enforces the revocation check.
+			protected.POST("/change-password",
+				sharedMiddleware.JWTAuth(sharedMiddleware.WithFailClosed()),
+				sharedMiddleware.EndpointRateLimit("password"),
+				authHandler.ChangePassword,
+			)
 			protected.GET("/sessions", authHandler.GetSessions)
 			protected.DELETE("/sessions/:id", authHandler.DeleteSession)
 			// Traefik forward auth endpoint

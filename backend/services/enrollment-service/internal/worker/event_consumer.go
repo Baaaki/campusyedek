@@ -106,10 +106,6 @@ func (c *EventConsumer) handleMessage(ctx context.Context, msgBody []byte) error
 	// Course semester events
 	case events.EventCourseSemesterCreated:
 		return c.handleCourseSemesterCreated(ctx, msgBody, genericEvent.EventID.String())
-	case events.EventCourseSemesterUpdated:
-		return c.handleCourseSemesterUpdated(ctx, msgBody, genericEvent.EventID.String())
-	case events.EventCourseSemesterDeleted:
-		return c.handleCourseSemesterDeleted(ctx, msgBody, genericEvent.EventID.String())
 
 	// Student events
 	case events.EventStudentCreated:
@@ -118,6 +114,10 @@ func (c *EventConsumer) handleMessage(ctx context.Context, msgBody []byte) error
 		return c.handleStudentUpdated(ctx, msgBody, genericEvent.EventID.String())
 	case events.EventStudentDeactivated:
 		return c.handleStudentDeactivated(ctx, msgBody, genericEvent.EventID.String())
+
+	// Grade events
+	case events.EventGradeStudentPrerequisitePassed:
+		return c.handleGradeStudentPrerequisitePassed(ctx, msgBody, genericEvent.EventID.String())
 
 	default:
 		logger.Warn("unknown event type",
@@ -152,68 +152,6 @@ func (c *EventConsumer) handleCourseSemesterCreated(ctx context.Context, msgBody
 	}
 
 	logger.Info("course.semester.created event processed successfully",
-		zap.String("event_id", eventID),
-	)
-
-	return nil
-}
-
-// handleCourseSemesterUpdated handles course.semester.updated events
-func (c *EventConsumer) handleCourseSemesterUpdated(ctx context.Context, msgBody []byte, eventID string) error {
-	var event dto.CourseSemesterUpdatedEvent
-	if err := json.Unmarshal(msgBody, &event); err != nil {
-		logger.Error("failed to unmarshal course.semester.updated event",
-			zap.Error(err),
-		)
-		return err
-	}
-
-	logger.Info("processing course.semester.updated event",
-		zap.String("event_id", eventID),
-		zap.String("course_id", event.SemesterCourseID.String()),
-	)
-
-	err := c.eventService.HandleCourseSemesterUpdated(ctx, event)
-	if err != nil {
-		logger.Error("failed to process course.semester.updated event",
-			zap.Error(err),
-			zap.String("course_id", event.SemesterCourseID.String()),
-		)
-		return err
-	}
-
-	logger.Info("course.semester.updated event processed successfully",
-		zap.String("event_id", eventID),
-	)
-
-	return nil
-}
-
-// handleCourseSemesterDeleted handles course.semester.deleted events
-func (c *EventConsumer) handleCourseSemesterDeleted(ctx context.Context, msgBody []byte, eventID string) error {
-	var event dto.CourseSemesterDeletedEvent
-	if err := json.Unmarshal(msgBody, &event); err != nil {
-		logger.Error("failed to unmarshal course.semester.deleted event",
-			zap.Error(err),
-		)
-		return err
-	}
-
-	logger.Info("processing course.semester.deleted event",
-		zap.String("event_id", eventID),
-		zap.String("course_id", event.SemesterCourseID.String()),
-	)
-
-	err := c.eventService.HandleCourseSemesterDeleted(ctx, event)
-	if err != nil {
-		logger.Error("failed to process course.semester.deleted event",
-			zap.Error(err),
-			zap.String("course_id", event.SemesterCourseID.String()),
-		)
-		return err
-	}
-
-	logger.Info("course.semester.deleted event processed successfully",
 		zap.String("event_id", eventID),
 	)
 
@@ -435,6 +373,38 @@ func (c *EventConsumer) handleStudentDeactivated(ctx context.Context, msgBody []
 	}
 
 	logger.Info("student.deleted event processed successfully",
+		zap.String("event_id", eventID),
+	)
+
+	return nil
+}
+
+// handleGradeStudentPrerequisitePassed handles grade.student.prerequisite.passed events
+func (c *EventConsumer) handleGradeStudentPrerequisitePassed(ctx context.Context, msgBody []byte, eventID string) error {
+	var event dto.GradeStudentPrerequisitePassedEvent
+	if err := json.Unmarshal(msgBody, &event); err != nil {
+		logger.Error("failed to unmarshal grade.student.prerequisite.passed event",
+			zap.Error(err),
+		)
+		return err
+	}
+
+	logger.Info("processing grade.student.prerequisite.passed event",
+		zap.String("event_id", eventID),
+		zap.String("student_id", event.StudentID.String()),
+		zap.String("course_code", event.CourseCode),
+	)
+
+	err := c.eventService.HandleGradeStudentPrerequisitePassed(ctx, event)
+	if err != nil {
+		logger.Error("failed to process grade.student.prerequisite.passed event",
+			zap.Error(err),
+			zap.String("student_id", event.StudentID.String()),
+		)
+		return err
+	}
+
+	logger.Info("grade.student.prerequisite.passed event processed successfully",
 		zap.String("event_id", eventID),
 	)
 

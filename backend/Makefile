@@ -1,7 +1,8 @@
 .PHONY: dev dev-all stop stop-all logs help docs \
         dev-auth dev-staff dev-student dev-course dev-enrollment dev-attendance dev-grades dev-meal dev-payment \
         stop-auth stop-staff stop-student stop-course stop-enrollment stop-attendance stop-grades stop-meal stop-payment \
-        infra infra-down status clean-logs rotate-logs ensure-watchdog
+        infra infra-down status clean-logs rotate-logs ensure-watchdog \
+        gen-types gen-frontend-types gen-mobile-types check-types
 
 # Use bash for proper shell features
 SHELL := /bin/bash
@@ -269,6 +270,30 @@ docs:
 	@echo -e "$(GREEN)📚 Serving API docs at http://localhost:8090/swagger-ui.html$(NC)"
 	@cd $(BACKEND_DIR)/docs && python3 serve.py 8090
 
+OPENAPI_SPEC := $(BACKEND_DIR)/docs/openapi.yaml
+FRONTEND_DIR := $(BACKEND_DIR)/../frontend
+MOBILE_DIR := $(BACKEND_DIR)/../mobile
+
+gen-frontend-types:
+	@echo -e "$(GREEN)🔧 Generating frontend API types from $(OPENAPI_SPEC)...$(NC)"
+	@cd $(FRONTEND_DIR) && bun run gen:api-types
+
+gen-mobile-types:
+	@echo -e "$(GREEN)🔧 Generating mobile API types from $(OPENAPI_SPEC)...$(NC)"
+	@cd $(MOBILE_DIR) && npm run gen:api-types
+
+gen-types: gen-frontend-types gen-mobile-types
+	@echo -e "$(GREEN)✅ API types regenerated for frontend and mobile$(NC)"
+
+check-types: gen-types
+	@echo -e "$(BLUE)🔍 Checking for drift between openapi.yaml and generated types...$(NC)"
+	@if ! git -C $(BACKEND_DIR)/.. diff --exit-code frontend/src/lib/api-types.ts mobile/types/api-types.ts; then \
+		echo -e "$(RED)❌ Generated API types are out of sync with openapi.yaml$(NC)"; \
+		echo -e "$(YELLOW)   Run 'make gen-types' and commit the result$(NC)"; \
+		exit 1; \
+	fi
+	@echo -e "$(GREEN)✅ Generated types are in sync with openapi.yaml$(NC)"
+
 # ============================================
 # 🆘 HELP
 # ============================================
@@ -321,4 +346,10 @@ help:
 	@echo ""
 	@echo -e "$(BLUE)📚 Documentation:$(NC)"
 	@echo "  make docs            Serve API docs (Swagger UI) at http://localhost:8090"
+	@echo ""
+	@echo -e "$(BLUE)🔧 API Types (OpenAPI → TypeScript):$(NC)"
+	@echo "  make gen-types           Regenerate frontend + mobile TS types from openapi.yaml"
+	@echo "  make gen-frontend-types  Regenerate only frontend types"
+	@echo "  make gen-mobile-types    Regenerate only mobile types"
+	@echo "  make check-types         CI helper — fail if generated types drifted"
 	@echo ""

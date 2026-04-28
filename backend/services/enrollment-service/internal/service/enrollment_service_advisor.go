@@ -3,12 +3,10 @@ package service
 import (
 	"context"
 	"encoding/json"
-	"time"
 
 	"github.com/baaaki/mydreamcampus/enrollment-service/internal/db"
 	"github.com/baaaki/mydreamcampus/enrollment-service/internal/dto"
 	serviceErrors "github.com/baaaki/mydreamcampus/enrollment-service/internal/errors"
-	"github.com/baaaki/mydreamcampus/shared/clock"
 	sharedErrors "github.com/baaaki/mydreamcampus/shared/errors"
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	"github.com/baaaki/mydreamcampus/shared/utils"
@@ -47,10 +45,9 @@ func (s *EnrollmentService) ApproveEnrollmentProgram(ctx context.Context, progra
 		return dto.EnrollmentProgramResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
 	}
 
-	// Verify advisor
-	if student.AdvisorID.Valid && utils.PgtypeToUUID(student.AdvisorID) != advisorID {
+	// Verify advisor — student must have an assigned advisor and it must match
+	if !student.AdvisorID.Valid || utils.PgtypeToUUID(student.AdvisorID) != advisorID {
 		serviceLogger.Warn("advisor mismatch",
-			zap.String("expected_advisor", utils.PgtypeToUUID(student.AdvisorID).String()),
 			zap.String("requesting_advisor", advisorID.String()),
 		)
 		return dto.EnrollmentProgramResponse{}, sharedErrors.ErrUnauthorized
@@ -67,20 +64,13 @@ func (s *EnrollmentService) ApproveEnrollmentProgram(ctx context.Context, progra
 		courseIDs[i] = utils.PgtypeToUUID(row.CourseID)
 	}
 
-	// Create event payload (wrapped with event_id, event_type, data)
-	eventPayload := map[string]any{
-		"event_id":   uuid.New().String(),
-		"event_type": "enrollment.program.approved",
-		"timestamp":  clock.Now().Format(time.RFC3339),
-		"data": map[string]any{
-			"program_id":  programID.String(),
-			"student_id":  utils.PgtypeToUUID(program.StudentID).String(),
-			"semester":    program.Semester,
-			"course_ids":  courseIDs,
-			"approved_by": advisorID.String(),
-			"approved_at": clock.Now(),
-		},
-	}
+	eventPayload := buildEnrollmentApprovedPayload(EnrollmentApprovedInputs{
+		ProgramID:  programID,
+		StudentID:  utils.PgtypeToUUID(program.StudentID),
+		Semester:   program.Semester,
+		CourseIDs:  courseIDs,
+		ApprovedBy: advisorID,
+	})
 
 	// Approve program (with event)
 	approvedProgram, err := s.enrollmentRepo.ApproveProgramWithEvent(ctx, programID, eventPayload)
@@ -143,10 +133,9 @@ func (s *EnrollmentService) RejectEnrollmentProgram(ctx context.Context, program
 		return sharedErrors.Wrap(sharedErrors.ErrInternal, err)
 	}
 
-	// Verify advisor
-	if student.AdvisorID.Valid && utils.PgtypeToUUID(student.AdvisorID) != advisorID {
+	// Verify advisor — student must have an assigned advisor and it must match
+	if !student.AdvisorID.Valid || utils.PgtypeToUUID(student.AdvisorID) != advisorID {
 		serviceLogger.Warn("advisor mismatch",
-			zap.String("expected_advisor", utils.PgtypeToUUID(student.AdvisorID).String()),
 			zap.String("requesting_advisor", advisorID.String()),
 		)
 		return sharedErrors.ErrUnauthorized
@@ -197,16 +186,14 @@ func (s *EnrollmentService) RejectEnrollmentProgram(ctx context.Context, program
 		RejectedCourses:   rejectedCoursesJSON,
 	}
 
-	// Create event payload
-	eventPayload := map[string]any{
-		"program_id":       programID.String(),
-		"student_id":       utils.PgtypeToUUID(program.StudentID).String(),
-		"semester":         program.Semester,
-		"course_ids":       courseIDs,
-		"rejected_by":      advisorID.String(),
-		"rejection_reason": rejectionReason,
-		"rejected_at":      clock.Now(),
-	}
+	eventPayload := buildEnrollmentRejectedPayload(EnrollmentRejectedInputs{
+		ProgramID:       programID,
+		StudentID:       utils.PgtypeToUUID(program.StudentID),
+		Semester:        program.Semester,
+		CourseIDs:       courseIDs,
+		RejectedBy:      advisorID,
+		RejectionReason: rejectionReason,
+	})
 
 	// Reject program (create log, decrement enrollments, delete program, create event)
 	err = s.enrollmentRepo.RejectProgramWithEventAndLog(ctx, programID, rejectionLogParams, courseIDs, eventPayload)

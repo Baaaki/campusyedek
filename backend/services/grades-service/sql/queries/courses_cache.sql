@@ -21,10 +21,3 @@ RETURNING *;
 SELECT * FROM courses_cache
 WHERE id = $1;
 
--- name: DeleteCourseCache :exec
-DELETE FROM courses_cache WHERE id = $1;
-
--- name: UpdateCourseInstructor :exec
-UPDATE courses_cache
-SET instructor_id = $2, instructor_fullname = $3, synced_at = NOW()
-WHERE id = $1;

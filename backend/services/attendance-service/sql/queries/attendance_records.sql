@@ -6,6 +6,27 @@ INSERT INTO attendance_records (
     $1, $2, $3, $4, $5, 'qr_scan', $6, $7, $8
 ) ON CONFLICT (session_id, student_id) DO NOTHING;
 
+-- name: BatchCreateAttendanceRecordsQR :exec
+INSERT INTO attendance_records (
+    session_id, student_id, course_id, semester, week_number,
+    marked_via, scanned_at, qr_timestamp, session_type
+)
+SELECT
+    session_id, student_id, course_id, semester, week_number,
+    'qr_scan', scanned_at, qr_timestamp, session_type
+FROM (
+    SELECT
+        unnest(@session_ids::uuid[])            AS session_id,
+        unnest(@student_ids::uuid[])            AS student_id,
+        unnest(@course_ids::uuid[])             AS course_id,
+        unnest(@semesters::text[])              AS semester,
+        unnest(@week_numbers::smallint[])       AS week_number,
+        unnest(@scanned_ats::timestamp[])       AS scanned_at,
+        unnest(@qr_timestamps::bigint[])        AS qr_timestamp,
+        unnest(@session_types::session_type_enum[]) AS session_type
+) AS input
+ON CONFLICT (session_id, student_id) DO NOTHING;
+
 -- name: CreateAttendanceRecordManual :one
 INSERT INTO attendance_records (
     session_id, student_id, course_id, semester, week_number,

@@ -64,8 +64,7 @@ func SetCommonDefaults(serviceName, defaultPort, dbPort string) {
 	// JWT defaults
 	viper.SetDefault("JWT_SECRET", "change-this-secret-in-production")
 
-	// Internal service communication secret
-	viper.SetDefault("INTERNAL_SERVICE_SECRET", "changeme_internal_secret")
+	// INTERNAL_SERVICE_SECRET intentionally has no default — must be provided via env.
 
 	// Rate limiting defaults
 	viper.SetDefault("RATE_LIMIT_ENABLED", true)
@@ -82,7 +81,7 @@ func SetCommonDefaults(serviceName, defaultPort, dbPort string) {
 
 	// Timeout defaults (in seconds)
 	viper.SetDefault("REQUEST_TIMEOUT_SECONDS", 10)
-	viper.SetDefault("SHUTDOWN_TIMEOUT_SECONDS", 5)
+	viper.SetDefault("SHUTDOWN_TIMEOUT_SECONDS", 30)
 	viper.SetDefault("ACCOUNT_LOCK_DURATION_MINUTES", 30)
 	viper.SetDefault("CLEANUP_SCHEDULER_INTERVAL_HOURS", 1)
 	viper.SetDefault("PROCESSED_EVENTS_RETENTION_DAYS", 30)
@@ -142,6 +141,12 @@ func LoadRateLimitConfig() RateLimitConfig {
 	}
 }
 
+// minJWTSecretLength is the minimum acceptable length in bytes for a
+// production JWT_SECRET. HS256 derives an HMAC key directly from this
+// value; anything shorter than 32 bytes weakens the signing strength
+// and makes brute-force feasible.
+const minJWTSecretLength = 32
+
 // ValidateCommonConfig validates common configuration fields
 // Returns error if any required field is missing or invalid
 func ValidateCommonConfig(server ServerConfig, database DatabaseConfig, rabbitmq RabbitMQConfig, jwt JWTConfig) error {
@@ -159,6 +164,28 @@ func ValidateCommonConfig(server ServerConfig, database DatabaseConfig, rabbitmq
 	}
 	if jwt.Secret == "change-this-secret-in-production" && server.Environment == "production" {
 		return fmt.Errorf("JWT_SECRET must be changed in production")
+	}
+	if server.Environment == "production" && len(jwt.Secret) < minJWTSecretLength {
+		return fmt.Errorf("JWT_SECRET must be at least %d bytes in production (got %d)", minJWTSecretLength, len(jwt.Secret))
+	}
+	return nil
+}
+
+// ValidateRedisConfig enforces that REDIS_ADDR is set when a service
+// depends on Redis (rate limiting, token blacklist, session storage).
+// In production we additionally require a real REDIS_PASSWORD so the
+// cache cannot be reached unauthenticated even if it ends up exposed.
+func ValidateRedisConfig(server ServerConfig, redis RedisConfig) error {
+	if redis.Addr == "" {
+		return fmt.Errorf("REDIS_ADDR is required")
+	}
+	if server.Environment == "production" {
+		if redis.Password == "" {
+			return fmt.Errorf("REDIS_PASSWORD is required in production")
+		}
+		if redis.Password == "changeme_redis_secret" {
+			return fmt.Errorf("REDIS_PASSWORD must be changed in production")
+		}
 	}
 	return nil
 }

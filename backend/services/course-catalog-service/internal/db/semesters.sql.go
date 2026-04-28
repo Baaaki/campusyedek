@@ -90,12 +90,50 @@ func (q *Queries) CreateSemester(ctx context.Context, arg CreateSemesterParams) 
 	return i, err
 }
 
+const deletePlannedSemester = `-- name: DeletePlannedSemester :exec
+DELETE FROM semesters WHERE id = $1 AND status = 'planned'
+`
+
+func (q *Queries) DeletePlannedSemester(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deletePlannedSemester, id)
+	return err
+}
+
+const deleteSemesterCoursesBySemester = `-- name: DeleteSemesterCoursesBySemester :exec
+DELETE FROM semester_courses WHERE semester = $1
+`
+
+func (q *Queries) DeleteSemesterCoursesBySemester(ctx context.Context, semester string) error {
+	_, err := q.db.Exec(ctx, deleteSemesterCoursesBySemester, semester)
+	return err
+}
+
 const getActiveSemester = `-- name: GetActiveSemester :one
 SELECT id, name, status, hard_deadline, activated_at, completed_at, created_at, updated_at FROM semesters WHERE status = 'active' LIMIT 1
 `
 
 func (q *Queries) GetActiveSemester(ctx context.Context) (Semester, error) {
 	row := q.db.QueryRow(ctx, getActiveSemester)
+	var i Semester
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Status,
+		&i.HardDeadline,
+		&i.ActivatedAt,
+		&i.CompletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getSemesterByID = `-- name: GetSemesterByID :one
+SELECT id, name, status, hard_deadline, activated_at, completed_at, created_at, updated_at FROM semesters WHERE id = $1
+`
+
+func (q *Queries) GetSemesterByID(ctx context.Context, id pgtype.UUID) (Semester, error) {
+	row := q.db.QueryRow(ctx, getSemesterByID, id)
 	var i Semester
 	err := row.Scan(
 		&i.ID,
@@ -175,4 +213,32 @@ func (q *Queries) ListSemesters(ctx context.Context) ([]Semester, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const updatePlannedSemester = `-- name: UpdatePlannedSemester :one
+UPDATE semesters
+SET hard_deadline = $2, updated_at = NOW()
+WHERE id = $1 AND status = 'planned'
+RETURNING id, name, status, hard_deadline, activated_at, completed_at, created_at, updated_at
+`
+
+type UpdatePlannedSemesterParams struct {
+	ID           pgtype.UUID        `json:"id"`
+	HardDeadline pgtype.Timestamptz `json:"hard_deadline"`
+}
+
+func (q *Queries) UpdatePlannedSemester(ctx context.Context, arg UpdatePlannedSemesterParams) (Semester, error) {
+	row := q.db.QueryRow(ctx, updatePlannedSemester, arg.ID, arg.HardDeadline)
+	var i Semester
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Status,
+		&i.HardDeadline,
+		&i.ActivatedAt,
+		&i.CompletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }

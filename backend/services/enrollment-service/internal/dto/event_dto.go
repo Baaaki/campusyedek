@@ -83,32 +83,6 @@ type CourseSemesterCreatedEvent struct {
 	ScheduleSessions  []CourseSession      `json:"schedule_sessions"`
 }
 
-// CourseSemesterUpdatedEvent represents course.semester.updated event
-type CourseSemesterUpdatedEvent struct {
-	BaseEvent
-	SemesterCourseID  uuid.UUID            `json:"semester_course_id"`
-	CourseCode        string               `json:"course_code"`
-	CourseName        string               `json:"course_name"`
-	Faculty           string               `json:"faculty"`
-	Department        string               `json:"department"`
-	Credits           int16                `json:"credits"`
-	CourseType        string               `json:"course_type"`
-	ClassLevel        int16                `json:"class_level"`
-	Semester          string               `json:"semester"`
-	InstructorID      *uuid.UUID           `json:"instructor_id"`
-	InstructorFullname string              `json:"instructor_fullname"`
-	ClassroomLocation string               `json:"classroom_location"`
-	MaxCapacity       int16                `json:"max_capacity"`
-	Prerequisites     []PrerequisiteCourse `json:"prerequisites"`
-	ScheduleSessions  []CourseSession      `json:"schedule_sessions"`
-}
-
-// CourseSemesterDeletedEvent represents course.semester.deleted event
-type CourseSemesterDeletedEvent struct {
-	BaseEvent
-	SemesterCourseID uuid.UUID `json:"semester_course_id"`
-}
-
 // GradeStudentPrerequisitePassedEvent represents grade.student.prerequisite.passed event
 type GradeStudentPrerequisitePassedEvent struct {
 	BaseEvent

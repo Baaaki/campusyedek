@@ -16,7 +16,7 @@ type CreateStudentRequest struct {
 	Department     string    `json:"department" binding:"required"`
 	EnrollmentYear int       `json:"enrollment_year" binding:"required,min=1900,max=2100"`
 	ClassLevel     int16     `json:"class_level" binding:"required,min=1,max=6"`
-	AdvisorID      uuid.UUID `json:"advisor_id" binding:"required"`
+	AdvisorID      *uuid.UUID `json:"advisor_id"`
 }
 
 // UpdateStudentRequest represents the request body for updating a student

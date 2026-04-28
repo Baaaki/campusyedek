@@ -8,13 +8,18 @@ import (
 	"go.uber.org/zap"
 )
 
-// RequestLogger logs all HTTP requests with duration and status code
+// RequestLogger logs all HTTP requests with duration and status code.
+// Honors an incoming X-Request-ID so a single ID flows across the API
+// gateway, services, and downstream event consumers; otherwise mints
+// a fresh UUID for the trace.
 func RequestLogger() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 
-		// Add request ID to context for distributed tracing
-		ctx := logger.WithRequestID(c.Request.Context())
+		// Reuse upstream X-Request-ID when present so a single trace
+		// ID survives across Traefik → service → downstream calls.
+		incoming := c.GetHeader("X-Request-ID")
+		ctx := logger.WithRequestIDValue(c.Request.Context(), incoming)
 		c.Request = c.Request.WithContext(ctx)
 		requestID := logger.GetRequestID(ctx)
 

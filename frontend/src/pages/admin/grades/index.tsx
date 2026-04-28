@@ -20,12 +20,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { catalogService } from '@/lib/services/catalog-service';
+import { semesterApi } from '@/lib/api-client';
 import { gradesService } from '@/lib/services/grades-service';
-import type { CourseCatalog, CourseStatusResponse, StudentGrades } from '@/lib/types';
+import type { CourseStatusResponse, StudentGrades, SemesterCourse } from '@/lib/types';
 import { mockFaculties, mockCourseCatalog } from '@/mock_data/catalog';
 import { mockAdminCourseStatus, mockAdminStudents } from '@/mock_data/admin_grades';
 import { getActiveSemester } from '@/lib/services/system-service';
+
+type AdminCourseRow = Pick<SemesterCourse, 'id' | 'course_code' | 'course_name' | 'department'> & {
+  faculty?: string;
+  instructor_fullname?: string;
+};
 
 type ViewState = 'COURSES' | 'STUDENTS';
 
@@ -35,14 +40,14 @@ export default function AdminGradesPage() {
   const [error, setError] = useState('');
 
   // Courses View State
-  const [courses, setCourses] = useState<CourseCatalog[]>([]);
+  const [courses, setCourses] = useState<AdminCourseRow[]>([]);
   const [facultyFilter, setFacultyFilter] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
 
   // Selection State
-  const [selectedCourse, setSelectedCourse] = useState<CourseCatalog | null>(null);
+  const [selectedCourse, setSelectedCourse] = useState<AdminCourseRow | null>(null);
   const [courseStatus, setCourseStatus] = useState<CourseStatusResponse | null>(null);
   
   // Students View State
@@ -78,30 +83,48 @@ export default function AdminGradesPage() {
       setError('Lütfen önce fakülte ve bölüm seçimi yapınız.');
       return;
     }
+    if (!useMockData && !activeSemester) {
+      setError('Aktif dönem bulunamadı. Lütfen önce bir dönem aktifleştirin.');
+      return;
+    }
     setLoading(true);
     setHasSearched(true);
     setError('');
     try {
       if (useMockData) {
-        // Mock filter logic
-        const filtered = mockCourseCatalog.filter(c => 
-          c.faculty === facultyFilter && 
+        const filtered = mockCourseCatalog.filter(c =>
+          c.faculty === facultyFilter &&
           c.department === departmentFilter &&
           (searchQuery ? (c.course_code.toLowerCase().includes(searchQuery.toLowerCase()) || c.name.toLowerCase().includes(searchQuery.toLowerCase())) : true)
         );
-        setCourses(filtered);
+        setCourses(filtered.map(c => ({
+          id: c.id,
+          course_code: c.course_code,
+          course_name: c.name,
+          department: c.department,
+          faculty: c.faculty,
+        })));
       } else {
-        const resp = await catalogService.listCourses({
-          limit: 100,
+        const resp = await semesterApi.get(`${encodeURIComponent(activeSemester)}/courses`, {
+          searchParams: { faculty: facultyFilter, department: departmentFilter, limit: 100 },
+        }).json<{ data: SemesterCourse[] | null }>();
+
+        const q = searchQuery.trim().toLowerCase();
+        const filtered = (resp.data || []).filter(c =>
+          !q || c.course_code.toLowerCase().includes(q) || c.course_name.toLowerCase().includes(q)
+        );
+        setCourses(filtered.map(c => ({
+          id: c.id,
+          course_code: c.course_code,
+          course_name: c.course_name,
+          department: c.department,
           faculty: facultyFilter,
-          department: departmentFilter,
-          search: searchQuery
-        });
-        setCourses(resp.courses);
+          instructor_fullname: c.instructor_fullname,
+        })));
       }
     } catch (err: any) {
       if (err.response?.status === 404) {
-        setCourses([]); // Ders bulunamadı durumu API'den 404 dönebiliyor
+        setCourses([]);
       } else {
         setError('Arama yapılırken hata oluştu.');
       }
@@ -110,7 +133,7 @@ export default function AdminGradesPage() {
     }
   };
 
-  const handleCourseSelect = async (course: CourseCatalog) => {
+  const handleCourseSelect = async (course: AdminCourseRow) => {
     setSelectedCourse(course);
     setView('STUDENTS');
     setLoading(true);
@@ -263,11 +286,14 @@ export default function AdminGradesPage() {
                     <TableCell className="font-medium text-blue-600 dark:text-blue-400">
                       {course.course_code}
                     </TableCell>
-                    <TableCell>{course.name}</TableCell>
+                    <TableCell>{course.course_name}</TableCell>
                     <TableCell>
                       <div className="text-sm">
-                        <div>{course.faculty}</div>
+                        <div>{course.faculty || facultyFilter}</div>
                         <div className="text-gray-500">{course.department}</div>
+                        {course.instructor_fullname && (
+                          <div className="text-xs text-gray-400">{course.instructor_fullname}</div>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell className="text-right">

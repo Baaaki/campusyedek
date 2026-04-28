@@ -49,6 +49,12 @@ SET status = $2
 WHERE id = $1
 RETURNING id, student_id, semester, status, created_at;
 
+-- name: LockPendingProgram :one
+SELECT id, student_id, semester, status, created_at
+FROM enrollment_programs
+WHERE id = $1 AND status = 'pending'
+FOR UPDATE;
+
 -- name: DeleteEnrollmentProgram :exec
 DELETE FROM enrollment_programs
 WHERE id = $1;

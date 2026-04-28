@@ -12,15 +12,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const deleteCourseCache = `-- name: DeleteCourseCache :exec
-DELETE FROM courses_cache WHERE id = $1
-`
-
-func (q *Queries) DeleteCourseCache(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.Exec(ctx, deleteCourseCache, id)
-	return err
-}
-
 const getCourseCacheByID = `-- name: GetCourseCacheByID :one
 SELECT id, course_code, course_name, credits, semester, department, instructor_id, instructor_fullname, assessment_schema, synced_at FROM courses_cache
 WHERE id = $1
@@ -42,23 +33,6 @@ func (q *Queries) GetCourseCacheByID(ctx context.Context, id uuid.UUID) (Courses
 		&i.SyncedAt,
 	)
 	return i, err
-}
-
-const updateCourseInstructor = `-- name: UpdateCourseInstructor :exec
-UPDATE courses_cache
-SET instructor_id = $2, instructor_fullname = $3, synced_at = NOW()
-WHERE id = $1
-`
-
-type UpdateCourseInstructorParams struct {
-	ID                 uuid.UUID   `json:"id"`
-	InstructorID       uuid.UUID   `json:"instructor_id"`
-	InstructorFullname pgtype.Text `json:"instructor_fullname"`
-}
-
-func (q *Queries) UpdateCourseInstructor(ctx context.Context, arg UpdateCourseInstructorParams) error {
-	_, err := q.db.Exec(ctx, updateCourseInstructor, arg.ID, arg.InstructorID, arg.InstructorFullname)
-	return err
 }
 
 const upsertCourseCache = `-- name: UpsertCourseCache :one

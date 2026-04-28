@@ -35,3 +35,15 @@ SELECT id, semester, period_start, period_end, is_active, created_at, updated_at
 FROM academic_periods
 WHERE semester = $1 AND is_active = true
 LIMIT 1;
+
+-- name: DeletePeriodsBySemester :exec
+DELETE FROM academic_periods WHERE semester = $1;
+
+-- name: GetPeriodBySemester :one
+SELECT * FROM academic_periods WHERE semester = $1 LIMIT 1;
+
+-- name: UpdatePeriodBySemesterSQL :one
+UPDATE academic_periods
+SET period_start = $2, period_end = $3, updated_at = NOW()
+WHERE semester = $1
+RETURNING *;

@@ -14,6 +14,9 @@ services:
   # PostgreSQL - Auth Service Database
   postgres-auth:
     image: postgres:18-alpine
+    mem_limit: 512m
+    cpus: 1.0
+    shm_size: 256mb
     container_name: mydreamcampus-postgres-auth
     restart: unless-stopped
     environment:
@@ -41,6 +44,9 @@ services:
   # PostgreSQL - Staff Service Database
   postgres-staff:
     image: postgres:18-alpine
+    mem_limit: 512m
+    cpus: 1.0
+    shm_size: 256mb
     container_name: mydreamcampus-postgres-staff
     restart: unless-stopped
     environment:
@@ -68,6 +74,9 @@ services:
   # PostgreSQL - Student Service Database
   postgres-student:
     image: postgres:18-alpine
+    mem_limit: 512m
+    cpus: 1.0
+    shm_size: 256mb
     container_name: mydreamcampus-postgres-student
     restart: unless-stopped
     environment:
@@ -95,6 +104,9 @@ services:
   # PostgreSQL - Catalog Service Database
   postgres-catalog:
     image: postgres:18-alpine
+    mem_limit: 512m
+    cpus: 1.0
+    shm_size: 256mb
     container_name: mydreamcampus-postgres-catalog
     restart: unless-stopped
     environment:
@@ -122,6 +134,9 @@ services:
   # PostgreSQL - Enrollment Service Database
   postgres-enrollment:
     image: postgres:18-alpine
+    mem_limit: 512m
+    cpus: 1.0
+    shm_size: 256mb
     container_name: mydreamcampus-postgres-enrollment
     restart: unless-stopped
     environment:
@@ -149,6 +164,9 @@ services:
   # PostgreSQL - Attendance Service Database
   postgres-attendance:
     image: postgres:18-alpine
+    mem_limit: 512m
+    cpus: 1.0
+    shm_size: 256mb
     container_name: mydreamcampus-postgres-attendance
     restart: unless-stopped
     environment:
@@ -176,6 +194,9 @@ services:
   # PostgreSQL - Grades Service Database
   postgres-grades:
     image: postgres:18-alpine
+    mem_limit: 512m
+    cpus: 1.0
+    shm_size: 256mb
     container_name: mydreamcampus-postgres-grades
     restart: unless-stopped
     environment:
@@ -203,6 +224,9 @@ services:
   # PostgreSQL - Meal Service Database
   postgres-meal:
     image: postgres:18-alpine
+    mem_limit: 512m
+    cpus: 1.0
+    shm_size: 256mb
     container_name: mydreamcampus-postgres-meal
     restart: unless-stopped
     environment:
@@ -230,6 +254,8 @@ services:
   # RabbitMQ - Message Broker
   rabbitmq:
     image: rabbitmq:4.2-management-alpine
+    mem_limit: 1g
+    cpus: 1.0
     container_name: mydreamcampus-rabbitmq
     restart: unless-stopped
     environment:
@@ -258,6 +284,8 @@ services:
   # Redis - Cache
   redis:
     image: redis:8-alpine
+    mem_limit: 256m
+    cpus: 0.5
     container_name: mydreamcampus-redis
     restart: unless-stopped
     command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
@@ -283,6 +311,8 @@ services:
   # Traefik - API Gateway / Reverse Proxy
   traefik:
     image: traefik:v3.6
+    mem_limit: 256m
+    cpus: 0.5
     container_name: mydreamcampus-traefik
     restart: unless-stopped
     ports:

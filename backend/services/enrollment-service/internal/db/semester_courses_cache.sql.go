@@ -11,15 +11,18 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const decrementEnrollment = `-- name: DecrementEnrollment :exec
+const decrementEnrollment = `-- name: DecrementEnrollment :execrows
 UPDATE semester_courses_cache
 SET current_enrollment = current_enrollment - 1
 WHERE id = $1 AND current_enrollment > 0
 `
 
-func (q *Queries) DecrementEnrollment(ctx context.Context, id pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, decrementEnrollment, id)
-	return err
+func (q *Queries) DecrementEnrollment(ctx context.Context, id pgtype.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, decrementEnrollment, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const deleteSemesterCourse = `-- name: DeleteSemesterCourse :exec
@@ -199,15 +202,18 @@ func (q *Queries) GetCoursesForCapacityCheck(ctx context.Context, dollar_1 []pgt
 	return items, nil
 }
 
-const incrementEnrollment = `-- name: IncrementEnrollment :exec
+const incrementEnrollment = `-- name: IncrementEnrollment :execrows
 UPDATE semester_courses_cache
 SET current_enrollment = current_enrollment + 1
-WHERE id = $1
+WHERE id = $1 AND current_enrollment < max_capacity
 `
 
-func (q *Queries) IncrementEnrollment(ctx context.Context, id pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, incrementEnrollment, id)
-	return err
+func (q *Queries) IncrementEnrollment(ctx context.Context, id pgtype.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, incrementEnrollment, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const upsertSemesterCourse = `-- name: UpsertSemesterCourse :one
@@ -231,7 +237,6 @@ ON CONFLICT (id) DO UPDATE SET
     instructor_fullname = EXCLUDED.instructor_fullname,
     classroom_location = EXCLUDED.classroom_location,
     max_capacity = EXCLUDED.max_capacity,
-    current_enrollment = EXCLUDED.current_enrollment,
     prerequisites = EXCLUDED.prerequisites,
     synced_at = NOW()
 RETURNING id, course_code, course_name, faculty, department, credits, course_type, class_level,

@@ -21,6 +21,7 @@ var (
 	ErrScoreExists      = sharedErrors.New("SCORE_EXISTS", "score already exists for this assessment", http.StatusConflict)
 	ErrAttendanceFailed = sharedErrors.New("ATTENDANCE_FAILED", "student failed due to attendance, cannot enter score manually", http.StatusBadRequest)
 	ErrScoreLocked      = sharedErrors.New("SCORE_LOCKED", "score is locked and cannot be modified", http.StatusForbidden)
+	ErrIncompleteAssessment = sharedErrors.New("INCOMPLETE_ASSESSMENT", "cannot lock assessment: not every student has a score entered", http.StatusBadRequest)
 	ErrGradingPeriodEnded = sharedErrors.New("GRADING_PERIOD_ENDED", "grading period has ended", http.StatusForbidden)
 	ErrNoPeriodDefined    = sharedErrors.New("NO_PERIOD_DEFINED", "no active grading period defined for this semester", http.StatusBadRequest)
 

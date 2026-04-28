@@ -11,6 +11,7 @@ import type {
   CreateClosedDayRequest,
   Semester,
   CreateSemesterRequest,
+  UpdateSemesterRequest,
   AuditLogEntry,
   AuditLogListResponse,
 } from '@/lib/types';
@@ -68,38 +69,54 @@ export async function resetTimeAll(): Promise<{ success: string[]; failed: strin
 
 // Grades Periods
 export async function listGradesPeriods(semester?: string): Promise<AcademicPeriod[]> {
-  await MOCK_DELAY();
-  return [
-    { id: 'gp1', semester: semester || '2024-2025-Fall', period_start: new Date(Date.now() - 86400000).toISOString(), period_end: new Date(Date.now() + 86400000 * 14).toISOString(), is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), course_id: 'CS101-UUID' },
-    { id: 'gp2', semester: semester || '2024-2025-Fall', period_start: new Date(Date.now() - 86400000 * 5).toISOString(), period_end: new Date(Date.now() - 86400000 * 1).toISOString(), is_active: false, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
-  ];
+  const searchParams: Record<string, string> = {};
+  if (semester) searchParams.semester = semester;
+  return gradesApiSafe.get('admin/periods', { searchParams }).json<AcademicPeriod[]>();
 }
-export async function createGradesPeriod(data: CreatePeriodRequest): Promise<AcademicPeriod> { await MOCK_DELAY(); return { id: 'new', ...data, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() } as AcademicPeriod; }
-export async function updateGradesPeriod() { await MOCK_DELAY(); return {} as AcademicPeriod; }
-export async function deleteGradesPeriod() { await MOCK_DELAY(); }
+export async function createGradesPeriod(data: CreatePeriodRequest): Promise<AcademicPeriod> {
+  return gradesApiSafe.post('admin/periods', { json: data }).json<AcademicPeriod>();
+}
+export async function updateGradesPeriod(id: string, data: UpdatePeriodRequest): Promise<AcademicPeriod> {
+  return gradesApiSafe.put(`admin/periods/${id}`, { json: data }).json<AcademicPeriod>();
+}
+export async function deleteGradesPeriod(id: string): Promise<void> {
+  await gradesApiSafe.delete(`admin/periods/${id}`);
+}
 
 // Simple Periods
-export type SimplePeriodServiceKey = 'enrollment' | 'catalog';
+export type SimplePeriodServiceKey = 'enrollment' | 'catalog' | 'attendance';
+
+const simplePeriodApi: Record<SimplePeriodServiceKey, typeof enrollmentApiSafe> = {
+  enrollment: enrollmentApiSafe,
+  catalog: catalogApiSafe,
+  attendance: attendanceApiSafe,
+};
+
 export async function listSimplePeriods(service: SimplePeriodServiceKey, semester?: string): Promise<SimplePeriod[]> {
-  await MOCK_DELAY();
-  return [
-    { id: 'sp1', semester: semester || '2024-2025-Fall', period_start: new Date(Date.now() - 86400000 * 10).toISOString(), period_end: new Date(Date.now() + 86400000 * 20).toISOString(), is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
-  ];
+  const searchParams: Record<string, string> = {};
+  if (semester) searchParams.semester = semester;
+  return simplePeriodApi[service].get('admin/periods', { searchParams }).json<SimplePeriod[]>();
 }
-export async function createSimplePeriod(service: SimplePeriodServiceKey, data: SimpleCreatePeriodRequest): Promise<SimplePeriod> { await MOCK_DELAY(); return { id: 'new', ...data, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() } as SimplePeriod; }
-export async function updateSimplePeriod() { await MOCK_DELAY(); return {} as SimplePeriod; }
-export async function deleteSimplePeriod() { await MOCK_DELAY(); }
+export async function createSimplePeriod(service: SimplePeriodServiceKey, data: SimpleCreatePeriodRequest): Promise<SimplePeriod> {
+  return simplePeriodApi[service].post('admin/periods', { json: data }).json<SimplePeriod>();
+}
+export async function updateSimplePeriod(service: SimplePeriodServiceKey, id: string, data: UpdatePeriodRequest): Promise<SimplePeriod> {
+  return simplePeriodApi[service].put(`admin/periods/${id}`, { json: data }).json<SimplePeriod>();
+}
+export async function deleteSimplePeriod(service: SimplePeriodServiceKey, id: string): Promise<void> {
+  await simplePeriodApi[service].delete(`admin/periods/${id}`);
+}
 
 // Closed Days
 export async function listClosedDays(): Promise<ClosedDay[]> {
-  await MOCK_DELAY();
-  return [
-    { id: 'cd1', date: '2025-01-01', reason: 'Yılbaşı Tatili', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-    { id: 'cd2', date: '2025-10-29', reason: 'Cumhuriyet Bayramı', created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
-  ];
+  return mealApiSafe.get('admin/closed-days').json<ClosedDay[]>();
 }
-export async function createClosedDay(data: CreateClosedDayRequest): Promise<ClosedDay> { await MOCK_DELAY(); return { id: 'new', ...data, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }; }
-export async function deleteClosedDay() { await MOCK_DELAY(); }
+export async function createClosedDay(data: CreateClosedDayRequest): Promise<ClosedDay> {
+  return mealApiSafe.post('admin/closed-days', { json: data }).json<ClosedDay>();
+}
+export async function deleteClosedDay(id: string): Promise<void> {
+  await mealApiSafe.delete(`admin/closed-days/${id}`);
+}
 
 // Semesters
 export async function listSemesters(): Promise<Semester[]> {
@@ -107,7 +124,11 @@ export async function listSemesters(): Promise<Semester[]> {
 }
 
 export async function createSemester(data: CreateSemesterRequest): Promise<Semester> {
-  return catalogApiSafe.post('admin/semesters', { json: data }).json<Semester>();
+  const body = await catalogApiSafe.post('admin/semesters', { json: data }).json<any>();
+  // Backend returns { semester, period_errors } when period distribution partially fails,
+  // but returns the Semester directly when everything succeeds.
+  if (body.semester) return body.semester as Semester;
+  return body as Semester;
 }
 
 export async function getActiveSemester(): Promise<Semester | null> {
@@ -124,6 +145,21 @@ export async function activateSemester(id: string): Promise<Semester> {
 
 export async function completeSemester(id: string): Promise<Semester> {
   return catalogApiSafe.put(`admin/semesters/${id}/complete`).json<Semester>();
+}
+
+export async function deleteSemester(id: string): Promise<void> {
+  await catalogApiSafe.delete(`admin/semesters/${id}`);
+}
+
+export async function updateSemester(
+  id: string,
+  data: UpdateSemesterRequest
+): Promise<Semester> {
+  const body = await catalogApiSafe
+    .put(`admin/semesters/${id}`, { json: data })
+    .json<any>();
+  if (body.semester) return body.semester as Semester;
+  return body as Semester;
 }
 
 // Audit Log Filters

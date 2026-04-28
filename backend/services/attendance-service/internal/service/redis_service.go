@@ -51,24 +51,31 @@ func (s *RedisService) IsStudentEnrolled(ctx context.Context, sessionID, student
 	return s.client.SIsMember(ctx, key, studentID).Result()
 }
 
-// IsAlreadyScanned checks if student already scanned this session (SISMEMBER on persistent SET - O(1))
-// This SET persists until session closes, unlike buffer which gets flushed every 5s
-func (s *RedisService) IsAlreadyScanned(ctx context.Context, sessionID, studentID string) (bool, error) {
-	key := fmt.Sprintf("attendance:scanned:%s", sessionID)
-	return s.client.SIsMember(ctx, key, studentID).Result()
-}
-
-// AddToBuffer writes scan data to buffer and marks student as scanned (atomic pipeline)
-// Pipeline: HSET buffer + SADD scanned + EXPIRE scanned (3 commands, 1 round-trip)
-func (s *RedisService) AddToBuffer(ctx context.Context, sessionID, studentID, data string, scannedTTL time.Duration) error {
+// AddToBuffer claims a scan slot atomically and writes it to the buffer.
+// Returns (true, nil) when the scan is newly recorded, (false, nil) when the
+// student already scanned this session. SADD is used as the dedup primitive so
+// the check-and-set is atomic (no TOCTOU race between concurrent scans).
+func (s *RedisService) AddToBuffer(ctx context.Context, sessionID, studentID, data string, scannedTTL time.Duration) (bool, error) {
 	bufferKey := fmt.Sprintf("attendance:buffer:%s", sessionID)
 	scannedKey := fmt.Sprintf("attendance:scanned:%s", sessionID)
+
+	added, err := s.client.SAdd(ctx, scannedKey, studentID).Result()
+	if err != nil {
+		return false, err
+	}
+	if added == 0 {
+		return false, nil
+	}
+
 	pipe := s.client.Pipeline()
 	pipe.HSet(ctx, bufferKey, studentID, data)
-	pipe.SAdd(ctx, scannedKey, studentID)
 	pipe.Expire(ctx, scannedKey, scannedTTL)
-	_, err := pipe.Exec(ctx)
-	return err
+	if _, err := pipe.Exec(ctx); err != nil {
+		// Roll back the claim so the student can retry.
+		s.client.SRem(ctx, scannedKey, studentID)
+		return false, err
+	}
+	return true, nil
 }
 
 func (s *RedisService) GetBuffer(ctx context.Context, sessionID string) (map[string]string, error) {
@@ -93,13 +100,34 @@ func (s *RedisService) InvalidateStudentSummary(ctx context.Context, studentID u
 	return s.client.Del(ctx, key).Err()
 }
 
-// Get all buffer keys (for buffer flusher worker)
+// GetAllBufferKeys returns every session buffer key using SCAN.
+// SCAN is cursor-based and non-blocking, unlike KEYS which is O(N) and
+// stalls the Redis event loop on large keyspaces.
 func (s *RedisService) GetAllBufferKeys(ctx context.Context) ([]string, error) {
-	pattern := "attendance:buffer:*"
-	return s.client.Keys(ctx, pattern).Result()
+	const pattern = "attendance:buffer:*"
+	const scanCount = 100
+
+	var keys []string
+	iter := s.client.Scan(ctx, 0, pattern, scanCount).Iterator()
+	for iter.Next(ctx) {
+		keys = append(keys, iter.Val())
+	}
+	if err := iter.Err(); err != nil {
+		return nil, err
+	}
+	return keys, nil
 }
 
-// Clear buffer after successful flush
-func (s *RedisService) ClearBuffer(ctx context.Context, bufferKey string) error {
-	return s.client.Del(ctx, bufferKey).Err()
+// HDelBufferFields removes the given student fields from a session buffer hash.
+// Unlike ClearBuffer (DEL), this only removes the fields we successfully flushed,
+// so records added concurrently and records that failed to persist are preserved
+// for the next tick.
+func (s *RedisService) HDelBufferFields(ctx context.Context, sessionID string, studentIDs []string) error {
+	if len(studentIDs) == 0 {
+		return nil
+	}
+	key := fmt.Sprintf("attendance:buffer:%s", sessionID)
+	fields := make([]string, len(studentIDs))
+	copy(fields, studentIDs)
+	return s.client.HDel(ctx, key, fields...).Err()
 }

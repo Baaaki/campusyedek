@@ -64,14 +64,7 @@ func (s *StaffService) CreateStaff(ctx context.Context, req dto.CreateStaffReque
 		OfficeLocation: utils.StringToPgText(req.OfficeLocation),
 	}
 
-	eventPayload := map[string]any{
-		"id":         nil, // Will be set after creation in repository
-		"email":      req.Email,
-		"first_name": req.FirstName,
-		"last_name":  req.LastName,
-		"role":       req.Role,
-		"department": req.Department,
-	}
+	eventPayload := buildStaffCreatedPayload(req)
 
 	staff, err := s.staffRepo.CreateStaffWithEvent(ctx, params, eventPayload)
 	if err != nil {
@@ -190,12 +183,12 @@ func (s *StaffService) UpdateStaff(ctx context.Context, id string, req dto.Updat
 		OfficeLocation: utils.PointerStringToPgText(req.OfficeLocation),
 	}
 
-	eventPayload := map[string]any{
-		"staff_id":        id,
-		"department":      req.Department,
-		"phone":           req.Phone,
-		"office_location": req.OfficeLocation,
-	}
+	eventPayload := buildStaffUpdatedPayload(StaffUpdatedInputs{
+		ID:             id,
+		Department:     req.Department,
+		Phone:          req.Phone,
+		OfficeLocation: req.OfficeLocation,
+	})
 
 	staff, err := s.staffRepo.UpdateStaffWithEvent(ctx, staffID, params, eventPayload)
 	if err != nil {
@@ -263,9 +256,7 @@ func (s *StaffService) DeleteStaff(ctx context.Context, id string) error {
 		return sharedErrors.Wrap(sharedErrors.ErrInternal, err)
 	}
 
-	eventPayload := map[string]any{
-		"staff_id": id,
-	}
+	eventPayload := buildStaffDeactivatedPayload(id)
 
 	err = s.staffRepo.SoftDeleteStaffWithEvent(ctx, staffID, eventPayload)
 	if err != nil {

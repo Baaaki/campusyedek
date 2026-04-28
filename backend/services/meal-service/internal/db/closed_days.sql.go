@@ -12,24 +12,26 @@ import (
 )
 
 const createClosedDay = `-- name: CreateClosedDay :one
-INSERT INTO closed_days (date, reason)
-VALUES ($1, $2)
-RETURNING id, date, reason, created_at
+INSERT INTO closed_days (date, reason, semester)
+VALUES ($1, $2, $3)
+RETURNING id, date, reason, created_at, semester
 `
 
 type CreateClosedDayParams struct {
-	Date   pgtype.Date `json:"date"`
-	Reason string      `json:"reason"`
+	Date     pgtype.Date `json:"date"`
+	Reason   string      `json:"reason"`
+	Semester pgtype.Text `json:"semester"`
 }
 
 func (q *Queries) CreateClosedDay(ctx context.Context, arg CreateClosedDayParams) (ClosedDay, error) {
-	row := q.db.QueryRow(ctx, createClosedDay, arg.Date, arg.Reason)
+	row := q.db.QueryRow(ctx, createClosedDay, arg.Date, arg.Reason, arg.Semester)
 	var i ClosedDay
 	err := row.Scan(
 		&i.ID,
 		&i.Date,
 		&i.Reason,
 		&i.CreatedAt,
+		&i.Semester,
 	)
 	return i, err
 }
@@ -43,9 +45,17 @@ func (q *Queries) DeleteClosedDay(ctx context.Context, id pgtype.UUID) error {
 	return err
 }
 
+const deleteClosedDaysBySemester = `-- name: DeleteClosedDaysBySemester :exec
+DELETE FROM closed_days WHERE semester = $1
+`
+
+func (q *Queries) DeleteClosedDaysBySemester(ctx context.Context, semester pgtype.Text) error {
+	_, err := q.db.Exec(ctx, deleteClosedDaysBySemester, semester)
+	return err
+}
+
 const getClosedDaysByDateRange = `-- name: GetClosedDaysByDateRange :many
-SELECT id, date, reason, created_at
-FROM closed_days
+SELECT id, date, reason, created_at, semester FROM closed_days
 WHERE date >= $1 AND date <= $2
 ORDER BY date ASC
 `
@@ -69,6 +79,7 @@ func (q *Queries) GetClosedDaysByDateRange(ctx context.Context, arg GetClosedDay
 			&i.Date,
 			&i.Reason,
 			&i.CreatedAt,
+			&i.Semester,
 		); err != nil {
 			return nil, err
 		}
@@ -94,8 +105,7 @@ func (q *Queries) IsDateClosed(ctx context.Context, date pgtype.Date) (bool, err
 }
 
 const listClosedDays = `-- name: ListClosedDays :many
-SELECT id, date, reason, created_at
-FROM closed_days
+SELECT id, date, reason, created_at, semester FROM closed_days
 WHERE ($1::date IS NULL OR date >= $1)
   AND ($2::date IS NULL OR date <= $2)
 ORDER BY date ASC
@@ -120,6 +130,7 @@ func (q *Queries) ListClosedDays(ctx context.Context, arg ListClosedDaysParams) 
 			&i.Date,
 			&i.Reason,
 			&i.CreatedAt,
+			&i.Semester,
 		); err != nil {
 			return nil, err
 		}

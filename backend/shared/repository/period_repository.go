@@ -173,6 +173,31 @@ func (r *PeriodRepository) GetEffectiveDeadline(ctx context.Context, semester st
 	return &p, nil
 }
 
+// DeletePeriodBySemester removes all periods for a given semester.
+func (r *PeriodRepository) DeletePeriodBySemester(ctx context.Context, semester string) error {
+	_, err := r.pool.Exec(ctx, `DELETE FROM academic_periods WHERE semester = $1`, semester)
+	return err
+}
+
+// UpdatePeriodBySemester updates the global (course_id IS NULL) period for a semester.
+func (r *PeriodRepository) UpdatePeriodBySemester(ctx context.Context, semester string, periodStart, periodEnd time.Time) (*AcademicPeriod, error) {
+	var p AcademicPeriod
+	err := r.pool.QueryRow(ctx, `
+		UPDATE academic_periods
+		SET period_start = $2, period_end = $3, updated_at = NOW()
+		WHERE semester = $1 AND course_id IS NULL
+		RETURNING id, semester, course_id, period_start, period_end, is_active, created_at, updated_at
+	`, semester, periodStart, periodEnd).Scan(
+		&p.ID, &p.Semester, &p.CourseID,
+		&p.PeriodStart, &p.PeriodEnd, &p.IsActive,
+		&p.CreatedAt, &p.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &p, nil
+}
+
 func scanPeriods(rows pgx.Rows) ([]AcademicPeriod, error) {
 	var periods []AcademicPeriod
 	for rows.Next() {

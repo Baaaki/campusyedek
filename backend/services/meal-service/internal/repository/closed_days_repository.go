@@ -37,3 +37,7 @@ func (r *ClosedDaysRepository) IsDateClosed(ctx context.Context, date pgtype.Dat
 func (r *ClosedDaysRepository) GetClosedDaysByDateRange(ctx context.Context, params db.GetClosedDaysByDateRangeParams) ([]db.ClosedDay, error) {
 	return r.queries.GetClosedDaysByDateRange(ctx, params)
 }
+
+func (r *ClosedDaysRepository) DeleteClosedDaysBySemester(ctx context.Context, semester string) error {
+	return r.queries.DeleteClosedDaysBySemester(ctx, pgtype.Text{String: semester, Valid: true})
+}

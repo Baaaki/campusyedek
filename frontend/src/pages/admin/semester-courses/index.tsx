@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,8 +27,9 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { mockFaculties } from '@/mock_data/catalog';
-import type { Faculty, Department, AssessmentItem, ScheduleSessionDTO, CourseCatalog, CreateSemesterCourseRequest, SemesterCourse } from '@/lib/types';
+import type { Faculty, Department, AssessmentItem, ScheduleSessionDTO, CourseCatalog, CreateSemesterCourseRequest, SemesterCourse, Semester } from '@/lib/types';
 import { catalogApi, staffApi, semesterApi } from '@/lib/api-client';
+import { listSemesters } from '@/lib/services/system-service';
 import {
   Plus,
   Trash2,
@@ -45,6 +46,8 @@ import {
   BookOpen,
   Loader2,
   Eye,
+  ArrowLeft,
+  Wand2,
 } from 'lucide-react';
 
 // Types for API responses
@@ -184,12 +187,52 @@ const initialFormData: FormData = {
 
 export default function SemesterCoursesPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const [formData, setFormData] = useState<FormData>(initialFormData);
-  const [departments, setDepartments] = useState<Department[]>([]);
+
+  // URL parametrelerini önce oku (useState initializer'larında kullanılıyor)
+  const semesterFromUrl = searchParams.get('semester');
+  const fromWizard = searchParams.get('from') === 'wizard';
+  const facultyFromUrl = searchParams.get('faculty_id');
+  const departmentFromUrl = searchParams.get('department_id');
+
+  const [formData, setFormData] = useState<FormData>(() => ({
+    ...initialFormData,
+    ...(facultyFromUrl ? { faculty_id: facultyFromUrl } : {}),
+    ...(departmentFromUrl ? { department_id: departmentFromUrl } : {}),
+  }));
+  const [departments, setDepartments] = useState<Department[]>(() => {
+    if (facultyFromUrl) {
+      const faculty = mockFaculties.find(f => f.id === facultyFromUrl);
+      return faculty?.departments || [];
+    }
+    return [];
+  });
   const [selectedCourse, setSelectedCourse] = useState<CourseCatalog | null>(null);
-  const [semester, setSemester] = useState('2024-2025-Fall'); // Current semester
   const [activeSessionType, setActiveSessionType] = useState<'theory' | 'lab'>('theory');
+
+  const [semester, setSemester] = useState(semesterFromUrl || '');
+  const [availableSemesters, setAvailableSemesters] = useState<Semester[]>([]);
+  const [semestersLoading, setSemestersLoading] = useState(!semesterFromUrl);
+
+  // URL'de semester yoksa API'den çek
+  useEffect(() => {
+    if (semesterFromUrl) return;
+    let cancelled = false;
+    setSemestersLoading(true);
+    listSemesters().then((all) => {
+      if (cancelled) return;
+      const eligible = all.filter(s => s.status === 'active' || s.status === 'planned');
+      setAvailableSemesters(eligible);
+      // Aktif olan varsa onu seç, yoksa ilk planned'ı seç
+      const active = eligible.find(s => s.status === 'active');
+      const fallback = active || eligible[0];
+      if (fallback) setSemester(fallback.name);
+    }).finally(() => {
+      if (!cancelled) setSemestersLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [semesterFromUrl]);
   const [errorDialog, setErrorDialog] = useState<{ open: boolean; title: string; message: string }>({ open: false, title: '', message: '' });
   const [successDialog, setSuccessDialog] = useState(false);
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
@@ -365,28 +408,15 @@ export default function SemesterCoursesPage() {
     return null;
   };
 
-  // Update departments when faculty changes
+  // Update departments list when faculty changes
   useEffect(() => {
     if (formData.faculty_id) {
       const faculty = mockFaculties.find(f => f.id === formData.faculty_id);
-      if (faculty) {
-        setDepartments(faculty.departments);
-        setFormData(prev => ({ ...prev, department_id: '', course_id: '', instructor_id: '' }));
-        setSelectedCourse(null);
-      }
+      setDepartments(faculty?.departments || []);
     } else {
       setDepartments([]);
-      setSelectedCourse(null);
     }
   }, [formData.faculty_id]);
-
-  // Reset form selections when department changes
-  useEffect(() => {
-    if (formData.department_id) {
-      setFormData(prev => ({ ...prev, course_id: '', instructor_id: '' }));
-      setSelectedCourse(null);
-    }
-  }, [formData.department_id]);
 
   // Update selected course info
   useEffect(() => {
@@ -588,12 +618,42 @@ export default function SemesterCoursesPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
+          {fromWizard && (
+            <Button variant="ghost" size="sm" onClick={() => window.close()} className="mr-1">
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              <Wand2 className="h-4 w-4 mr-1" />
+              Wizard'a Dön
+            </Button>
+          )}
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-600 text-white">
             <CalendarPlus className="h-5 w-5" />
           </div>
           <div>
             <h1 className="text-2xl font-bold dark:text-white">Dönem Ders Açılışı</h1>
-            <p className="text-muted-foreground text-sm">Dönemlik açılacak dersleri tanımlayın</p>
+            <div className="flex items-center gap-2">
+              {semesterFromUrl ? (
+                <Badge variant="outline" className="border-indigo-400 text-indigo-600 dark:text-indigo-400">
+                  {semester}
+                </Badge>
+              ) : semestersLoading ? (
+                <span className="text-muted-foreground text-sm">Dönemler yükleniyor...</span>
+              ) : availableSemesters.length > 0 ? (
+                <Select value={semester} onValueChange={setSemester}>
+                  <SelectTrigger className="w-[220px] h-8 text-sm">
+                    <SelectValue placeholder="Dönem seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableSemesters.map((s) => (
+                      <SelectItem key={s.id} value={s.name}>
+                        {s.name} {s.status === 'active' ? '(Aktif)' : '(Planlanan)'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <span className="text-muted-foreground text-sm">Açık dönem bulunamadı</span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -625,7 +685,10 @@ export default function SemesterCoursesPage() {
                 <Label>Fakülte *</Label>
                 <Select
                   value={formData.faculty_id}
-                  onValueChange={(value) => handleInputChange('faculty_id', value)}
+                  onValueChange={(value) => {
+                    setFormData(prev => ({ ...prev, faculty_id: value, department_id: '', course_id: '', instructor_id: '', instructor_fullname: '' }));
+                    setSelectedCourse(null);
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Fakülte seçin" />
@@ -647,7 +710,10 @@ export default function SemesterCoursesPage() {
                 </Label>
                 <Select
                   value={formData.department_id}
-                  onValueChange={(value) => handleInputChange('department_id', value)}
+                  onValueChange={(value) => {
+                    setFormData(prev => ({ ...prev, department_id: value, course_id: '', instructor_id: '', instructor_fullname: '' }));
+                    setSelectedCourse(null);
+                  }}
                   disabled={!formData.faculty_id}
                 >
                   <SelectTrigger>
@@ -1187,7 +1253,7 @@ export default function SemesterCoursesPage() {
                 <Button
                   onClick={() => {
                     setPreviewDialogOpen(false);
-                    navigate('/system/semesters');
+                    navigate('/semester-courses/review');
                   }}
                   className="bg-green-600 hover:bg-green-700 text-white"
                 >

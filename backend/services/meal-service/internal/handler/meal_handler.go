@@ -451,19 +451,12 @@ func (h *MealHandler) Health(c *gin.Context) {
 // ============================================================================
 
 func (h *MealHandler) getStudentIDFromContext(c *gin.Context) (uuid.UUID, error) {
-	// Get user_id from JWT context (set by auth middleware)
+	// Role check is enforced by middleware.RequireStudent(); we only parse the ID here.
 	userIDStr, exists := c.Get("user_id")
 	if !exists {
 		return uuid.UUID{}, sharedErrors.ErrUnauthorized
 	}
 
-	// Get role from JWT context
-	role, exists := c.Get("role")
-	if !exists || role != "student" {
-		return uuid.UUID{}, serviceErrors.ErrRoleNotAllowed
-	}
-
-	// Parse UUID
 	userID, err := uuid.Parse(userIDStr.(string))
 	if err != nil {
 		return uuid.UUID{}, sharedErrors.ErrUnauthorized

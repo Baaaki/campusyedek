@@ -73,13 +73,17 @@ func (h *GradeHandler) GetCourseStatus(c *gin.Context) {
 		return
 	}
 
+	role, _ := c.Get("role")
+	isAdmin := role == "admin"
+
 	handlerLogger.Info("getting course status",
 		zap.String("instructor_id", instructorID.String()),
 		zap.String("course_id", courseID.String()),
+		zap.Bool("is_admin", isAdmin),
 	)
 
 	// Get course status
-	status, err := h.gradeService.GetCourseStatus(c.Request.Context(), instructorID, courseID)
+	status, err := h.gradeService.GetCourseStatus(c.Request.Context(), instructorID, courseID, isAdmin)
 	if err != nil {
 		handlerLogger.Error("failed to get course status", zap.Error(err))
 		h.handleError(c, err)
@@ -130,13 +134,17 @@ func (h *GradeHandler) GetCourseStudents(c *gin.Context) {
 		return
 	}
 
+	role, _ := c.Get("role")
+	isAdmin := role == "admin"
+
 	handlerLogger.Info("getting course students",
 		zap.String("instructor_id", instructorID.String()),
 		zap.String("course_id", courseID.String()),
+		zap.Bool("is_admin", isAdmin),
 	)
 
 	// Get course students
-	students, err := h.gradeService.GetCourseStudents(c.Request.Context(), instructorID, courseID)
+	students, err := h.gradeService.GetCourseStudents(c.Request.Context(), instructorID, courseID, isAdmin)
 	if err != nil {
 		handlerLogger.Error("failed to get course students", zap.Error(err))
 		h.handleError(c, err)
@@ -287,6 +295,57 @@ func (h *GradeHandler) BulkSubmitScores(c *gin.Context) {
 		zap.Bool("auto_finalized", result.AutoFinalized),
 	)
 	c.JSON(http.StatusCreated, result)
+}
+
+// LockAssessment - POST /course/:course_id/assessments/:slug/lock
+// Instructor-only: marks every student's score for this assessment as final.
+// Once all assessments are locked, the course auto-finalizes.
+func (h *GradeHandler) LockAssessment(c *gin.Context) {
+	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+		zap.String("handler", "GradeHandler"),
+		zap.String("method", "LockAssessment"),
+	)
+
+	instructorIDStr, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
+			Error: sharedErrors.ErrUnauthorized.Message,
+			Code:  sharedErrors.ErrUnauthorized.Code,
+		})
+		return
+	}
+	instructorID, err := uuid.Parse(instructorIDStr.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid instructor ID", Code: "INVALID_ID"})
+		return
+	}
+
+	courseID, err := uuid.Parse(c.Param("course_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid course ID", Code: "INVALID_ID"})
+		return
+	}
+
+	slug := c.Param("slug")
+	if slug == "" {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "slug is required", Code: "VALIDATION_ERROR"})
+		return
+	}
+
+	handlerLogger.Info("locking assessment",
+		zap.String("instructor_id", instructorID.String()),
+		zap.String("course_id", courseID.String()),
+		zap.String("slug", slug),
+	)
+
+	result, err := h.gradeService.LockAssessmentBySlug(c.Request.Context(), instructorID, courseID, slug)
+	if err != nil {
+		handlerLogger.Warn("failed to lock assessment", zap.Error(err))
+		h.handleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
 }
 
 // ============================================

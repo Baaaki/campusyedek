@@ -54,6 +54,50 @@ func (q *Queries) CheckScheduleConflict(ctx context.Context, dollar_1 []pgtype.U
 	return items, nil
 }
 
+const checkScheduleConflictWithExisting = `-- name: CheckScheduleConflictWithExisting :many
+SELECT cs1.course_id as course_id_1, cs2.course_id as course_id_2, cs1.day_of_week, cs1.slot_number
+FROM course_sessions_cache cs1
+JOIN course_sessions_cache cs2
+  ON cs1.day_of_week = cs2.day_of_week
+  AND cs1.slot_number = cs2.slot_number
+JOIN enrollment_program_courses epc ON cs2.course_id = epc.course_id
+JOIN enrollment_programs ep ON epc.program_id = ep.id
+WHERE cs1.course_id = ANY($1::uuid[])
+  AND ep.student_id = $2
+  AND ep.status = 'approved'
+  AND cs1.course_id != cs2.course_id
+`
+
+type CheckScheduleConflictWithExistingParams struct {
+	Dollar1   []pgtype.UUID `json:"dollar_1"`
+	StudentID pgtype.UUID   `json:"student_id"`
+}
+
+func (q *Queries) CheckScheduleConflictWithExisting(ctx context.Context, arg CheckScheduleConflictWithExistingParams) ([]CheckScheduleConflictRow, error) {
+	rows, err := q.db.Query(ctx, checkScheduleConflictWithExisting, arg.Dollar1, arg.StudentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []CheckScheduleConflictRow{}
+	for rows.Next() {
+		var i CheckScheduleConflictRow
+		if err := rows.Scan(
+			&i.CourseID1,
+			&i.CourseID2,
+			&i.DayOfWeek,
+			&i.SlotNumber,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const deleteCourseSessionsByCourseID = `-- name: DeleteCourseSessionsByCourseID :exec
 DELETE FROM course_sessions_cache
 WHERE course_id = $1

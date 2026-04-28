@@ -161,10 +161,8 @@ export interface AvailableCourse {
 }
 
 export interface AvailableCourseSlot {
-  day: number;
-  slot: number;
-  day_of_week?: string;
-  slot_numbers?: number[];
+  day_of_week: string;
+  slot_numbers: number[];
   session_type?: 'theory' | 'lab';
 }
 
@@ -775,6 +773,7 @@ export interface ClosedDay {
   id: string;
   date: string;
   reason: string;
+  semester?: string;
   created_at: string;
 }
 
@@ -813,6 +812,13 @@ export interface CreateSemesterRequest {
   name: string;
   hard_deadline: string;
   periods?: SemesterPeriods;
+  closed_days?: Array<{ date: string; reason: string }>;
+}
+
+export interface UpdateSemesterRequest {
+  hard_deadline: string;
+  periods?: SemesterPeriods;
+  closed_days?: Array<{ date: string; reason: string }>;
 }
 
 // Audit Log types

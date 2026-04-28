@@ -2,9 +2,7 @@ package service
 
 import (
 	"context"
-	"time"
 
-	"github.com/baaaki/mydreamcampus/shared/clock"
 	sharedErrors "github.com/baaaki/mydreamcampus/shared/errors"
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	"github.com/baaaki/mydreamcampus/shared/utils"
@@ -90,16 +88,6 @@ func (s *StudentService) CreateStudent(ctx context.Context, req dto.CreateStuden
 		return dto.StudentResponse{}, serviceErrors.ErrStudentEmailExists
 	}
 
-	// Get advisor info (validates and returns name)
-	advisorInfo, err := s.staffService.GetAdvisorInfo(ctx, req.AdvisorID)
-	if err != nil {
-		serviceLogger.Warn("advisor validation failed",
-			zap.Error(err),
-			zap.String("advisor_id", req.AdvisorID.String()),
-		)
-		return dto.StudentResponse{}, serviceErrors.ErrAdvisorNotFound
-	}
-
 	// Create student with outbox event
 	params := db.CreateStudentParams{
 		StudentNumber:  req.StudentNumber,
@@ -110,22 +98,23 @@ func (s *StudentService) CreateStudent(ctx context.Context, req dto.CreateStuden
 		Department:     req.Department,
 		EnrollmentYear: int32(req.EnrollmentYear),
 		ClassLevel:     req.ClassLevel,
-		AdvisorID:      utils.UUIDToPgtype(req.AdvisorID),
-		AdvisorName:    utils.StringToPgText(advisorInfo.Name),
 	}
 
-	eventPayload := map[string]any{
-		"id":              nil, // Will be set after creation
-		"student_number":  req.StudentNumber,
-		"first_name":      req.FirstName,
-		"last_name":       req.LastName,
-		"email":           req.Email,
-		"faculty":         req.Faculty,
-		"department":      req.Department,
-		"enrollment_year": req.EnrollmentYear,
-		"class_level":     req.ClassLevel,
-		"advisor_id":      req.AdvisorID.String(),
-		"status":          "active",
+	eventPayload := buildStudentCreatedPayload(req, nil)
+
+	// Validate and set advisor info if provided
+	if req.AdvisorID != nil {
+		advisorInfo, err := s.staffService.GetAdvisorInfo(ctx, *req.AdvisorID)
+		if err != nil {
+			serviceLogger.Warn("advisor validation failed",
+				zap.Error(err),
+				zap.String("advisor_id", req.AdvisorID.String()),
+			)
+			return dto.StudentResponse{}, serviceErrors.ErrAdvisorNotFound
+		}
+		params.AdvisorID = utils.UUIDToPgtype(*req.AdvisorID)
+		params.AdvisorName = utils.StringToPgText(advisorInfo.Name)
+		eventPayload["advisor_id"] = req.AdvisorID.String()
 	}
 
 	student, err := s.studentRepo.CreateStudentWithEvent(ctx, params, eventPayload)
@@ -307,26 +296,17 @@ func (s *StudentService) UpdateStudent(ctx context.Context, id string, req dto.U
 		email = *req.Email
 	}
 
-	eventPayload := map[string]any{
-		"id":              id,
-		"student_number":  currentStudent.StudentNumber,
-		"first_name":      firstName,
-		"last_name":       lastName,
-		"email":           email,
-		"faculty":         currentStudent.Faculty,
-		"department":      currentStudent.Department,
-		"enrollment_year": int(currentStudent.EnrollmentYear),
-		"class_level":     classLevel,
-		"advisor_id":      utils.PgtypeToUUIDString(currentStudent.AdvisorID),
-		"status":          utils.PgTextToString(currentStudent.Status),
-		"changed_fields":  changedFields,
-	}
-	if req.Status != nil {
-		eventPayload["status"] = *req.Status
-	}
-	if req.AdvisorID != nil {
-		eventPayload["advisor_id"] = req.AdvisorID.String()
-	}
+	eventPayload := buildStudentUpdatedPayload(StudentUpdatedInputs{
+		ID:              id,
+		Current:         currentStudent,
+		FirstName:       firstName,
+		LastName:        lastName,
+		Email:           email,
+		ClassLevel:      classLevel,
+		ChangedFields:   changedFields,
+		StatusOverride:  req.Status,
+		AdvisorOverride: req.AdvisorID,
+	})
 
 	student, err := s.studentRepo.UpdateStudentWithEvent(ctx, studentID, params, eventPayload)
 	if err != nil {
@@ -394,12 +374,7 @@ func (s *StudentService) DeleteStudent(ctx context.Context, id string) error {
 		return sharedErrors.Wrap(sharedErrors.ErrInternal, err)
 	}
 
-	eventPayload := map[string]any{
-		"id":             id,
-		"student_number": student.StudentNumber,
-		"is_active":      false,
-		"deleted_at":     clock.Now().Format(time.RFC3339),
-	}
+	eventPayload := buildStudentDeactivatedPayload(id, student.StudentNumber)
 
 	err = s.studentRepo.SoftDeleteStudentWithEvent(ctx, studentID, eventPayload)
 	if err != nil {

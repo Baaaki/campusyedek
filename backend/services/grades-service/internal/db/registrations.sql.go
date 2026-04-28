@@ -12,6 +12,20 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countEligibleRegistrationsByCourse = `-- name: CountEligibleRegistrationsByCourse :one
+SELECT COUNT(*) FROM student_course_registrations
+WHERE course_id = $1 AND COALESCE(is_attendance_failed, FALSE) = FALSE
+`
+
+// Registrations that still need a grade entered — attendance failures
+// are auto-scored as FF at finalize time and don't need scores.
+func (q *Queries) CountEligibleRegistrationsByCourse(ctx context.Context, courseID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countEligibleRegistrationsByCourse, courseID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countRegistrationsByCourse = `-- name: CountRegistrationsByCourse :one
 SELECT COUNT(*) FROM student_course_registrations
 WHERE course_id = $1
@@ -67,6 +81,76 @@ DELETE FROM student_course_registrations WHERE course_id = $1
 func (q *Queries) DeleteRegistrationsByCourse(ctx context.Context, courseID uuid.UUID) error {
 	_, err := q.db.Exec(ctx, deleteRegistrationsByCourse, courseID)
 	return err
+}
+
+const getActiveRegistrationsByStudent = `-- name: GetActiveRegistrationsByStudent :many
+SELECT
+    r.id AS registration_id,
+    r.semester,
+    c.course_code,
+    c.course_name,
+    c.credits,
+    COALESCE(
+        (
+            SELECT jsonb_object_agg(
+                sa.slug,
+                jsonb_build_object(
+                    'score', sa.score,
+                    'is_absent', COALESCE(sa.is_absent, FALSE),
+                    'is_locked', COALESCE(sa.is_locked, FALSE)
+                )
+            )
+            FROM student_assessment_scores sa
+            WHERE sa.registration_id = r.id
+        ),
+        '{}'::jsonb
+    ) AS scores
+FROM student_course_registrations r
+JOIN courses_cache c ON r.course_id = c.id
+WHERE r.student_id = $1
+  AND NOT EXISTS (
+      SELECT 1 FROM student_completed_courses cc
+      WHERE cc.student_id = r.student_id AND cc.course_id = r.course_id
+  )
+ORDER BY r.semester DESC, c.course_code
+`
+
+type GetActiveRegistrationsByStudentRow struct {
+	RegistrationID uuid.UUID   `json:"registration_id"`
+	Semester       string      `json:"semester"`
+	CourseCode     string      `json:"course_code"`
+	CourseName     string      `json:"course_name"`
+	Credits        int16       `json:"credits"`
+	Scores         interface{} `json:"scores"`
+}
+
+// Returns registrations the student has but has NOT yet been finalized into
+// student_completed_courses, joined with course metadata and aggregated scores.
+func (q *Queries) GetActiveRegistrationsByStudent(ctx context.Context, studentID uuid.UUID) ([]GetActiveRegistrationsByStudentRow, error) {
+	rows, err := q.db.Query(ctx, getActiveRegistrationsByStudent, studentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetActiveRegistrationsByStudentRow{}
+	for rows.Next() {
+		var i GetActiveRegistrationsByStudentRow
+		if err := rows.Scan(
+			&i.RegistrationID,
+			&i.Semester,
+			&i.CourseCode,
+			&i.CourseName,
+			&i.Credits,
+			&i.Scores,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getRegistrationByID = `-- name: GetRegistrationByID :one
@@ -171,6 +255,75 @@ func (q *Queries) GetRegistrationsByCourse(ctx context.Context, courseID uuid.UU
 			&i.StudentFirstName,
 			&i.StudentLastName,
 			&i.StudentDepartment,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getRegistrationsByIDs = `-- name: GetRegistrationsByIDs :many
+SELECT
+    r.id, r.student_id, r.course_id, r.semester, r.is_attendance_failed, r.created_at,
+    s.student_number,
+    s.first_name as student_first_name,
+    s.last_name as student_last_name,
+    s.department as student_department,
+    c.course_code,
+    c.course_name,
+    c.instructor_id,
+    c.assessment_schema
+FROM student_course_registrations r
+JOIN students_cache s ON r.student_id = s.id
+JOIN courses_cache c ON r.course_id = c.id
+WHERE r.id = ANY($1::uuid[])
+`
+
+type GetRegistrationsByIDsRow struct {
+	ID                 uuid.UUID        `json:"id"`
+	StudentID          uuid.UUID        `json:"student_id"`
+	CourseID           uuid.UUID        `json:"course_id"`
+	Semester           string           `json:"semester"`
+	IsAttendanceFailed pgtype.Bool      `json:"is_attendance_failed"`
+	CreatedAt          pgtype.Timestamp `json:"created_at"`
+	StudentNumber      string           `json:"student_number"`
+	StudentFirstName   pgtype.Text      `json:"student_first_name"`
+	StudentLastName    pgtype.Text      `json:"student_last_name"`
+	StudentDepartment  pgtype.Text      `json:"student_department"`
+	CourseCode         string           `json:"course_code"`
+	CourseName         string           `json:"course_name"`
+	InstructorID       uuid.UUID        `json:"instructor_id"`
+	AssessmentSchema   []byte           `json:"assessment_schema"`
+}
+
+func (q *Queries) GetRegistrationsByIDs(ctx context.Context, dollar_1 []uuid.UUID) ([]GetRegistrationsByIDsRow, error) {
+	rows, err := q.db.Query(ctx, getRegistrationsByIDs, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetRegistrationsByIDsRow{}
+	for rows.Next() {
+		var i GetRegistrationsByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.StudentID,
+			&i.CourseID,
+			&i.Semester,
+			&i.IsAttendanceFailed,
+			&i.CreatedAt,
+			&i.StudentNumber,
+			&i.StudentFirstName,
+			&i.StudentLastName,
+			&i.StudentDepartment,
+			&i.CourseCode,
+			&i.CourseName,
+			&i.InstructorID,
+			&i.AssessmentSchema,
 		); err != nil {
 			return nil, err
 		}

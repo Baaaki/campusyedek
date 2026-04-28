@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useNavigate } from 'react-router';
 import { authApi } from "@/lib/api-client";
+import { validatePasswordPolicy } from "@/lib/password-policy";
 
 export default function ChangePasswordPage() {
   const navigate = useNavigate();
@@ -20,8 +21,9 @@ export default function ChangePasswordPage() {
       return;
     }
 
-    if (newPassword.length < 8) {
-      setError("Şifre en az 8 karakter olmalıdır");
+    const policyError = validatePasswordPolicy(newPassword);
+    if (policyError) {
+      setError(policyError);
       return;
     }
 
@@ -89,7 +91,7 @@ export default function ChangePasswordPage() {
                 type="password"
                 required
                 className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                placeholder="Yeni şifreniz (min 8 karakter)"
+                placeholder="Yeni şifreniz (min 8 karakter, 1 büyük, 1 küçük, 1 rakam)"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 disabled={loading}

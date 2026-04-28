@@ -29,8 +29,30 @@ func SetBlacklistChecker(checker TokenBlacklistChecker) {
 	blacklistChecker = checker
 }
 
-// JWTAuth validates JWT token and sets user claims in context
-func JWTAuth() gin.HandlerFunc {
+// AuthOption configures JWT auth middleware behavior.
+type AuthOption func(*authConfig)
+
+type authConfig struct {
+	failClosed bool
+}
+
+// WithFailClosed makes the blacklist/version check return 503 when Redis
+// is unreachable. Use for sensitive endpoints (password change, grade
+// writes, financial) where unverified token acceptance is unacceptable.
+// Default behavior is fail-open for general availability.
+func WithFailClosed() AuthOption {
+	return func(c *authConfig) { c.failClosed = true }
+}
+
+// JWTAuth validates JWT token and sets user claims in context.
+// Pass WithFailClosed() to require Redis-backed revocation checks
+// to succeed before the request proceeds.
+func JWTAuth(opts ...AuthOption) gin.HandlerFunc {
+	cfg := authConfig{}
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+
 	return func(c *gin.Context) {
 		// Try Authorization header first
 		tokenString := ""
@@ -93,7 +115,16 @@ func JWTAuth() gin.HandlerFunc {
 					logger.Error("failed to check token blacklist",
 						zap.Error(err),
 						zap.String("jti", claims.JTI),
+						zap.Bool("fail_closed", cfg.failClosed),
 					)
+					if cfg.failClosed {
+						c.JSON(http.StatusServiceUnavailable, gin.H{
+							"error":   "SERVICE_UNAVAILABLE",
+							"message": "Token revocation check unavailable, please try again later",
+						})
+						c.Abort()
+						return
+					}
 					// Continue on error - fail open for availability
 				} else if isBlacklisted {
 					logger.Warn("blacklisted token used",
@@ -115,7 +146,16 @@ func JWTAuth() gin.HandlerFunc {
 				logger.Error("failed to check min token version",
 					zap.Error(err),
 					zap.String("user_id", claims.UserID),
+					zap.Bool("fail_closed", cfg.failClosed),
 				)
+				if cfg.failClosed {
+					c.JSON(http.StatusServiceUnavailable, gin.H{
+						"error":   "SERVICE_UNAVAILABLE",
+						"message": "Token revocation check unavailable, please try again later",
+					})
+					c.Abort()
+					return
+				}
 				// Continue on error - fail open for availability
 			} else if minVersion > 0 && claims.TokenVersion < minVersion {
 				logger.Warn("token version too old - all tokens revoked",
@@ -138,6 +178,7 @@ func JWTAuth() gin.HandlerFunc {
 		c.Set("department", claims.Department)
 		c.Set("token_version", claims.TokenVersion)
 		c.Set("jti", claims.JTI)
+		c.Set("force_password_change", claims.ForcePasswordChange)
 
 		logger.Debug("jwt authentication successful",
 			zap.String("user_id", claims.UserID),
@@ -193,14 +234,16 @@ func OptionalJWTAuth() gin.HandlerFunc {
 // after successful forward-auth verification.
 // This middleware should be placed BEFORE other auth middleware in the chain.
 // Internal services that communicate directly should include X-Internal-Secret.
+//
+// INTERNAL_SERVICE_SECRET environment variable must be set; the constructor
+// panics on init rather than per-request to fail fast at startup.
 func StripInternalHeaders() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// Only strip if the request doesn't come from a trusted internal source
-		internalSecret := os.Getenv("INTERNAL_SERVICE_SECRET")
-		if internalSecret == "" {
-			internalSecret = "changeme_internal_secret"
-		}
+	internalSecret := os.Getenv("INTERNAL_SERVICE_SECRET")
+	if internalSecret == "" {
+		panic("INTERNAL_SERVICE_SECRET environment variable is not set")
+	}
 
+	return func(c *gin.Context) {
 		receivedSecret := c.GetHeader("X-Internal-Secret")
 		if receivedSecret != internalSecret {
 			// Request is not from a trusted internal source - strip auth headers

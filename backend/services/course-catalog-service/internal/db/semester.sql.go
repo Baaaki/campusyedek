@@ -404,3 +404,81 @@ func (q *Queries) ListSemesterCourses(ctx context.Context, arg ListSemesterCours
 	}
 	return items, nil
 }
+
+const listSemesterCoursesForActivation = `-- name: ListSemesterCoursesForActivation :many
+SELECT
+    sc.id, sc.semester, sc.course_code, sc.credits, sc.class_level, sc.instructor_id, sc.instructor_fullname, sc.classroom_location, sc.max_capacity, sc.prerequisites, sc.assessment_schema, sc.created_at, sc.updated_at, sc.department,
+    cc.name AS course_name,
+    cc.faculty,
+    cc.course_type,
+    json_agg(json_build_object(
+        'day_of_week', css.day_of_week,
+        'slot_number', css.slot_number,
+        'session_type', css.session_type
+    )) AS schedule_sessions
+FROM semester_courses sc
+JOIN course_catalog cc ON cc.course_code = sc.course_code
+LEFT JOIN course_schedule_sessions css ON css.semester_course_id = sc.id
+WHERE sc.semester = $1
+GROUP BY sc.id, cc.name, cc.faculty, cc.course_type
+`
+
+type ListSemesterCoursesForActivationRow struct {
+	ID                 pgtype.UUID      `json:"id"`
+	Semester           string           `json:"semester"`
+	CourseCode         string           `json:"course_code"`
+	Credits            int16            `json:"credits"`
+	ClassLevel         int16            `json:"class_level"`
+	InstructorID       pgtype.UUID      `json:"instructor_id"`
+	InstructorFullname string           `json:"instructor_fullname"`
+	ClassroomLocation  string           `json:"classroom_location"`
+	MaxCapacity        int16            `json:"max_capacity"`
+	Prerequisites      []byte           `json:"prerequisites"`
+	AssessmentSchema   []byte           `json:"assessment_schema"`
+	CreatedAt          pgtype.Timestamp `json:"created_at"`
+	UpdatedAt          pgtype.Timestamp `json:"updated_at"`
+	Department         string           `json:"department"`
+	CourseName         string           `json:"course_name"`
+	Faculty            string           `json:"faculty"`
+	CourseType         CourseTypeEnum   `json:"course_type"`
+	ScheduleSessions   []byte           `json:"schedule_sessions"`
+}
+
+func (q *Queries) ListSemesterCoursesForActivation(ctx context.Context, semester string) ([]ListSemesterCoursesForActivationRow, error) {
+	rows, err := q.db.Query(ctx, listSemesterCoursesForActivation, semester)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListSemesterCoursesForActivationRow{}
+	for rows.Next() {
+		var i ListSemesterCoursesForActivationRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Semester,
+			&i.CourseCode,
+			&i.Credits,
+			&i.ClassLevel,
+			&i.InstructorID,
+			&i.InstructorFullname,
+			&i.ClassroomLocation,
+			&i.MaxCapacity,
+			&i.Prerequisites,
+			&i.AssessmentSchema,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Department,
+			&i.CourseName,
+			&i.Faculty,
+			&i.CourseType,
+			&i.ScheduleSessions,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

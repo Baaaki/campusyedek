@@ -29,6 +29,16 @@ var (
 	testJobID     string
 )
 
+// TestMain gates the entire suite — each of these tests hits live HTTP
+// endpoints on localhost (8003 + 8002). Opt in with INTEGRATION_TESTS=true.
+func TestMain(m *testing.M) {
+	if os.Getenv("INTEGRATION_TESTS") != "true" {
+		fmt.Println("Skipping student-service integration tests. Set INTEGRATION_TESTS=true to run.")
+		os.Exit(0)
+	}
+	os.Exit(m.Run())
+}
+
 // Helper function to make HTTP requests
 func makeRequest(t *testing.T, method, url string, body any) (*http.Response, []byte) {
 	var reqBody io.Reader
@@ -349,8 +359,13 @@ func TestDeleteStudent(t *testing.T) {
 	t.Logf("✅ Verified Soft Delete: Student not accessible (status: %d)", resp.StatusCode)
 }
 
-// Test order matters! Run tests sequentially
+// Test order matters! Run tests sequentially.
+// Requires student-service (8003) and staff-service (8002) running locally.
+// Gate with INTEGRATION_TESTS=true to opt in.
 func TestStudentServiceIntegration(t *testing.T) {
+	if os.Getenv("INTEGRATION_TESTS") != "true" {
+		t.Skip("Skipping integration tests. Set INTEGRATION_TESTS=true to run.")
+	}
 	if testing.Short() {
 		t.Skip("Skipping integration tests in short mode")
 	}

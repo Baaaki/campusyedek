@@ -7,6 +7,7 @@ import { useChangePassword } from '@/hooks/useAuth';
 import { useToast } from '@/contexts/ToastContext';
 import { useHaptic } from '@/hooks/useHaptic';
 import { spacing, radius } from '@/constants/tokens';
+import { validatePasswordPolicy } from '@/lib/password-policy';
 
 export default function ChangePasswordScreen() {
   const router = useRouter();
@@ -33,9 +34,10 @@ export default function ChangePasswordScreen() {
       return;
     }
 
-    if (newPassword.length < 8) {
+    const policyError = validatePasswordPolicy(newPassword);
+    if (policyError) {
       haptic.error();
-      toast.show({ message: 'Sifre en az 8 karakter olmali', type: 'warning' });
+      toast.show({ message: policyError, type: 'warning' });
       return;
     }
 

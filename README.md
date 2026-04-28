@@ -2,20 +2,49 @@
 
 A full-stack university management platform built with microservices architecture. Handles student enrollment, course scheduling, attendance tracking, grading, and cafeteria operations across web and mobile.
 
+## Screenshots
+
+> _Placeholders — drop your captures into `docs/screenshots/` and update the paths._
+
+| Web | Mobile |
+|-----|--------|
+| ![Web dashboard](docs/screenshots/web-dashboard.png) | ![Mobile attendance](docs/screenshots/mobile-attendance.png) |
+
 ## Architecture
 
-```
-                          Traefik (API Gateway)
-                                 |
-                 ----------------+----------------
-                 |               |               |
-            Frontend        Mobile App      Backend Services
-         (React+Vite)    (React Native)    (9 Go Services)
-                                                 |
-                          +-----------+-----------+-----------+
-                          |           |           |           |
-                       Postgres    RabbitMQ     Redis     Grafana
-                      (per svc)   (events)    (cache)    + Loki
+```mermaid
+flowchart LR
+    subgraph Clients
+        Web[Web<br/>React + Vite]
+        Mobile[Mobile<br/>React Native + Expo]
+    end
+
+    Traefik[Traefik<br/>API Gateway]
+
+    subgraph Services[Go Microservices]
+        Auth[auth]
+        Staff[staff]
+        Student[student]
+        Catalog[catalog]
+        Enrollment[enrollment]
+        Attendance[attendance]
+        Grades[grades]
+        Meal[meal]
+        Payment[payment]
+    end
+
+    RMQ[(RabbitMQ<br/>events)]
+    Redis[(Redis<br/>cache + rate limit)]
+    PG[(Postgres<br/>DB per service)]
+    Obs[Grafana + Loki<br/>observability]
+
+    Web --> Traefik
+    Mobile --> Traefik
+    Traefik --> Services
+    Services <--> RMQ
+    Services --> Redis
+    Services --> PG
+    Services -.logs.-> Obs
 ```
 
 **9 independent microservices** communicate asynchronously via RabbitMQ using the transactional outbox pattern. Each service owns its database, ensuring data isolation and independent deployability.
@@ -74,24 +103,36 @@ mydreamcampus/
 │   └── go.work             # Go workspace
 ├── frontend/               # React + Vite web application
 ├── mobile/                 # React Native (Expo) mobile app
-└── old-frontend/           # Eski Next.js frontend (deprecated)
+└── old-frontend/           # Legacy Next.js frontend (deprecated)
 ```
 
 ## Running Locally
 
+**Prerequisites:** Docker (with the compose plugin), Go 1.26+, Node 20+, Bun, and `air` on `$PATH` for backend hot-reload (`go install github.com/air-verse/air@latest`).
+
 ```bash
-# 1. Infrastructure (PostgreSQL, RabbitMQ, Redis, Traefik)
-cd backend/infrastructure && make up
+# Everything you need in one shot (infra + 9 backend services, hot-reload)
+make up
 
-# 2. Backend (starts all services with hot-reload)
-cd backend && make dev
+# Frontend (new terminal)
+make frontend
 
-# 3. Frontend
-cd frontend && bun install && bun dev
+# Mobile (new terminal)
+make mobile
 
-# 4. Mobile
-cd mobile && npm install && npm start
+# When you're done
+make down
 ```
+
+Run `make help` to see the full list of targets (`infra`, `backend`, `status`, `logs`, `clean`).
+
+### Endpoints
+
+- Web (Vite dev server): http://localhost:5173
+- API (via Traefik): http://localhost/api/v1/*
+- RabbitMQ management: http://localhost:15672 (`guest` / `guest`)
+
+Each service ships its own `.env.example` under `backend/services/<name>/`. Copy them to `.env` before the first run if you want to override defaults.
 
 ## License
 

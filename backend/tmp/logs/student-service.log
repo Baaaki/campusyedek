@@ -23,21 +23,21 @@ watching tests
 !exclude tmp
 building...
 running...
-10:31:48.402	[34mINFO[0m	cmd/main.go:40	starting student-service	{"environment": "development", "port": "8003"}
-10:31:48.412	[34mINFO[0m	cmd/main.go:54	database connection established
-10:31:48.412	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
-10:31:48.415	[34mINFO[0m	redis/redis.go:41	redis connection established
-10:31:48.415	[34mINFO[0m	cmd/main.go:72	rate limiter configured
-10:31:48.415	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
-10:31:48.418	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
-10:31:48.418	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
-10:31:48.418	[34mINFO[0m	cmd/main.go:269	RabbitMQ exchange declared	{"exchange": "student.events"}
-10:31:48.423	[34mINFO[0m	worker/event_consumer.go:155	staff events queue setup completed	{"queue": "student.staff_events", "routing_key": "staff.deactivated"}
-10:31:48.468	[34mINFO[0m	cmd/main.go:306	downstream consumer queues pre-declared
-10:31:48.468	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
-10:31:48.468	[34mINFO[0m	worker/outbox_worker.go:39	starting outbox worker	{"interval": "5s", "batch_size": 10}
-10:31:48.470	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "student.staff_events"}
-10:31:48.470	[34mINFO[0m	worker/event_consumer.go:46	event consumer started successfully
+13:36:48.554	[34mINFO[0m	cmd/main.go:40	starting student-service	{"environment": "development", "port": "8003"}
+13:36:48.574	[34mINFO[0m	cmd/main.go:54	database connection established
+13:36:48.574	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+13:36:48.586	[34mINFO[0m	redis/redis.go:41	redis connection established
+13:36:48.586	[34mINFO[0m	cmd/main.go:72	rate limiter configured
+13:36:48.586	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+13:36:48.592	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+13:36:48.592	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
+13:36:48.592	[34mINFO[0m	cmd/main.go:269	RabbitMQ exchange declared	{"exchange": "student.events"}
+13:36:48.612	[34mINFO[0m	worker/event_consumer.go:155	staff events queue setup completed	{"queue": "student.staff_events", "routing_key": "staff.deactivated"}
+13:36:48.659	[34mINFO[0m	cmd/main.go:306	downstream consumer queues pre-declared
+13:36:48.659	[34mINFO[0m	worker/event_consumer.go:36	starting event consumer
+13:36:48.659	[34mINFO[0m	worker/outbox_worker.go:39	starting outbox worker	{"interval": "5s", "batch_size": 10}
+13:36:48.659	[34mINFO[0m	rabbitmq/consumer.go:66	consumer started	{"queue": "student.staff_events"}
+13:36:48.659	[34mINFO[0m	worker/event_consumer.go:46	event consumer started successfully
 [GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
  - using env:	export GIN_MODE=release
  - using code:	gin.SetMode(gin.ReleaseMode)
@@ -58,4 +58,46 @@ running...
 [GIN-debug] POST   /api/students/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (8 handlers)
 [GIN-debug] POST   /api/students/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (8 handlers)
 [GIN-debug] GET    /api/students/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (8 handlers)
-10:31:48.470	[34mINFO[0m	cmd/main.go:154	server starting	{"port": "8003"}
+13:36:48.660	[34mINFO[0m	cmd/main.go:154	server starting	{"port": "8003"}
+13:37:37.553	[35mDEBUG[0m	middleware/auth.go:257	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:37:37.554	[34mINFO[0m	handler/student_handler.go:367	listing orphaned students	{"page": 1, "limit": 10}
+13:37:37.562	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "de233fba-b836-4da3-aa20-a39aab3d8e14", "method": "GET", "path": "/api/students/orphaned", "query": "page=1&limit=10", "status": 200, "duration": "8.953951ms", "ip": "172.19.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:37:37.565	[35mDEBUG[0m	middleware/auth.go:257	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:37:37.565	[34mINFO[0m	handler/student_handler.go:367	listing orphaned students	{"page": 1, "limit": 10}
+13:37:37.566	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "f29293b1-59c4-46c7-b6fc-ac8944676c0d", "method": "GET", "path": "/api/students/orphaned", "query": "page=1&limit=10", "status": 200, "duration": "863.354µs", "ip": "172.19.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:37:38.465	[35mDEBUG[0m	middleware/auth.go:257	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:37:38.465	[34mINFO[0m	handler/student_handler.go:262	listing students	{"page": 1, "limit": 10}
+13:37:38.468	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "d8384fee-c1cf-48b6-83ab-624ee4d366a1", "method": "GET", "path": "/api/students", "query": "page=1&limit=10", "status": 200, "duration": "3.085596ms", "ip": "172.19.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:37:38.471	[35mDEBUG[0m	middleware/auth.go:257	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:37:38.471	[34mINFO[0m	handler/student_handler.go:262	listing students	{"page": 1, "limit": 10}
+13:37:38.471	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "f277cf8a-9b96-4ac8-9741-68ea595af20c", "method": "GET", "path": "/api/students", "query": "page=1&limit=10", "status": 200, "duration": "924.686µs", "ip": "172.19.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:37:39.256	[35mDEBUG[0m	middleware/auth.go:257	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:37:39.257	[34mINFO[0m	handler/student_handler.go:367	listing orphaned students	{"page": 1, "limit": 10}
+13:37:39.258	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "39f20fdc-d429-41cb-8aab-a7c4ba4e66e0", "method": "GET", "path": "/api/students/orphaned", "query": "page=1&limit=10", "status": 200, "duration": "1.817891ms", "ip": "172.19.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:37:39.262	[35mDEBUG[0m	middleware/auth.go:257	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:37:39.262	[34mINFO[0m	handler/student_handler.go:367	listing orphaned students	{"page": 1, "limit": 10}
+13:37:39.263	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "1fcf63c0-c2f9-4ac6-a94f-15c679b5a005", "method": "GET", "path": "/api/students/orphaned", "query": "page=1&limit=10", "status": 200, "duration": "999.808µs", "ip": "172.19.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:37:51.670	[35mDEBUG[0m	middleware/auth.go:257	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:37:51.670	[34mINFO[0m	handler/student_handler.go:262	listing students	{"page": 1, "limit": 10}
+13:37:51.676	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "91edf844-e7ed-4480-8448-c6786f6a8669", "method": "GET", "path": "/api/students", "query": "page=1&limit=10", "status": 200, "duration": "6.961715ms", "ip": "172.19.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:37:51.679	[35mDEBUG[0m	middleware/auth.go:257	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:37:51.679	[34mINFO[0m	handler/student_handler.go:262	listing students	{"page": 1, "limit": 10}
+13:37:51.680	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "ac1ff0ec-0ab6-4152-b96c-1585a49216b4", "method": "GET", "path": "/api/students", "query": "page=1&limit=10", "status": 200, "duration": "1.08216ms", "ip": "172.19.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+23:04:49.549	[31mERROR[0m	rabbitmq/connection.go:94	rabbitmq connection lost	{"error": "Exception (320) Reason: \"CONNECTION_FORCED - broker forced connection closure with reason 'shutdown'\""}
+github.com/baaaki/mydreamcampus/shared/rabbitmq.(*Connection).handleReconnect
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/rabbitmq/connection.go:94
+23:04:49.549	[34mINFO[0m	rabbitmq/connection.go:99	attempting to reconnect to rabbitmq...
+23:04:54.549	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+23:04:54.550	[31mERROR[0m	rabbitmq/connection.go:103	rabbitmq reconnection failed	{"error": "failed to connect to rabbitmq: Exception (501) Reason: \"read tcp 127.0.0.1:55136->127.0.0.1:5672: read: connection reset by peer\""}
+github.com/baaaki/mydreamcampus/shared/rabbitmq.(*Connection).handleReconnect
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/rabbitmq/connection.go:103
+23:04:54.550	[34mINFO[0m	rabbitmq/connection.go:99	attempting to reconnect to rabbitmq...
+23:04:59.550	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+23:04:59.562	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+23:04:59.562	[34mINFO[0m	rabbitmq/connection.go:107	rabbitmq reconnection successful
+23:06:49.842	[31mERROR[0m	rabbitmq/connection.go:94	rabbitmq connection lost	{"error": "Exception (320) Reason: \"CONNECTION_FORCED - broker forced connection closure with reason 'shutdown'\""}
+github.com/baaaki/mydreamcampus/shared/rabbitmq.(*Connection).handleReconnect
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/rabbitmq/connection.go:94
+23:06:49.842	[34mINFO[0m	rabbitmq/connection.go:99	attempting to reconnect to rabbitmq...
+cleaning...
+see you again~

@@ -42,6 +42,11 @@ func NewClient(addr, password string, db int) (*ClientWrapper, error) {
 	return &ClientWrapper{client: rdb}, nil
 }
 
+// Ping verifies the Redis connection is alive.
+func (c *ClientWrapper) Ping(ctx context.Context) error {
+	return c.client.Ping(ctx).Err()
+}
+
 // Close closes the Redis connection wrapper
 func (c *ClientWrapper) Close() error {
 	if c.client != nil {

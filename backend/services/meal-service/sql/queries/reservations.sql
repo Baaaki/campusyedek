@@ -17,6 +17,18 @@ WHERE student_id = $1 AND reservation_date = $2 AND meal_time = $3
   AND status IN ('pending', 'confirmed')
 LIMIT 1;
 
+-- name: CheckActiveReservationsForSlots :many
+-- Batch variant of CheckActiveReservation. Accepts parallel arrays of dates and
+-- meal times and returns any existing active rows for (student_id, date, meal).
+SELECT r.id, r.reservation_date, r.meal_time, r.status, c.name AS cafeteria_name
+FROM reservations r
+JOIN cafeterias c ON r.cafeteria_id = c.id
+WHERE r.student_id = $1
+  AND r.status IN ('pending', 'confirmed')
+  AND (r.reservation_date, r.meal_time::text) IN (
+    SELECT unnest(@dates::date[]), unnest(@meal_times::text[])
+  );
+
 -- name: GetStudentReservations :many
 SELECT r.id, r.batch_id, r.student_id, r.cafeteria_id, r.reservation_date, r.meal_time, r.menu_type, r.status, r.is_used, r.used_at, r.expires_at, r.created_at, r.updated_at,
        c.name as cafeteria_name, c.location as cafeteria_location

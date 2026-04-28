@@ -2,10 +2,8 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"regexp"
-	"time"
 
 	"github.com/baaaki/mydreamcampus/course-catalog-service/internal/db"
 	"github.com/baaaki/mydreamcampus/course-catalog-service/internal/dto"
@@ -13,7 +11,6 @@ import (
 	"github.com/baaaki/mydreamcampus/course-catalog-service/internal/repository"
 	"github.com/baaaki/mydreamcampus/shared/clock"
 	sharedErrors "github.com/baaaki/mydreamcampus/shared/errors"
-	"github.com/baaaki/mydreamcampus/shared/events"
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	sharedRepo "github.com/baaaki/mydreamcampus/shared/repository"
 	"github.com/baaaki/mydreamcampus/shared/rules"
@@ -309,53 +306,6 @@ func (s *SemesterService) CreateSemesterCourse(ctx context.Context, semester str
 		return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
 	}
 
-	// prerequisites already parsed above
-
-	// Create outbox event: course.semester.created
-	eventPayload := map[string]any{
-		"event_id":            uuid.New().String(),
-		"event_type":          events.EventCourseSemesterCreated,
-		"timestamp":           clock.Now().Format(time.RFC3339),
-		"semester_course_id":  utils.PgtypeToUUIDString(semesterCourse.ID),
-		"semester":            semester,
-		"course_code":         req.CourseCode,
-		"course_name":         catalogCourse.Name,
-		"faculty":             catalogCourse.Faculty,
-		"department":          catalogCourse.Department,
-		"credits":             catalogCourse.Credits,
-		"class_level":         req.ClassLevel,
-		"course_type":         string(catalogCourse.CourseType),
-		"instructor_id":       req.InstructorID.String(),
-		"instructor_fullname": req.InstructorFullname,
-		"classroom_location":  req.ClassroomLocation,
-		"max_capacity":        req.MaxCapacity,
-		"assessment_schema":   req.AssessmentSchema,
-		"prerequisites":       prerequisites,
-		"schedule_sessions":   req.ScheduleSessions,
-	}
-
-	eventPayloadJSON, err := json.Marshal(eventPayload)
-	if err != nil {
-		serviceLogger.Error("failed to marshal event payload",
-			zap.Error(err),
-		)
-		return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
-	}
-
-	outboxParams := db.CreateOutboxEventParams{
-		EventType:  events.EventCourseSemesterCreated,
-		RoutingKey: events.EventCourseSemesterCreated,
-		Payload:    eventPayloadJSON,
-	}
-
-	_, err = s.outboxRepo.CreateOutboxEventWithTx(ctx, tx, outboxParams)
-	if err != nil {
-		if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
-			return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
-		}
-		return dto.SemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
-	}
-
 	// Commit transaction
 	if err := tx.Commit(ctx); err != nil {
 		serviceLogger.Error("failed to commit transaction",
@@ -624,86 +574,12 @@ func (s *SemesterService) DeleteSemesterCourse(ctx context.Context, semester, co
 		return dto.DeleteSemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
 	}
 
-	// Get catalog course
-	catalogCourse, err := s.catalogRepo.GetCourseByCourseCode(ctx, existingCourse.CourseCode)
-	if err != nil {
-		if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
-			return dto.DeleteSemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
-		}
-		return dto.DeleteSemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
-	}
-
-	// Get schedule sessions
-	scheduleSessions, err := s.scheduleRepo.GetScheduleSessionsByCourseID(ctx, id)
-	if err != nil {
-		if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
-			return dto.DeleteSemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
-		}
-		return dto.DeleteSemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
-	}
-
-	scheduleSessionsDTO := groupScheduleSessionsFromRows(scheduleSessions)
-
-	// Begin transaction
-	tx, err := s.outboxRepo.BeginTx(ctx)
-	if err != nil {
-		serviceLogger.Error("failed to begin transaction", zap.Error(err))
-		return dto.DeleteSemesterCourseResponse{}, catalogErrors.ErrTransactionFailed
-	}
-	defer tx.Rollback(ctx)
-
-	// Get transaction-aware repository
-	semesterRepoTx := s.semesterRepo.WithTx(tx)
-
-	// Create outbox event: course.semester.deleted
-	eventPayload := map[string]any{
-		"event_id":           uuid.New().String(),
-		"event_type":         events.EventCourseSemesterDeleted,
-		"timestamp":          clock.Now().Format(time.RFC3339),
-		"semester_course_id": courseID,
-		"semester":           semester,
-		"course_code":        existingCourse.CourseCode,
-		"course_name":        catalogCourse.Name,
-		"department":         catalogCourse.Department,
-		"schedule_sessions":  scheduleSessionsDTO,
-	}
-
-	eventPayloadJSON, err := json.Marshal(eventPayload)
-	if err != nil {
-		serviceLogger.Error("failed to marshal event payload",
-			zap.Error(err),
-		)
-		return dto.DeleteSemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
-	}
-
-	outboxParams := db.CreateOutboxEventParams{
-		EventType:  events.EventCourseSemesterDeleted,
-		RoutingKey: events.EventCourseSemesterDeleted,
-		Payload:    eventPayloadJSON,
-	}
-
-	_, err = s.outboxRepo.CreateOutboxEventWithTx(ctx, tx, outboxParams)
-	if err != nil {
-		if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
-			return dto.DeleteSemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
-		}
-		return dto.DeleteSemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
-	}
-
 	// Delete semester course (CASCADE will delete schedule sessions)
-	if err := semesterRepoTx.DeleteSemesterCourse(ctx, id); err != nil {
+	if err := s.semesterRepo.DeleteSemesterCourse(ctx, id); err != nil {
 		if sharedErrors.Is(err, sharedErrors.ErrQueryFailed) {
 			return dto.DeleteSemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
 		}
 		return dto.DeleteSemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, err)
-	}
-
-	// Commit transaction
-	if err := tx.Commit(ctx); err != nil {
-		serviceLogger.Error("failed to commit transaction",
-			zap.Error(err),
-		)
-		return dto.DeleteSemesterCourseResponse{}, sharedErrors.Wrap(sharedErrors.ErrInternal, fmt.Errorf("transaction commit failed: %w", err))
 	}
 
 	serviceLogger.Info("semester course deleted successfully",
@@ -934,9 +810,27 @@ func (s *SemesterService) GetTeacherCourses(ctx context.Context, instructorID uu
 }
 
 // semesterFormatRegex validates semester format: YYYY-YYYY-Fall or YYYY-YYYY-Spring
-var semesterFormatRegex = regexp.MustCompile(`^\d{4}-\d{4}-(Fall|Spring)$`)
+var semesterFormatRegex = regexp.MustCompile(`^(\d{4})-(\d{4})-(Fall|Spring)$`)
 
 // isValidSemesterFormat checks if a semester string matches the expected format
+// and the second year is exactly one more than the first (e.g., 2025-2026)
 func isValidSemesterFormat(semester string) bool {
-	return semesterFormatRegex.MatchString(semester)
+	matches := semesterFormatRegex.FindStringSubmatch(semester)
+	if matches == nil {
+		return false
+	}
+
+	startYear := 0
+	endYear := 0
+	fmt.Sscanf(matches[1], "%d", &startYear)
+	fmt.Sscanf(matches[2], "%d", &endYear)
+
+	if endYear != startYear+1 {
+		return false
+	}
+	if startYear < 2000 || startYear > 2100 {
+		return false
+	}
+
+	return true
 }

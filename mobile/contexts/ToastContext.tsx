@@ -9,7 +9,7 @@
  *   toast.show({ message: 'Basarili!', type: 'success' });
  *   toast.show({ message: 'Hata olustu', type: 'error' });
  */
-import React, { createContext, useContext, useState, useCallback, useRef, type ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Snackbar, Text, useTheme } from 'react-native-paper';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -44,28 +44,35 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const [visible, setVisible] = useState(false);
   const [current, setCurrent] = useState<ToastOptions>({ message: '' });
   const queueRef = useRef<ToastOptions[]>([]);
+  // Tracked synchronously so two show() calls in the same tick don't both
+  // see visible=false and race to display.
+  const showingRef = useRef(false);
 
-  const showNext = useCallback(() => {
-    if (queueRef.current.length > 0) {
-      const next = queueRef.current.shift()!;
-      setCurrent(next);
-      setVisible(true);
-    }
+  const driveNext = useCallback(() => {
+    if (showingRef.current) return;
+    const next = queueRef.current.shift();
+    if (!next) return;
+    showingRef.current = true;
+    setCurrent(next);
+    setVisible(true);
   }, []);
 
   const show = useCallback((options: ToastOptions) => {
-    if (visible) {
-      queueRef.current.push(options);
-    } else {
-      setCurrent(options);
-      setVisible(true);
-    }
-  }, [visible]);
+    queueRef.current.push(options);
+    driveNext();
+  }, [driveNext]);
 
   const handleDismiss = useCallback(() => {
     setVisible(false);
-    setTimeout(showNext, 200);
-  }, [showNext]);
+  }, []);
+
+  // After the snackbar finishes hiding, advance the queue.
+  useEffect(() => {
+    if (!visible && showingRef.current) {
+      showingRef.current = false;
+      driveNext();
+    }
+  }, [visible, driveNext]);
 
   const type = current.type ?? 'info';
   const config = toastConfig[type];

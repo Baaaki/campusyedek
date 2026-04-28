@@ -23,16 +23,16 @@ watching sql/queries
 !exclude tmp
 building...
 running...
-10:31:48.387	[34mINFO[0m	cmd/main.go:41	starting course-catalog-service	{"environment": "development", "port": "8004"}
-10:31:48.395	[34mINFO[0m	cmd/main.go:55	database connection established
-10:31:48.396	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
-10:31:48.399	[34mINFO[0m	redis/redis.go:41	redis connection established
-10:31:48.399	[34mINFO[0m	cmd/main.go:73	rate limiter configured
-10:31:48.399	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
-10:31:48.402	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
-10:31:48.402	[34mINFO[0m	cmd/main.go:86	RabbitMQ connection established
-10:31:48.403	[34mINFO[0m	cmd/main.go:310	RabbitMQ exchange declared	{"exchange": "course.events"}
-10:31:48.447	[34mINFO[0m	cmd/main.go:340	downstream consumer queues pre-declared
+13:36:48.554	[34mINFO[0m	cmd/main.go:41	starting course-catalog-service	{"environment": "development", "port": "8004"}
+13:36:48.590	[34mINFO[0m	cmd/main.go:55	database connection established
+13:36:48.590	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+13:36:48.593	[34mINFO[0m	redis/redis.go:41	redis connection established
+13:36:48.593	[34mINFO[0m	cmd/main.go:73	rate limiter configured
+13:36:48.593	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+13:36:48.597	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+13:36:48.597	[34mINFO[0m	cmd/main.go:86	RabbitMQ connection established
+13:36:48.597	[34mINFO[0m	cmd/main.go:311	RabbitMQ exchange declared	{"exchange": "course.events"}
+13:36:48.747	[34mINFO[0m	cmd/main.go:341	downstream consumer queues pre-declared
 [GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
  - using env:	export GIN_MODE=release
  - using code:	gin.SetMode(gin.ReleaseMode)
@@ -46,8 +46,8 @@ running...
 [GIN-debug] POST   /api/catalog/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (10 handlers)
 [GIN-debug] GET    /api/catalog/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (10 handlers)
 [GIN-debug] POST   /api/catalog/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*SimplePeriodHandler).CreatePeriod-fm (10 handlers)
+13:36:48.747	[34mINFO[0m	worker/outbox_worker.go:39	starting outbox worker	{"interval": "5s", "batch_size": 10}
 [GIN-debug] GET    /api/catalog/admin/periods --> github.com/baaaki/mydreamcampus/shared/handler.(*SimplePeriodHandler).ListPeriods-fm (10 handlers)
-10:31:48.447	[34mINFO[0m	worker/outbox_worker.go:39	starting outbox worker	{"interval": "5s", "batch_size": 10}
 [GIN-debug] PUT    /api/catalog/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*SimplePeriodHandler).UpdatePeriod-fm (10 handlers)
 [GIN-debug] DELETE /api/catalog/admin/periods/:id --> github.com/baaaki/mydreamcampus/shared/handler.(*SimplePeriodHandler).DeletePeriod-fm (10 handlers)
 [GIN-debug] POST   /api/catalog/admin/semesters --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*SemesterStatusHandler).CreateSemester-fm (10 handlers)
@@ -55,6 +55,8 @@ running...
 [GIN-debug] GET    /api/catalog/admin/semesters/active --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*SemesterStatusHandler).GetActiveSemester-fm (10 handlers)
 [GIN-debug] PUT    /api/catalog/admin/semesters/:id/activate --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*SemesterStatusHandler).ActivateSemester-fm (10 handlers)
 [GIN-debug] PUT    /api/catalog/admin/semesters/:id/complete --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*SemesterStatusHandler).CompleteSemester-fm (10 handlers)
+[GIN-debug] DELETE /api/catalog/admin/semesters/:id --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*SemesterStatusHandler).DeletePlannedSemester-fm (10 handlers)
+[GIN-debug] PUT    /api/catalog/admin/semesters/:id --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*SemesterStatusHandler).UpdatePlannedSemester-fm (10 handlers)
 [GIN-debug] GET    /api/catalog/admin/audit-log --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*AuditHandler).ListAuditLog-fm (10 handlers)
 [GIN-debug] GET    /api/semesters/teacher/courses --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*SemesterHandler).GetTeacherCourses-fm (10 handlers)
 [GIN-debug] GET    /api/semesters/:semester_id/courses --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*SemesterHandler).ListSemesterCourses-fm (9 handlers)
@@ -64,237 +66,46 @@ running...
 [GIN-debug] GET    /api/catalog/internal/semesters/:name/status --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*SemesterStatusHandler).IsSemesterActive-fm (6 handlers)
 [GIN-debug] GET    /api/catalog/internal/semesters/:name/info --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*SemesterStatusHandler).GetSemesterInfo-fm (6 handlers)
 [GIN-debug] POST   /api/catalog/internal/audit-log --> github.com/baaaki/mydreamcampus/course-catalog-service/internal/handler.(*AuditHandler).CreateAuditLog-fm (6 handlers)
-10:31:48.447	[34mINFO[0m	cmd/main.go:172	server starting	{"port": "8004"}
-10:31:55.175	[35mDEBUG[0m	middleware/auth.go:256	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-10:31:55.175	[34mINFO[0m	gin@v1.11.0/context.go:192	creating semester course	{"request_id": "ef421953-e10c-476f-b875-4ec06a6e6377", "handler": "SemesterHandler", "endpoint": "CreateSemesterCourse", "semester": "2024-2025-Fall", "course_code": "ATA 1001", "class_level": 1, "instructor_id": "019b4a11-713c-76d0-839f-30275a3b387b"}
-10:31:55.179	[33mWARN[0m	handler/semester_handler.go:60	semester status check failed, semester may not exist in status table	{"request_id": "ef421953-e10c-476f-b875-4ec06a6e6377", "service": "SemesterService", "method": "CreateSemesterCourse", "semester": "2024-2025-Fall", "course_code": "ATA 1001", "error": "no rows in result set"}
-10:31:55.189	[34mINFO[0m	service/semester_service.go:187	instructor validated successfully	{"request_id": "ef421953-e10c-476f-b875-4ec06a6e6377", "client": "HTTPStaffClient", "method": "GetInstructor", "instructor_id": "019b4a11-713c-76d0-839f-30275a3b387b", "department": "Bilgisayar Bilimleri", "full_name": "Dr. Ahmet Yılmaz"}
-10:31:55.204	[33mWARN[0m	handler/semester_handler.go:60	course already opened for this semester (race condition caught)	{"request_id": "ef421953-e10c-476f-b875-4ec06a6e6377", "service": "SemesterService", "method": "CreateSemesterCourse", "semester": "2024-2025-Fall", "course_code": "ATA 1001", "error": "resource already exists in repository: course already opened for this semester"}
-10:31:55.204	[31mERROR[0m	gin@v1.11.0/context.go:192	failed to create semester course	{"request_id": "ef421953-e10c-476f-b875-4ec06a6e6377", "handler": "SemesterHandler", "endpoint": "CreateSemesterCourse", "semester": "2024-2025-Fall", "error": "[COURSE_ALREADY_OPENED] Course already opened for this semester", "error_code": "COURSE_ALREADY_OPENED"}
-github.com/gin-gonic/gin.(*Context).Next
-	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
-main.setupRouter.RequireAdmin.RequireRole.func14
-	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/rbac.go:30
-github.com/gin-gonic/gin.(*Context).Next
-	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
-main.setupRouter.UserRateLimit.func9
-	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/ratelimit.go:138
-github.com/gin-gonic/gin.(*Context).Next
-	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
-main.setupRouter.CSRFProtection.func8
-	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/csrf.go:48
-github.com/gin-gonic/gin.(*Context).Next
-	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
-main.setupRouter.ExtractUserFromHeaders.func7
-	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/auth.go:261
-github.com/gin-gonic/gin.(*Context).Next
-	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
-main.setupRouter.SetCSRFToken.func6
-	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/csrf.go:61
-github.com/gin-gonic/gin.(*Context).Next
-	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
-main.setupRouter.IPRateLimit.func5
-	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/ratelimit.go:94
-github.com/gin-gonic/gin.(*Context).Next
-	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
-main.setupRouter.RequestLogger.func4
-	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/logger.go:25
-github.com/gin-gonic/gin.(*Context).Next
-	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
-main.setupRouter.CORS.func3
-	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/cors.go:42
-github.com/gin-gonic/gin.(*Context).Next
-	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
-main.setupRouter.Recovery.func2
-	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/recovery.go:40
-github.com/gin-gonic/gin.(*Context).Next
-	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
-github.com/gin-gonic/gin.(*Engine).handleHTTPRequest
-	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:689
-github.com/gin-gonic/gin.(*Engine).ServeHTTP
-	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:643
-net/http.serverHandler.ServeHTTP
-	/usr/local/go/src/net/http/server.go:3311
-net/http.(*conn).serve
-	/usr/local/go/src/net/http/server.go:2073
-10:31:55.204	[33mWARN[0m	middleware/logger.go:58	http request - client error	{"request_id": "ef421953-e10c-476f-b875-4ec06a6e6377", "method": "POST", "path": "/api/semesters/2024-2025-Fall/courses", "query": "", "status": 409, "duration": "30.358652ms", "ip": "172.22.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-10:31:58.786	[35mDEBUG[0m	middleware/auth.go:256	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-10:31:58.786	[34mINFO[0m	gin@v1.11.0/context.go:192	creating semester course	{"request_id": "1049515d-2d6f-4f0e-8a98-e8d7cdccb8d5", "handler": "SemesterHandler", "endpoint": "CreateSemesterCourse", "semester": "2024-2025-Fall", "course_code": "ATA 1001", "class_level": 1, "instructor_id": "019b4a11-713c-76d0-839f-30275a3b387b"}
-10:31:58.787	[33mWARN[0m	handler/semester_handler.go:60	semester status check failed, semester may not exist in status table	{"request_id": "1049515d-2d6f-4f0e-8a98-e8d7cdccb8d5", "service": "SemesterService", "method": "CreateSemesterCourse", "semester": "2024-2025-Fall", "course_code": "ATA 1001", "error": "no rows in result set"}
-10:31:58.788	[34mINFO[0m	service/semester_service.go:187	instructor validated successfully	{"request_id": "1049515d-2d6f-4f0e-8a98-e8d7cdccb8d5", "client": "HTTPStaffClient", "method": "GetInstructor", "instructor_id": "019b4a11-713c-76d0-839f-30275a3b387b", "department": "Bilgisayar Bilimleri", "full_name": "Dr. Ahmet Yılmaz"}
-10:31:58.790	[33mWARN[0m	handler/semester_handler.go:60	course already opened for this semester (race condition caught)	{"request_id": "1049515d-2d6f-4f0e-8a98-e8d7cdccb8d5", "service": "SemesterService", "method": "CreateSemesterCourse", "semester": "2024-2025-Fall", "course_code": "ATA 1001", "error": "resource already exists in repository: course already opened for this semester"}
-10:31:58.790	[31mERROR[0m	gin@v1.11.0/context.go:192	failed to create semester course	{"request_id": "1049515d-2d6f-4f0e-8a98-e8d7cdccb8d5", "handler": "SemesterHandler", "endpoint": "CreateSemesterCourse", "semester": "2024-2025-Fall", "error": "[COURSE_ALREADY_OPENED] Course already opened for this semester", "error_code": "COURSE_ALREADY_OPENED"}
-github.com/gin-gonic/gin.(*Context).Next
-	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
-main.setupRouter.RequireAdmin.RequireRole.func14
-	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/rbac.go:30
-github.com/gin-gonic/gin.(*Context).Next
-	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
-main.setupRouter.UserRateLimit.func9
-	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/ratelimit.go:138
-github.com/gin-gonic/gin.(*Context).Next
-	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
-main.setupRouter.CSRFProtection.func8
-	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/csrf.go:48
-github.com/gin-gonic/gin.(*Context).Next
-	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
-main.setupRouter.ExtractUserFromHeaders.func7
-	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/auth.go:261
-github.com/gin-gonic/gin.(*Context).Next
-	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
-main.setupRouter.SetCSRFToken.func6
-	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/csrf.go:61
-github.com/gin-gonic/gin.(*Context).Next
-	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
-main.setupRouter.IPRateLimit.func5
-	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/ratelimit.go:94
-github.com/gin-gonic/gin.(*Context).Next
-	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
-main.setupRouter.RequestLogger.func4
-	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/logger.go:25
-github.com/gin-gonic/gin.(*Context).Next
-	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
-main.setupRouter.CORS.func3
-	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/cors.go:42
-github.com/gin-gonic/gin.(*Context).Next
-	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
-main.setupRouter.Recovery.func2
-	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/recovery.go:40
-github.com/gin-gonic/gin.(*Context).Next
-	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
-github.com/gin-gonic/gin.(*Engine).handleHTTPRequest
-	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:689
-github.com/gin-gonic/gin.(*Engine).ServeHTTP
-	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:643
-net/http.serverHandler.ServeHTTP
-	/usr/local/go/src/net/http/server.go:3311
-net/http.(*conn).serve
-	/usr/local/go/src/net/http/server.go:2073
-10:31:58.790	[33mWARN[0m	middleware/logger.go:58	http request - client error	{"request_id": "1049515d-2d6f-4f0e-8a98-e8d7cdccb8d5", "method": "POST", "path": "/api/semesters/2024-2025-Fall/courses", "query": "", "status": 409, "duration": "3.78004ms", "ip": "172.22.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-10:32:24.642	[34mINFO[0m	gin@v1.11.0/context.go:192	listing courses from catalog	{"request_id": "444d0213-ee89-4160-a75b-96e689875aac", "handler": "CatalogHandler", "endpoint": "ListCourses", "page": 1, "limit": 100}
-10:32:24.643	[35mDEBUG[0m	middleware/auth.go:256	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-10:32:24.643	[34mINFO[0m	gin@v1.11.0/context.go:192	listing semester courses	{"request_id": "514edf72-67d4-4750-bc4c-518f6c23f95c", "handler": "SemesterHandler", "endpoint": "ListSemesterCourses", "semester": "2024-2025-Fall", "page": 1, "limit": 100}
-10:32:24.647	[34mINFO[0m	handler/catalog_handler.go:179	courses list retrieved successfully from catalog	{"request_id": "444d0213-ee89-4160-a75b-96e689875aac", "service": "CatalogService", "method": "ListCourses", "page": 1, "limit": 100, "total_records": 4, "returned_records": 4, "total_pages": 1}
-10:32:24.647	[34mINFO[0m	gin@v1.11.0/context.go:192	courses listed successfully from catalog	{"request_id": "444d0213-ee89-4160-a75b-96e689875aac", "handler": "CatalogHandler", "endpoint": "ListCourses", "total_records": 4, "returned_records": 4}
-10:32:24.647	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "444d0213-ee89-4160-a75b-96e689875aac", "method": "GET", "path": "/api/catalog/courses", "query": "department=Bilgisayar+Bilimleri&limit=100", "status": 200, "duration": "5.655169ms", "ip": "172.22.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0"}
-10:32:24.660	[34mINFO[0m	handler/semester_handler.go:204	semester courses list retrieved successfully	{"request_id": "514edf72-67d4-4750-bc4c-518f6c23f95c", "service": "SemesterService", "method": "ListSemesterCourses", "semester": "2024-2025-Fall", "page": 1, "limit": 100, "total_records": 2, "returned_records": 2, "total_pages": 1}
-10:32:24.660	[34mINFO[0m	gin@v1.11.0/context.go:192	semester courses listed successfully	{"request_id": "514edf72-67d4-4750-bc4c-518f6c23f95c", "handler": "SemesterHandler", "endpoint": "ListSemesterCourses", "semester": "2024-2025-Fall", "total_records": 2, "returned_records": 2}
-10:32:24.660	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "514edf72-67d4-4750-bc4c-518f6c23f95c", "method": "GET", "path": "/api/semesters/2024-2025-Fall/courses", "query": "department=Bilgisayar+Bilimleri&limit=100", "status": 200, "duration": "16.802453ms", "ip": "172.22.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-10:32:35.151	[35mDEBUG[0m	middleware/auth.go:256	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-10:32:35.151	[34mINFO[0m	gin@v1.11.0/context.go:192	creating semester course	{"request_id": "4c08d374-3e78-474b-b53b-fa6545cdccbc", "handler": "SemesterHandler", "endpoint": "CreateSemesterCourse", "semester": "2024-2025-Fall", "course_code": "ATA 1001", "class_level": 1, "instructor_id": "019c0115-3248-7cad-8ca1-305acba4e48c"}
-10:32:35.153	[33mWARN[0m	handler/semester_handler.go:60	semester status check failed, semester may not exist in status table	{"request_id": "4c08d374-3e78-474b-b53b-fa6545cdccbc", "service": "SemesterService", "method": "CreateSemesterCourse", "semester": "2024-2025-Fall", "course_code": "ATA 1001", "error": "no rows in result set"}
-10:32:35.158	[34mINFO[0m	service/semester_service.go:187	instructor validated successfully	{"request_id": "4c08d374-3e78-474b-b53b-fa6545cdccbc", "client": "HTTPStaffClient", "method": "GetInstructor", "instructor_id": "019c0115-3248-7cad-8ca1-305acba4e48c", "department": "Bilgisayar Bilimleri", "full_name": "mamazittta mamalaka"}
-10:32:35.162	[33mWARN[0m	handler/semester_handler.go:60	course already opened for this semester (race condition caught)	{"request_id": "4c08d374-3e78-474b-b53b-fa6545cdccbc", "service": "SemesterService", "method": "CreateSemesterCourse", "semester": "2024-2025-Fall", "course_code": "ATA 1001", "error": "resource already exists in repository: course already opened for this semester"}
-10:32:35.162	[31mERROR[0m	gin@v1.11.0/context.go:192	failed to create semester course	{"request_id": "4c08d374-3e78-474b-b53b-fa6545cdccbc", "handler": "SemesterHandler", "endpoint": "CreateSemesterCourse", "semester": "2024-2025-Fall", "error": "[COURSE_ALREADY_OPENED] Course already opened for this semester", "error_code": "COURSE_ALREADY_OPENED"}
-github.com/gin-gonic/gin.(*Context).Next
-	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
-main.setupRouter.RequireAdmin.RequireRole.func14
-	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/rbac.go:30
-github.com/gin-gonic/gin.(*Context).Next
-	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
-main.setupRouter.UserRateLimit.func9
-	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/ratelimit.go:138
-github.com/gin-gonic/gin.(*Context).Next
-	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
-main.setupRouter.CSRFProtection.func8
-	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/csrf.go:48
-github.com/gin-gonic/gin.(*Context).Next
-	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
-main.setupRouter.ExtractUserFromHeaders.func7
-	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/auth.go:261
-github.com/gin-gonic/gin.(*Context).Next
-	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
-main.setupRouter.SetCSRFToken.func6
-	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/csrf.go:61
-github.com/gin-gonic/gin.(*Context).Next
-	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
-main.setupRouter.IPRateLimit.func5
-	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/ratelimit.go:94
-github.com/gin-gonic/gin.(*Context).Next
-	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
-main.setupRouter.RequestLogger.func4
-	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/logger.go:25
-github.com/gin-gonic/gin.(*Context).Next
-	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
-main.setupRouter.CORS.func3
-	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/cors.go:42
-github.com/gin-gonic/gin.(*Context).Next
-	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
-main.setupRouter.Recovery.func2
-	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/middleware/recovery.go:40
-github.com/gin-gonic/gin.(*Context).Next
-	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/context.go:192
-github.com/gin-gonic/gin.(*Engine).handleHTTPRequest
-	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:689
-github.com/gin-gonic/gin.(*Engine).ServeHTTP
-	/home/nautilus/go/pkg/mod/github.com/gin-gonic/gin@v1.11.0/gin.go:643
-net/http.serverHandler.ServeHTTP
-	/usr/local/go/src/net/http/server.go:3311
-net/http.(*conn).serve
-	/usr/local/go/src/net/http/server.go:2073
-10:32:35.162	[33mWARN[0m	middleware/logger.go:58	http request - client error	{"request_id": "4c08d374-3e78-474b-b53b-fa6545cdccbc", "method": "POST", "path": "/api/semesters/2024-2025-Fall/courses", "query": "", "status": 409, "duration": "11.650017ms", "ip": "172.22.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-10:32:50.395	[35mDEBUG[0m	middleware/auth.go:256	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-10:32:50.396	[34mINFO[0m	gin@v1.11.0/context.go:192	creating semester course	{"request_id": "e81c8a49-90b4-4d7d-a44b-04d54994e6cd", "handler": "SemesterHandler", "endpoint": "CreateSemesterCourse", "semester": "2024-2025-Fall", "course_code": "BİL 1011", "class_level": 1, "instructor_id": "019b4a11-713c-76d0-839f-30275a3b387b"}
-10:32:50.396	[33mWARN[0m	handler/semester_handler.go:60	semester status check failed, semester may not exist in status table	{"request_id": "e81c8a49-90b4-4d7d-a44b-04d54994e6cd", "service": "SemesterService", "method": "CreateSemesterCourse", "semester": "2024-2025-Fall", "course_code": "BİL 1011", "error": "no rows in result set"}
-10:32:50.401	[34mINFO[0m	service/semester_service.go:187	instructor validated successfully	{"request_id": "e81c8a49-90b4-4d7d-a44b-04d54994e6cd", "client": "HTTPStaffClient", "method": "GetInstructor", "instructor_id": "019b4a11-713c-76d0-839f-30275a3b387b", "department": "Bilgisayar Bilimleri", "full_name": "Dr. Ahmet Yılmaz"}
-10:32:50.416	[34mINFO[0m	handler/semester_handler.go:60	semester course created successfully	{"request_id": "e81c8a49-90b4-4d7d-a44b-04d54994e6cd", "service": "SemesterService", "method": "CreateSemesterCourse", "semester": "2024-2025-Fall", "course_code": "BİL 1011", "semester_course_id": "019d335c-2663-763f-bd50-54f164a0afec", "instructor_id": "019b4a11-713c-76d0-839f-30275a3b387b"}
-10:32:50.416	[34mINFO[0m	gin@v1.11.0/context.go:192	semester course created successfully	{"request_id": "e81c8a49-90b4-4d7d-a44b-04d54994e6cd", "handler": "SemesterHandler", "endpoint": "CreateSemesterCourse", "semester": "2024-2025-Fall", "semester_course_id": "019d335c-2663-763f-bd50-54f164a0afec", "course_code": "BİL 1011"}
-10:32:50.416	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "e81c8a49-90b4-4d7d-a44b-04d54994e6cd", "method": "POST", "path": "/api/semesters/2024-2025-Fall/courses", "query": "", "status": 201, "duration": "20.497419ms", "ip": "172.22.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-10:32:50.452	[35mDEBUG[0m	middleware/auth.go:256	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-10:32:50.452	[34mINFO[0m	gin@v1.11.0/context.go:192	listing semester courses	{"request_id": "c9189634-876e-401d-b617-bf0276d12cef", "handler": "SemesterHandler", "endpoint": "ListSemesterCourses", "semester": "2024-2025-Fall", "page": 1, "limit": 100}
-10:32:50.455	[34mINFO[0m	handler/semester_handler.go:204	semester courses list retrieved successfully	{"request_id": "c9189634-876e-401d-b617-bf0276d12cef", "service": "SemesterService", "method": "ListSemesterCourses", "semester": "2024-2025-Fall", "page": 1, "limit": 100, "total_records": 3, "returned_records": 3, "total_pages": 1}
-10:32:50.455	[34mINFO[0m	gin@v1.11.0/context.go:192	semester courses listed successfully	{"request_id": "c9189634-876e-401d-b617-bf0276d12cef", "handler": "SemesterHandler", "endpoint": "ListSemesterCourses", "semester": "2024-2025-Fall", "total_records": 3, "returned_records": 3}
-10:32:50.455	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "c9189634-876e-401d-b617-bf0276d12cef", "method": "GET", "path": "/api/semesters/2024-2025-Fall/courses", "query": "department=Bilgisayar+Bilimleri&limit=100", "status": 200, "duration": "3.03782ms", "ip": "172.22.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-10:32:53.448	[34mINFO[0m	worker/outbox_worker.go:76	processing outbox events	{"count": 1}
-10:32:53.448	[35mDEBUG[0m	rabbitmq/publisher.go:72	message published	{"exchange": "course.events", "routing_key": "course.semester.created", "body_size": 776}
-10:32:53.457	[34mINFO[0m	worker/outbox_worker.go:123	event published successfully	{"event_id": "019d335c-266e-78e2-ac02-fb9588718eff", "event_type": "course.semester.created"}
-10:32:53.457	[34mINFO[0m	worker/outbox_worker.go:130	outbox processing completed	{"success": 1, "failed": 0, "total": 1}
-11:28:59.666	[34mINFO[0m	gin@v1.11.0/context.go:192	listing courses from catalog	{"request_id": "6b319768-6a1f-445c-a198-bfec532ce9ad", "handler": "CatalogHandler", "endpoint": "ListCourses", "page": 1, "limit": 100}
-11:28:59.667	[35mDEBUG[0m	middleware/auth.go:256	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-11:28:59.667	[34mINFO[0m	handler/catalog_handler.go:179	courses list retrieved successfully from catalog	{"request_id": "6b319768-6a1f-445c-a198-bfec532ce9ad", "service": "CatalogService", "method": "ListCourses", "page": 1, "limit": 100, "total_records": 0, "returned_records": 0, "total_pages": 0}
-11:28:59.667	[34mINFO[0m	gin@v1.11.0/context.go:192	courses listed successfully from catalog	{"request_id": "6b319768-6a1f-445c-a198-bfec532ce9ad", "handler": "CatalogHandler", "endpoint": "ListCourses", "total_records": 0, "returned_records": 0}
-11:28:59.667	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "6b319768-6a1f-445c-a198-bfec532ce9ad", "method": "GET", "path": "/api/catalog/courses", "query": "department=Yayl%C4%B1+%C3%87alg%C4%B1lar&limit=100", "status": 200, "duration": "2.065871ms", "ip": "172.22.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0"}
-11:28:59.667	[34mINFO[0m	gin@v1.11.0/context.go:192	listing semester courses	{"request_id": "dc486cac-8771-44d0-a47a-e6424bcf05b8", "handler": "SemesterHandler", "endpoint": "ListSemesterCourses", "semester": "2024-2025-Fall", "page": 1, "limit": 100}
-11:28:59.669	[34mINFO[0m	handler/semester_handler.go:204	semester courses list retrieved successfully	{"request_id": "dc486cac-8771-44d0-a47a-e6424bcf05b8", "service": "SemesterService", "method": "ListSemesterCourses", "semester": "2024-2025-Fall", "page": 1, "limit": 100, "total_records": 0, "returned_records": 0, "total_pages": 0}
-11:28:59.669	[34mINFO[0m	gin@v1.11.0/context.go:192	semester courses listed successfully	{"request_id": "dc486cac-8771-44d0-a47a-e6424bcf05b8", "handler": "SemesterHandler", "endpoint": "ListSemesterCourses", "semester": "2024-2025-Fall", "total_records": 0, "returned_records": 0}
-11:28:59.669	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "dc486cac-8771-44d0-a47a-e6424bcf05b8", "method": "GET", "path": "/api/semesters/2024-2025-Fall/courses", "query": "department=Yayl%C4%B1+%C3%87alg%C4%B1lar&limit=100", "status": 200, "duration": "1.69722ms", "ip": "172.22.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-11:29:03.671	[34mINFO[0m	gin@v1.11.0/context.go:192	listing courses from catalog	{"request_id": "0bf849e2-b32c-460f-ae81-dfbecfe93ace", "handler": "CatalogHandler", "endpoint": "ListCourses", "page": 1, "limit": 100}
-11:29:03.672	[35mDEBUG[0m	middleware/auth.go:256	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-11:29:03.672	[34mINFO[0m	gin@v1.11.0/context.go:192	listing semester courses	{"request_id": "b69053e9-d053-4bbe-938b-e259f0852ec9", "handler": "SemesterHandler", "endpoint": "ListSemesterCourses", "semester": "2024-2025-Fall", "page": 1, "limit": 100}
-11:29:03.672	[34mINFO[0m	handler/catalog_handler.go:179	courses list retrieved successfully from catalog	{"request_id": "0bf849e2-b32c-460f-ae81-dfbecfe93ace", "service": "CatalogService", "method": "ListCourses", "page": 1, "limit": 100, "total_records": 4, "returned_records": 4, "total_pages": 1}
-11:29:03.672	[34mINFO[0m	gin@v1.11.0/context.go:192	courses listed successfully from catalog	{"request_id": "0bf849e2-b32c-460f-ae81-dfbecfe93ace", "handler": "CatalogHandler", "endpoint": "ListCourses", "total_records": 4, "returned_records": 4}
-11:29:03.672	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "0bf849e2-b32c-460f-ae81-dfbecfe93ace", "method": "GET", "path": "/api/catalog/courses", "query": "department=Bilgisayar+Bilimleri&limit=100", "status": 200, "duration": "1.541446ms", "ip": "172.22.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0"}
-11:29:03.673	[34mINFO[0m	handler/semester_handler.go:204	semester courses list retrieved successfully	{"request_id": "b69053e9-d053-4bbe-938b-e259f0852ec9", "service": "SemesterService", "method": "ListSemesterCourses", "semester": "2024-2025-Fall", "page": 1, "limit": 100, "total_records": 3, "returned_records": 3, "total_pages": 1}
-11:29:03.673	[34mINFO[0m	gin@v1.11.0/context.go:192	semester courses listed successfully	{"request_id": "b69053e9-d053-4bbe-938b-e259f0852ec9", "handler": "SemesterHandler", "endpoint": "ListSemesterCourses", "semester": "2024-2025-Fall", "total_records": 3, "returned_records": 3}
-11:29:03.674	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "b69053e9-d053-4bbe-938b-e259f0852ec9", "method": "GET", "path": "/api/semesters/2024-2025-Fall/courses", "query": "department=Bilgisayar+Bilimleri&limit=100", "status": 200, "duration": "1.846265ms", "ip": "172.22.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-11:51:46.821	[34mINFO[0m	gin@v1.11.0/context.go:192	listing courses from catalog	{"request_id": "a71e3a46-6034-4c4b-b719-5c898b16acd1", "handler": "CatalogHandler", "endpoint": "ListCourses", "page": 1, "limit": 100}
-11:51:46.822	[35mDEBUG[0m	middleware/auth.go:256	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-11:51:46.822	[34mINFO[0m	gin@v1.11.0/context.go:192	listing semester courses	{"request_id": "83ac74a3-ea5b-4faf-b172-fd90268b46ab", "handler": "SemesterHandler", "endpoint": "ListSemesterCourses", "semester": "2024-2025-Fall", "page": 1, "limit": 100}
-11:51:46.830	[34mINFO[0m	handler/catalog_handler.go:179	courses list retrieved successfully from catalog	{"request_id": "a71e3a46-6034-4c4b-b719-5c898b16acd1", "service": "CatalogService", "method": "ListCourses", "page": 1, "limit": 100, "total_records": 0, "returned_records": 0, "total_pages": 0}
-11:51:46.830	[34mINFO[0m	gin@v1.11.0/context.go:192	courses listed successfully from catalog	{"request_id": "a71e3a46-6034-4c4b-b719-5c898b16acd1", "handler": "CatalogHandler", "endpoint": "ListCourses", "total_records": 0, "returned_records": 0}
-11:51:46.830	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "a71e3a46-6034-4c4b-b719-5c898b16acd1", "method": "GET", "path": "/api/catalog/courses", "query": "department=Gemi+Makineleri+%C4%B0%C5%9Fletme+M%C3%BChendisli%C4%9Fi&limit=100", "status": 200, "duration": "9.802525ms", "ip": "172.22.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0"}
-11:51:46.836	[34mINFO[0m	handler/semester_handler.go:204	semester courses list retrieved successfully	{"request_id": "83ac74a3-ea5b-4faf-b172-fd90268b46ab", "service": "SemesterService", "method": "ListSemesterCourses", "semester": "2024-2025-Fall", "page": 1, "limit": 100, "total_records": 0, "returned_records": 0, "total_pages": 0}
-11:51:46.836	[34mINFO[0m	gin@v1.11.0/context.go:192	semester courses listed successfully	{"request_id": "83ac74a3-ea5b-4faf-b172-fd90268b46ab", "handler": "SemesterHandler", "endpoint": "ListSemesterCourses", "semester": "2024-2025-Fall", "total_records": 0, "returned_records": 0}
-11:51:46.836	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "83ac74a3-ea5b-4faf-b172-fd90268b46ab", "method": "GET", "path": "/api/semesters/2024-2025-Fall/courses", "query": "department=Gemi+Makineleri+%C4%B0%C5%9Fletme+M%C3%BChendisli%C4%9Fi&limit=100", "status": 200, "duration": "13.87594ms", "ip": "172.22.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-11:51:51.931	[34mINFO[0m	gin@v1.11.0/context.go:192	listing courses from catalog	{"request_id": "3dc460be-91b5-4d0d-8232-ea94b906d8c7", "handler": "CatalogHandler", "endpoint": "ListCourses", "page": 1, "limit": 100}
-11:51:51.932	[35mDEBUG[0m	middleware/auth.go:256	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-11:51:51.932	[34mINFO[0m	gin@v1.11.0/context.go:192	listing semester courses	{"request_id": "6f1e2400-ffac-4e69-b1b9-7f7282f530a7", "handler": "SemesterHandler", "endpoint": "ListSemesterCourses", "semester": "2024-2025-Fall", "page": 1, "limit": 100}
-11:51:51.940	[34mINFO[0m	handler/catalog_handler.go:179	courses list retrieved successfully from catalog	{"request_id": "3dc460be-91b5-4d0d-8232-ea94b906d8c7", "service": "CatalogService", "method": "ListCourses", "page": 1, "limit": 100, "total_records": 4, "returned_records": 4, "total_pages": 1}
-11:51:51.940	[34mINFO[0m	gin@v1.11.0/context.go:192	courses listed successfully from catalog	{"request_id": "3dc460be-91b5-4d0d-8232-ea94b906d8c7", "handler": "CatalogHandler", "endpoint": "ListCourses", "total_records": 4, "returned_records": 4}
-11:51:51.940	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "3dc460be-91b5-4d0d-8232-ea94b906d8c7", "method": "GET", "path": "/api/catalog/courses", "query": "department=Bilgisayar+Bilimleri&limit=100", "status": 200, "duration": "9.083506ms", "ip": "172.22.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0"}
-11:51:51.944	[34mINFO[0m	handler/semester_handler.go:204	semester courses list retrieved successfully	{"request_id": "6f1e2400-ffac-4e69-b1b9-7f7282f530a7", "service": "SemesterService", "method": "ListSemesterCourses", "semester": "2024-2025-Fall", "page": 1, "limit": 100, "total_records": 3, "returned_records": 3, "total_pages": 1}
-11:51:51.944	[34mINFO[0m	gin@v1.11.0/context.go:192	semester courses listed successfully	{"request_id": "6f1e2400-ffac-4e69-b1b9-7f7282f530a7", "handler": "SemesterHandler", "endpoint": "ListSemesterCourses", "semester": "2024-2025-Fall", "total_records": 3, "returned_records": 3}
-11:51:51.944	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "6f1e2400-ffac-4e69-b1b9-7f7282f530a7", "method": "GET", "path": "/api/semesters/2024-2025-Fall/courses", "query": "department=Bilgisayar+Bilimleri&limit=100", "status": 200, "duration": "11.507673ms", "ip": "172.22.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-11:57:35.597	[35mDEBUG[0m	middleware/auth.go:256	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-11:57:35.597	[34mINFO[0m	gin@v1.11.0/context.go:192	listing semester courses	{"request_id": "a1306ba7-f283-42b8-9ec1-5a357a42bdc6", "handler": "SemesterHandler", "endpoint": "ListSemesterCourses", "semester": "2024-2025-Fall", "page": 1, "limit": 100}
-11:57:35.598	[34mINFO[0m	handler/semester_handler.go:204	semester courses list retrieved successfully	{"request_id": "a1306ba7-f283-42b8-9ec1-5a357a42bdc6", "service": "SemesterService", "method": "ListSemesterCourses", "semester": "2024-2025-Fall", "page": 1, "limit": 100, "total_records": 3, "returned_records": 3, "total_pages": 1}
-11:57:35.598	[34mINFO[0m	gin@v1.11.0/context.go:192	semester courses listed successfully	{"request_id": "a1306ba7-f283-42b8-9ec1-5a357a42bdc6", "handler": "SemesterHandler", "endpoint": "ListSemesterCourses", "semester": "2024-2025-Fall", "total_records": 3, "returned_records": 3}
-11:57:35.598	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "a1306ba7-f283-42b8-9ec1-5a357a42bdc6", "method": "GET", "path": "/api/semesters/2024-2025-Fall/courses", "query": "department=Bilgisayar+Bilimleri&limit=100", "status": 200, "duration": "1.604055ms", "ip": "172.22.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-11:58:25.635	[35mDEBUG[0m	middleware/auth.go:256	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-11:58:25.638	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "fab51d1a-4aba-492d-88f7-18299db7d2c9", "method": "GET", "path": "/api/catalog/admin/semesters", "query": "", "status": 200, "duration": "2.943843ms", "ip": "172.22.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-11:58:25.642	[35mDEBUG[0m	middleware/auth.go:256	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-11:58:25.642	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "e723196d-7f0a-4024-86d4-6bee16035140", "method": "GET", "path": "/api/catalog/admin/semesters", "query": "", "status": 200, "duration": "503.694µs", "ip": "172.22.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-11:58:25.645	[35mDEBUG[0m	middleware/auth.go:256	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-11:58:25.645	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "16229a37-b117-4fdd-9d64-3de4c6b38d13", "method": "GET", "path": "/api/catalog/admin/semesters", "query": "", "status": 200, "duration": "545.305µs", "ip": "172.22.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-11:58:25.649	[35mDEBUG[0m	middleware/auth.go:256	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-11:58:25.649	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "2ece9676-0391-4997-a05d-28fc811c0f36", "method": "GET", "path": "/api/catalog/admin/semesters", "query": "", "status": 200, "duration": "543.455µs", "ip": "172.22.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:36:48.748	[34mINFO[0m	cmd/main.go:173	server starting	{"port": "8004"}
+13:37:09.198	[35mDEBUG[0m	middleware/auth.go:257	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:37:09.202	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "4df64cee-704c-49e6-afe9-cdd958391660", "method": "GET", "path": "/api/catalog/admin/semesters/active", "query": "", "status": 200, "duration": "4.205458ms", "ip": "172.19.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:37:09.206	[35mDEBUG[0m	middleware/auth.go:257	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:37:09.206	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "ab93f08d-4a60-42e1-9eb6-b6c8304ae258", "method": "GET", "path": "/api/catalog/admin/semesters/active", "query": "", "status": 200, "duration": "453.112µs", "ip": "172.19.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:37:19.844	[35mDEBUG[0m	middleware/auth.go:257	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:37:19.846	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "3925eae2-1b56-4e4e-ab8b-ee0d1c5efcf9", "method": "GET", "path": "/api/catalog/admin/semesters", "query": "", "status": 200, "duration": "1.79828ms", "ip": "172.19.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:37:19.849	[35mDEBUG[0m	middleware/auth.go:257	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:37:19.849	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "42e1bfd8-2e4e-4866-ac50-960c78a9ab09", "method": "GET", "path": "/api/catalog/admin/semesters", "query": "", "status": 200, "duration": "448.943µs", "ip": "172.19.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:37:22.653	[34mINFO[0m	gin@v1.11.0/context.go:192	listing courses from catalog	{"request_id": "10249304-446e-47e0-9974-140f3c35e963", "handler": "CatalogHandler", "endpoint": "ListCourses", "page": 1, "limit": 100}
+13:37:22.669	[34mINFO[0m	handler/catalog_handler.go:179	courses list retrieved successfully from catalog	{"request_id": "10249304-446e-47e0-9974-140f3c35e963", "service": "CatalogService", "method": "ListCourses", "page": 1, "limit": 100, "total_records": 4, "returned_records": 4, "total_pages": 1}
+13:37:22.669	[34mINFO[0m	gin@v1.11.0/context.go:192	courses listed successfully from catalog	{"request_id": "10249304-446e-47e0-9974-140f3c35e963", "handler": "CatalogHandler", "endpoint": "ListCourses", "total_records": 4, "returned_records": 4}
+13:37:22.669	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "10249304-446e-47e0-9974-140f3c35e963", "method": "GET", "path": "/api/catalog/courses", "query": "limit=100", "status": 200, "duration": "16.859692ms", "ip": "172.19.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0"}
+13:37:22.672	[34mINFO[0m	gin@v1.11.0/context.go:192	listing courses from catalog	{"request_id": "9f840aa9-55c1-45ef-82a4-c1f3e9f93d9a", "handler": "CatalogHandler", "endpoint": "ListCourses", "page": 1, "limit": 100}
+13:37:22.672	[34mINFO[0m	handler/catalog_handler.go:179	courses list retrieved successfully from catalog	{"request_id": "9f840aa9-55c1-45ef-82a4-c1f3e9f93d9a", "service": "CatalogService", "method": "ListCourses", "page": 1, "limit": 100, "total_records": 4, "returned_records": 4, "total_pages": 1}
+13:37:22.672	[34mINFO[0m	gin@v1.11.0/context.go:192	courses listed successfully from catalog	{"request_id": "9f840aa9-55c1-45ef-82a4-c1f3e9f93d9a", "handler": "CatalogHandler", "endpoint": "ListCourses", "total_records": 4, "returned_records": 4}
+13:37:22.672	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "9f840aa9-55c1-45ef-82a4-c1f3e9f93d9a", "method": "GET", "path": "/api/catalog/courses", "query": "limit=100", "status": 200, "duration": "830.363µs", "ip": "172.19.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0"}
+13:37:25.344	[34mINFO[0m	gin@v1.11.0/context.go:192	listing courses from catalog	{"request_id": "5a67924a-9f6e-408f-9a07-b332c501feb8", "handler": "CatalogHandler", "endpoint": "ListCourses", "page": 1, "limit": 100}
+13:37:25.344	[34mINFO[0m	handler/catalog_handler.go:179	courses list retrieved successfully from catalog	{"request_id": "5a67924a-9f6e-408f-9a07-b332c501feb8", "service": "CatalogService", "method": "ListCourses", "page": 1, "limit": 100, "total_records": 4, "returned_records": 4, "total_pages": 1}
+13:37:25.344	[34mINFO[0m	gin@v1.11.0/context.go:192	courses listed successfully from catalog	{"request_id": "5a67924a-9f6e-408f-9a07-b332c501feb8", "handler": "CatalogHandler", "endpoint": "ListCourses", "total_records": 4, "returned_records": 4}
+13:37:25.344	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "5a67924a-9f6e-408f-9a07-b332c501feb8", "method": "GET", "path": "/api/catalog/courses", "query": "limit=100", "status": 200, "duration": "1.098621ms", "ip": "172.19.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0"}
+13:37:25.347	[34mINFO[0m	gin@v1.11.0/context.go:192	listing courses from catalog	{"request_id": "2ac5fd80-466b-4020-bace-c9e6ab3f1f32", "handler": "CatalogHandler", "endpoint": "ListCourses", "page": 1, "limit": 100}
+13:37:25.347	[34mINFO[0m	handler/catalog_handler.go:179	courses list retrieved successfully from catalog	{"request_id": "2ac5fd80-466b-4020-bace-c9e6ab3f1f32", "service": "CatalogService", "method": "ListCourses", "page": 1, "limit": 100, "total_records": 4, "returned_records": 4, "total_pages": 1}
+13:37:25.347	[34mINFO[0m	gin@v1.11.0/context.go:192	courses listed successfully from catalog	{"request_id": "2ac5fd80-466b-4020-bace-c9e6ab3f1f32", "handler": "CatalogHandler", "endpoint": "ListCourses", "total_records": 4, "returned_records": 4}
+13:37:25.347	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "2ac5fd80-466b-4020-bace-c9e6ab3f1f32", "method": "GET", "path": "/api/catalog/courses", "query": "limit=100", "status": 200, "duration": "790.472µs", "ip": "172.19.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0"}
+23:04:49.549	[31mERROR[0m	rabbitmq/connection.go:94	rabbitmq connection lost	{"error": "Exception (320) Reason: \"CONNECTION_FORCED - broker forced connection closure with reason 'shutdown'\""}
+github.com/baaaki/mydreamcampus/shared/rabbitmq.(*Connection).handleReconnect
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/rabbitmq/connection.go:94
+23:04:49.549	[34mINFO[0m	rabbitmq/connection.go:99	attempting to reconnect to rabbitmq...
+23:04:54.549	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+23:04:54.550	[31mERROR[0m	rabbitmq/connection.go:103	rabbitmq reconnection failed	{"error": "failed to connect to rabbitmq: Exception (501) Reason: \"read tcp 127.0.0.1:55130->127.0.0.1:5672: read: connection reset by peer\""}
+github.com/baaaki/mydreamcampus/shared/rabbitmq.(*Connection).handleReconnect
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/rabbitmq/connection.go:103
+23:04:54.550	[34mINFO[0m	rabbitmq/connection.go:99	attempting to reconnect to rabbitmq...
+23:04:59.550	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+23:04:59.562	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+23:04:59.562	[34mINFO[0m	rabbitmq/connection.go:107	rabbitmq reconnection successful
+23:06:49.839	[31mERROR[0m	rabbitmq/connection.go:94	rabbitmq connection lost	{"error": "Exception (320) Reason: \"CONNECTION_FORCED - broker forced connection closure with reason 'shutdown'\""}
+github.com/baaaki/mydreamcampus/shared/rabbitmq.(*Connection).handleReconnect
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/rabbitmq/connection.go:94
+23:06:49.839	[34mINFO[0m	rabbitmq/connection.go:99	attempting to reconnect to rabbitmq...
+cleaning...
+see you again~

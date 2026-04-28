@@ -115,6 +115,7 @@ func main() {
 
 	// Initialize workers
 	eventConsumer := worker.NewEventConsumer(consumer, cacheRepo, registrationRepo)
+	finalizeConsumer := worker.NewFinalizeConsumer(consumer, gradeService, completedRepo)
 	outboxWorker := worker.NewOutboxWorker(outboxRepo, publisher, 5*time.Second, 10)
 
 	// Start workers in background
@@ -128,6 +129,13 @@ func main() {
 		}
 	}()
 
+	// Start finalize consumer
+	go func() {
+		if err := finalizeConsumer.Start(ctx); err != nil {
+			logger.Error("finalize consumer failed", zap.Error(err))
+		}
+	}()
+
 	// Start outbox worker
 	go outboxWorker.Start(ctx)
 
@@ -138,6 +146,17 @@ func main() {
 
 	// Setup Gin router
 	router := setupRouter(gradeHandler, timeHandler, periodHandler, internalPeriodHandler, cfg)
+
+	// Health: liveness (process up). Ready: deps reachable.
+	healthChecks := map[string]sharedHandler.HealthCheck{
+		"database": pool.Ping,
+		"rabbitmq": rabbitConn.Ping,
+	}
+	if redisClient != nil {
+		healthChecks["redis"] = redisClient.Ping
+	}
+	router.GET("/health", sharedHandler.LivenessHandler("grades-service"))
+	router.GET("/ready", sharedHandler.ReadinessHandler("grades-service", healthChecks))
 
 	// Start HTTP server
 	srv := &http.Server{
@@ -164,7 +183,7 @@ func main() {
 	cancel()
 
 	// Shutdown HTTP server with timeout
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutdownCancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
@@ -183,18 +202,13 @@ func setupRouter(gradeHandler *handler.GradeHandler, timeHandler *sharedHandler.
 
 	// Global middleware
 	router.Use(sharedMiddleware.Recovery())
+	router.Use(sharedMiddleware.SecurityHeaders())
 	router.Use(sharedMiddleware.CORS())
 	router.Use(sharedMiddleware.RequestLogger())
 	router.Use(sharedMiddleware.IPRateLimit())
 	router.Use(sharedMiddleware.SetCSRFToken(cfg.Server.Environment == "production"))
 
-	// Health check
-	router.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"status":  "healthy",
-			"service": "grades-service",
-		})
-	})
+	// Health endpoints registered in main() with dependency checks
 
 	// API routes - All routes are protected via Traefik forward-auth
 	// User info is extracted from X-User-* headers set by Traefik
@@ -211,6 +225,7 @@ func setupRouter(gradeHandler *handler.GradeHandler, timeHandler *sharedHandler.
 		teacher.GET("/:course_id/students", gradeHandler.GetCourseStudents)
 		teacher.POST("/:course_id/scores", gradeHandler.SubmitScore)
 		teacher.POST("/:course_id/scores/bulk", gradeHandler.BulkSubmitScores)
+		teacher.POST("/:course_id/assessments/:slug/lock", gradeHandler.LockAssessment)
 	}
 
 	// Student routes
@@ -238,8 +253,8 @@ func setupRouter(gradeHandler *handler.GradeHandler, timeHandler *sharedHandler.
 		periodHandler.RegisterRoutes(admin)
 	}
 
-	// Internal routes (service-to-service, no auth)
-	internal := api.Group("/internal")
+	// Internal routes (service-to-service, no auth — must NOT be under api group)
+	internal := router.Group("/api/grades/internal")
 	internal.Use(sharedMiddleware.StripInternalHeaders())
 	{
 		internalPeriodHandler.RegisterRoutes(internal)

@@ -62,6 +62,42 @@ func (q *Queries) DeleteScoresByCourse(ctx context.Context, courseID uuid.UUID) 
 	return err
 }
 
+const getLockedRegistrationsBySlug = `-- name: GetLockedRegistrationsBySlug :many
+SELECT registration_id
+FROM student_assessment_scores
+WHERE slug = $1
+  AND registration_id = ANY($2::uuid[])
+  AND is_locked = TRUE
+`
+
+type GetLockedRegistrationsBySlugParams struct {
+	Slug    string      `json:"slug"`
+	Column2 []uuid.UUID `json:"column_2"`
+}
+
+// Returns the subset of the given registration IDs whose score at the given
+// slug is already locked. Used by bulk upsert to skip locked entries without
+// per-row roundtrips.
+func (q *Queries) GetLockedRegistrationsBySlug(ctx context.Context, arg GetLockedRegistrationsBySlugParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, getLockedRegistrationsBySlug, arg.Slug, arg.Column2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []uuid.UUID{}
+	for rows.Next() {
+		var registration_id uuid.UUID
+		if err := rows.Scan(&registration_id); err != nil {
+			return nil, err
+		}
+		items = append(items, registration_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getScoreByRegistrationAndSlug = `-- name: GetScoreByRegistrationAndSlug :one
 SELECT id, registration_id, slug, score, is_absent, graded_by, graded_at, is_locked FROM student_assessment_scores
 WHERE registration_id = $1 AND slug = $2
@@ -157,6 +193,27 @@ func (q *Queries) LockScore(ctx context.Context, arg LockScoreParams) error {
 	return err
 }
 
+const lockScoresByCourseAndSlug = `-- name: LockScoresByCourseAndSlug :exec
+UPDATE student_assessment_scores sa
+SET is_locked = TRUE
+FROM student_course_registrations r
+WHERE sa.registration_id = r.id
+  AND r.course_id = $1
+  AND sa.slug = $2
+`
+
+type LockScoresByCourseAndSlugParams struct {
+	CourseID uuid.UUID `json:"course_id"`
+	Slug     string    `json:"slug"`
+}
+
+// Bulk-lock every score for a given (course, slug). Used by an instructor to
+// finalize an assessment once all students have drafts entered.
+func (q *Queries) LockScoresByCourseAndSlug(ctx context.Context, arg LockScoresByCourseAndSlugParams) error {
+	_, err := q.db.Exec(ctx, lockScoresByCourseAndSlug, arg.CourseID, arg.Slug)
+	return err
+}
+
 const unlockScore = `-- name: UnlockScore :exec
 UPDATE student_assessment_scores
 SET is_locked = FALSE
@@ -177,7 +234,7 @@ const upsertAssessmentScore = `-- name: UpsertAssessmentScore :one
 INSERT INTO student_assessment_scores (
     registration_id, slug, score, is_absent, graded_by, graded_at, is_locked
 ) VALUES (
-    $1, $2, $3, $4, $5, NOW(), TRUE
+    $1, $2, $3, $4, $5, NOW(), FALSE
 )
 ON CONFLICT (registration_id, slug) DO UPDATE SET
     score = EXCLUDED.score,
@@ -196,6 +253,9 @@ type UpsertAssessmentScoreParams struct {
 	GradedBy       uuid.UUID      `json:"graded_by"`
 }
 
+// Scores are inserted as editable drafts (is_locked=FALSE). An instructor
+// later calls LockScoresByCourseAndSlug to finalize a whole assessment.
+// Already-locked rows cannot be overwritten (admin must unlock first).
 func (q *Queries) UpsertAssessmentScore(ctx context.Context, arg UpsertAssessmentScoreParams) (StudentAssessmentScore, error) {
 	row := q.db.QueryRow(ctx, upsertAssessmentScore,
 		arg.RegistrationID,

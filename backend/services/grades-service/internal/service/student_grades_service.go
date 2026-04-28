@@ -50,10 +50,30 @@ func (s *StudentGradesService) GetMyGrades(ctx context.Context, studentID uuid.U
 		return nil, errors.ErrStudentDeactivated
 	}
 
-	// 2. Get active courses (registrations with scores)
-	// Note: This requires a custom query, but for now we'll skip active courses
-	// since they require joining with courses_cache which might not have the registration
-	activeCourses := []dto.ActiveCourse{}
+	// 2. Get active courses (registrations not yet finalized into completed_courses)
+	activeRows, err := s.registrationRepo.GetActiveRegistrationsByStudent(ctx, studentID)
+	if err != nil {
+		logger.Error("failed to get active registrations", zap.Error(err))
+		return nil, err
+	}
+
+	activeCourses := make([]dto.ActiveCourse, 0, len(activeRows))
+	for _, ar := range activeRows {
+		scoresMap, err := decodeScoresJSON(ar.Scores)
+		if err != nil {
+			logger.Error("failed to decode active course scores",
+				zap.String("course_code", ar.CourseCode),
+				zap.Error(err))
+			scoresMap = map[string]dto.ScoreDetail{}
+		}
+		activeCourses = append(activeCourses, dto.ActiveCourse{
+			CourseCode: ar.CourseCode,
+			CourseName: ar.CourseName,
+			Semester:   ar.Semester,
+			Credits:    int(ar.Credits),
+			Scores:     scoresMap,
+		})
+	}
 
 	// 3. Get completed courses
 	completedCourses, err := s.completedRepo.GetCompletedCoursesByStudent(ctx, studentID)
@@ -280,6 +300,61 @@ func parseInterfaceToFloat64(v any) float64 {
 		f, _ := strconv.ParseFloat(s, 64)
 		return f
 	}
+}
+
+// decodeScoresJSON parses a JSONB blob (scanned as []byte) of the shape
+//   { "midterm": { "score": 85, "is_absent": false, "is_locked": true }, ... }
+// into the DTO map. Empty/nil input returns an empty (non-nil) map.
+func decodeScoresJSON(raw any) (map[string]dto.ScoreDetail, error) {
+	out := map[string]dto.ScoreDetail{}
+	if raw == nil {
+		return out, nil
+	}
+	var b []byte
+	switch v := raw.(type) {
+	case []byte:
+		b = v
+	case string:
+		b = []byte(v)
+	case map[string]any:
+		// pgx/v5 decodes jsonb into a Go map by default — re-marshal so the
+		// downstream json.Unmarshal path stays single.
+		marshaled, err := json.Marshal(v)
+		if err != nil {
+			return out, err
+		}
+		b = marshaled
+	default:
+		return out, fmt.Errorf("unexpected scores type %T", raw)
+	}
+	if len(b) == 0 || string(b) == "null" {
+		return out, nil
+	}
+
+	// Backend stores numeric scores as DECIMAL — pgx renders them as JSON strings
+	// inside jsonb_object_agg output ("85.00"). Decode into a flexible shape.
+	type rawDetail struct {
+		Score    json.Number `json:"score"`
+		IsAbsent bool        `json:"is_absent"`
+		IsLocked bool        `json:"is_locked"`
+	}
+	tmp := map[string]rawDetail{}
+	if err := json.Unmarshal(b, &tmp); err != nil {
+		return out, err
+	}
+	for slug, d := range tmp {
+		detail := dto.ScoreDetail{
+			IsAbsent: d.IsAbsent,
+			IsLocked: d.IsLocked,
+		}
+		if s := d.Score.String(); s != "" {
+			if f, err := strconv.ParseFloat(s, 64); err == nil {
+				detail.Score = &f
+			}
+		}
+		out[slug] = detail
+	}
+	return out, nil
 }
 
 // parseInterfaceToInt64 safely converts interface{} (from pgx scan) to int64.

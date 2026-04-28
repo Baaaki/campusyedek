@@ -22,16 +22,16 @@ watching sql/queries
 !exclude tmp
 building...
 running...
-10:31:48.376	[34mINFO[0m	cmd/main.go:40	starting staff-service	{"environment": "development", "port": "8002"}
-10:31:48.385	[34mINFO[0m	cmd/main.go:54	database connection established
-10:31:48.385	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
-10:31:48.386	[34mINFO[0m	redis/redis.go:41	redis connection established
-10:31:48.386	[34mINFO[0m	cmd/main.go:72	rate limiter configured
-10:31:48.386	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
-10:31:48.389	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
-10:31:48.389	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
-10:31:48.389	[34mINFO[0m	cmd/main.go:263	RabbitMQ exchange declared	{"exchange": "staff.events"}
-10:31:48.417	[34mINFO[0m	cmd/main.go:287	downstream consumer queues pre-declared
+13:36:48.559	[34mINFO[0m	cmd/main.go:40	starting staff-service	{"environment": "development", "port": "8002"}
+13:36:48.584	[34mINFO[0m	cmd/main.go:54	database connection established
+13:36:48.584	[34mINFO[0m	redis/redis.go:20	connecting to redis	{"addr": "localhost:6379"}
+13:36:48.589	[34mINFO[0m	redis/redis.go:41	redis connection established
+13:36:48.589	[34mINFO[0m	cmd/main.go:72	rate limiter configured
+13:36:48.589	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+13:36:48.592	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+13:36:48.592	[34mINFO[0m	cmd/main.go:85	RabbitMQ connection established
+13:36:48.592	[34mINFO[0m	cmd/main.go:263	RabbitMQ exchange declared	{"exchange": "staff.events"}
+13:36:48.624	[34mINFO[0m	cmd/main.go:287	downstream consumer queues pre-declared
 [GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
  - using env:	export GIN_MODE=release
  - using code:	gin.SetMode(gin.ReleaseMode)
@@ -49,49 +49,70 @@ running...
 [GIN-debug] PUT    /api/staff/:id            --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).UpdateStaff-fm (10 handlers)
 [GIN-debug] DELETE /api/staff/:id            --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*StaffHandler).DeleteStaff-fm (10 handlers)
 [GIN-debug] PUT    /api/staff/:id/profile    --> github.com/baaaki/mydreamcampus/staff-service/internal/handler.(*TeacherProfileHandler).UpdateTeacherProfile-fm (10 handlers)
+13:36:48.624	[34mINFO[0m	worker/outbox_worker.go:39	starting outbox worker	{"interval": "5s", "batch_size": 10}
 [GIN-debug] POST   /api/staff/admin/time/simulate --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Simulate-fm (8 handlers)
 [GIN-debug] POST   /api/staff/admin/time/reset --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Reset-fm (8 handlers)
 [GIN-debug] GET    /api/staff/admin/time/status --> github.com/baaaki/mydreamcampus/shared/handler.(*TimeHandler).Status-fm (8 handlers)
-10:31:48.418	[34mINFO[0m	worker/outbox_worker.go:40	starting outbox worker	{"interval": "5s", "batch_size": 10}
-10:31:48.418	[34mINFO[0m	cmd/main.go:136	server starting	{"port": "8002"}
-10:31:55.187	[34mINFO[0m	gin@v1.11.0/context.go:192	getting staff by ID	{"request_id": "4400d747-732a-4fed-9f96-8a8d7589dded", "endpoint": "GetStaffByID", "handler": "StaffHandler", "staff_id": "019b4a11-713c-76d0-839f-30275a3b387b"}
-10:31:55.189	[34mINFO[0m	handler/staff_handler.go:129	staff retrieved successfully from database	{"request_id": "4400d747-732a-4fed-9f96-8a8d7589dded", "service": "StaffService", "method": "GetStaffByID", "staff_id": "019b4a11-713c-76d0-839f-30275a3b387b", "email": "ahmet.yilmaz@university.edu.tr"}
-10:31:55.189	[34mINFO[0m	gin@v1.11.0/context.go:192	staff retrieved successfully	{"request_id": "4400d747-732a-4fed-9f96-8a8d7589dded", "endpoint": "GetStaffByID", "handler": "StaffHandler", "staff_id": "019b4a11-713c-76d0-839f-30275a3b387b"}
-10:31:55.189	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "4400d747-732a-4fed-9f96-8a8d7589dded", "method": "GET", "path": "/internal/staff/019b4a11-713c-76d0-839f-30275a3b387b", "query": "", "status": 200, "duration": "2.513567ms", "ip": "127.0.0.1", "user_agent": "Go-http-client/1.1"}
-10:31:58.788	[34mINFO[0m	gin@v1.11.0/context.go:192	getting staff by ID	{"request_id": "c3930635-545a-425a-9436-a32cd7b75816", "endpoint": "GetStaffByID", "handler": "StaffHandler", "staff_id": "019b4a11-713c-76d0-839f-30275a3b387b"}
-10:31:58.788	[34mINFO[0m	handler/staff_handler.go:129	staff retrieved successfully from database	{"request_id": "c3930635-545a-425a-9436-a32cd7b75816", "service": "StaffService", "method": "GetStaffByID", "staff_id": "019b4a11-713c-76d0-839f-30275a3b387b", "email": "ahmet.yilmaz@university.edu.tr"}
-10:31:58.788	[34mINFO[0m	gin@v1.11.0/context.go:192	staff retrieved successfully	{"request_id": "c3930635-545a-425a-9436-a32cd7b75816", "endpoint": "GetStaffByID", "handler": "StaffHandler", "staff_id": "019b4a11-713c-76d0-839f-30275a3b387b"}
-10:31:58.788	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "c3930635-545a-425a-9436-a32cd7b75816", "method": "GET", "path": "/internal/staff/019b4a11-713c-76d0-839f-30275a3b387b", "query": "", "status": 200, "duration": "567.655µs", "ip": "127.0.0.1", "user_agent": "Go-http-client/1.1"}
-10:32:24.643	[35mDEBUG[0m	middleware/auth.go:256	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-10:32:24.643	[34mINFO[0m	gin@v1.11.0/context.go:192	getting instructors by department	{"request_id": "b854ccc4-066c-4993-b23e-13ef124e677c", "endpoint": "GetInstructorsByDepartment", "handler": "StaffHandler", "department": "Bilgisayar Bilimleri"}
-10:32:24.645	[34mINFO[0m	handler/staff_handler.go:404	instructors retrieved successfully from database	{"request_id": "b854ccc4-066c-4993-b23e-13ef124e677c", "service": "StaffService", "method": "GetInstructorsByDepartment", "department": "Bilgisayar Bilimleri", "count": 2}
-10:32:24.645	[34mINFO[0m	gin@v1.11.0/context.go:192	instructors retrieved successfully	{"request_id": "b854ccc4-066c-4993-b23e-13ef124e677c", "endpoint": "GetInstructorsByDepartment", "handler": "StaffHandler", "department": "Bilgisayar Bilimleri", "total_results": 2}
-10:32:24.645	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "b854ccc4-066c-4993-b23e-13ef124e677c", "method": "GET", "path": "/api/staff/instructors", "query": "department=Bilgisayar+Bilimleri&limit=100", "status": 200, "duration": "2.900967ms", "ip": "172.22.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-10:32:35.157	[34mINFO[0m	gin@v1.11.0/context.go:192	getting staff by ID	{"request_id": "c5f27fa6-a1fc-4887-89a9-f1be0f5b435c", "endpoint": "GetStaffByID", "handler": "StaffHandler", "staff_id": "019c0115-3248-7cad-8ca1-305acba4e48c"}
-10:32:35.157	[34mINFO[0m	handler/staff_handler.go:129	staff retrieved successfully from database	{"request_id": "c5f27fa6-a1fc-4887-89a9-f1be0f5b435c", "service": "StaffService", "method": "GetStaffByID", "staff_id": "019c0115-3248-7cad-8ca1-305acba4e48c", "email": "asfsadhfasf@hotmail.com"}
-10:32:35.157	[34mINFO[0m	gin@v1.11.0/context.go:192	staff retrieved successfully	{"request_id": "c5f27fa6-a1fc-4887-89a9-f1be0f5b435c", "endpoint": "GetStaffByID", "handler": "StaffHandler", "staff_id": "019c0115-3248-7cad-8ca1-305acba4e48c"}
-10:32:35.157	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "c5f27fa6-a1fc-4887-89a9-f1be0f5b435c", "method": "GET", "path": "/internal/staff/019c0115-3248-7cad-8ca1-305acba4e48c", "query": "", "status": 200, "duration": "1.109889ms", "ip": "127.0.0.1", "user_agent": "Go-http-client/1.1"}
-10:32:50.398	[34mINFO[0m	gin@v1.11.0/context.go:192	getting staff by ID	{"request_id": "facfaa3b-fa58-452b-b646-48c574834cc1", "endpoint": "GetStaffByID", "handler": "StaffHandler", "staff_id": "019b4a11-713c-76d0-839f-30275a3b387b"}
-10:32:50.401	[34mINFO[0m	handler/staff_handler.go:129	staff retrieved successfully from database	{"request_id": "facfaa3b-fa58-452b-b646-48c574834cc1", "service": "StaffService", "method": "GetStaffByID", "staff_id": "019b4a11-713c-76d0-839f-30275a3b387b", "email": "ahmet.yilmaz@university.edu.tr"}
-10:32:50.401	[34mINFO[0m	gin@v1.11.0/context.go:192	staff retrieved successfully	{"request_id": "facfaa3b-fa58-452b-b646-48c574834cc1", "endpoint": "GetStaffByID", "handler": "StaffHandler", "staff_id": "019b4a11-713c-76d0-839f-30275a3b387b"}
-10:32:50.401	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "facfaa3b-fa58-452b-b646-48c574834cc1", "method": "GET", "path": "/internal/staff/019b4a11-713c-76d0-839f-30275a3b387b", "query": "", "status": 200, "duration": "3.354328ms", "ip": "127.0.0.1", "user_agent": "Go-http-client/1.1"}
-11:28:59.668	[35mDEBUG[0m	middleware/auth.go:256	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-11:28:59.668	[34mINFO[0m	gin@v1.11.0/context.go:192	getting instructors by department	{"request_id": "169394a2-6c1f-4695-93fb-573d9c61cdbb", "endpoint": "GetInstructorsByDepartment", "handler": "StaffHandler", "department": "Yaylı Çalgılar"}
-11:28:59.668	[34mINFO[0m	handler/staff_handler.go:404	instructors retrieved successfully from database	{"request_id": "169394a2-6c1f-4695-93fb-573d9c61cdbb", "service": "StaffService", "method": "GetInstructorsByDepartment", "department": "Yaylı Çalgılar", "count": 0}
-11:28:59.668	[34mINFO[0m	gin@v1.11.0/context.go:192	instructors retrieved successfully	{"request_id": "169394a2-6c1f-4695-93fb-573d9c61cdbb", "endpoint": "GetInstructorsByDepartment", "handler": "StaffHandler", "department": "Yaylı Çalgılar", "total_results": 0}
-11:28:59.668	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "169394a2-6c1f-4695-93fb-573d9c61cdbb", "method": "GET", "path": "/api/staff/instructors", "query": "department=Yayl%C4%B1+%C3%87alg%C4%B1lar&limit=100", "status": 200, "duration": "1.471424ms", "ip": "172.22.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-11:29:03.672	[35mDEBUG[0m	middleware/auth.go:256	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-11:29:03.672	[34mINFO[0m	gin@v1.11.0/context.go:192	getting instructors by department	{"request_id": "556a1345-e080-4266-b0e6-1948299e0f19", "endpoint": "GetInstructorsByDepartment", "handler": "StaffHandler", "department": "Bilgisayar Bilimleri"}
-11:29:03.672	[34mINFO[0m	handler/staff_handler.go:404	instructors retrieved successfully from database	{"request_id": "556a1345-e080-4266-b0e6-1948299e0f19", "service": "StaffService", "method": "GetInstructorsByDepartment", "department": "Bilgisayar Bilimleri", "count": 2}
-11:29:03.672	[34mINFO[0m	gin@v1.11.0/context.go:192	instructors retrieved successfully	{"request_id": "556a1345-e080-4266-b0e6-1948299e0f19", "endpoint": "GetInstructorsByDepartment", "handler": "StaffHandler", "department": "Bilgisayar Bilimleri", "total_results": 2}
-11:29:03.673	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "556a1345-e080-4266-b0e6-1948299e0f19", "method": "GET", "path": "/api/staff/instructors", "query": "department=Bilgisayar+Bilimleri&limit=100", "status": 200, "duration": "897.256µs", "ip": "172.22.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-11:51:46.822	[35mDEBUG[0m	middleware/auth.go:256	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-11:51:46.822	[34mINFO[0m	gin@v1.11.0/context.go:192	getting instructors by department	{"request_id": "c93fc49f-8f44-436e-bffe-bf86b47c5246", "endpoint": "GetInstructorsByDepartment", "handler": "StaffHandler", "department": "Gemi Makineleri İşletme Mühendisliği"}
-11:51:46.826	[34mINFO[0m	handler/staff_handler.go:404	instructors retrieved successfully from database	{"request_id": "c93fc49f-8f44-436e-bffe-bf86b47c5246", "service": "StaffService", "method": "GetInstructorsByDepartment", "department": "Gemi Makineleri İşletme Mühendisliği", "count": 0}
-11:51:46.826	[34mINFO[0m	gin@v1.11.0/context.go:192	instructors retrieved successfully	{"request_id": "c93fc49f-8f44-436e-bffe-bf86b47c5246", "endpoint": "GetInstructorsByDepartment", "handler": "StaffHandler", "department": "Gemi Makineleri İşletme Mühendisliği", "total_results": 0}
-11:51:46.826	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "c93fc49f-8f44-436e-bffe-bf86b47c5246", "method": "GET", "path": "/api/staff/instructors", "query": "department=Gemi+Makineleri+%C4%B0%C5%9Fletme+M%C3%BChendisli%C4%9Fi&limit=100", "status": 200, "duration": "4.042663ms", "ip": "172.22.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-11:51:51.932	[35mDEBUG[0m	middleware/auth.go:256	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
-11:51:51.932	[34mINFO[0m	gin@v1.11.0/context.go:192	getting instructors by department	{"request_id": "86e279b9-94b2-4ab3-b540-f9a856a9bc01", "endpoint": "GetInstructorsByDepartment", "handler": "StaffHandler", "department": "Bilgisayar Bilimleri"}
-11:51:51.935	[34mINFO[0m	handler/staff_handler.go:404	instructors retrieved successfully from database	{"request_id": "86e279b9-94b2-4ab3-b540-f9a856a9bc01", "service": "StaffService", "method": "GetInstructorsByDepartment", "department": "Bilgisayar Bilimleri", "count": 2}
-11:51:51.935	[34mINFO[0m	gin@v1.11.0/context.go:192	instructors retrieved successfully	{"request_id": "86e279b9-94b2-4ab3-b540-f9a856a9bc01", "endpoint": "GetInstructorsByDepartment", "handler": "StaffHandler", "department": "Bilgisayar Bilimleri", "total_results": 2}
-11:51:51.935	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "86e279b9-94b2-4ab3-b540-f9a856a9bc01", "method": "GET", "path": "/api/staff/instructors", "query": "department=Bilgisayar+Bilimleri&limit=100", "status": 200, "duration": "3.292183ms", "ip": "172.22.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:36:48.625	[34mINFO[0m	cmd/main.go:136	server starting	{"port": "8002"}
+13:37:37.557	[35mDEBUG[0m	middleware/auth.go:257	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:37:37.558	[34mINFO[0m	gin@v1.11.0/context.go:192	listing staff	{"request_id": "07a1064f-04a3-47dd-b4a1-c2c4795f8397", "endpoint": "ListStaff", "handler": "StaffHandler", "page": 1, "limit": 100}
+13:37:37.562	[34mINFO[0m	handler/staff_handler.go:340	staff list retrieved successfully from database	{"request_id": "07a1064f-04a3-47dd-b4a1-c2c4795f8397", "service": "StaffService", "method": "ListStaff", "page": 1, "limit": 100, "total_records": 18, "returned_records": 18, "total_pages": 1}
+13:37:37.562	[34mINFO[0m	gin@v1.11.0/context.go:192	staff list retrieved successfully	{"request_id": "07a1064f-04a3-47dd-b4a1-c2c4795f8397", "endpoint": "ListStaff", "handler": "StaffHandler", "total_results": 18}
+13:37:37.563	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "07a1064f-04a3-47dd-b4a1-c2c4795f8397", "method": "GET", "path": "/api/staff", "query": "page=1&limit=100", "status": 200, "duration": "6.291886ms", "ip": "172.19.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:37:37.566	[35mDEBUG[0m	middleware/auth.go:257	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:37:37.566	[34mINFO[0m	gin@v1.11.0/context.go:192	listing staff	{"request_id": "3e5afef6-cb00-4417-a6d4-1b546000e153", "endpoint": "ListStaff", "handler": "StaffHandler", "page": 1, "limit": 100}
+13:37:37.567	[34mINFO[0m	handler/staff_handler.go:340	staff list retrieved successfully from database	{"request_id": "3e5afef6-cb00-4417-a6d4-1b546000e153", "service": "StaffService", "method": "ListStaff", "page": 1, "limit": 100, "total_records": 18, "returned_records": 18, "total_pages": 1}
+13:37:37.567	[34mINFO[0m	gin@v1.11.0/context.go:192	staff list retrieved successfully	{"request_id": "3e5afef6-cb00-4417-a6d4-1b546000e153", "endpoint": "ListStaff", "handler": "StaffHandler", "total_results": 18}
+13:37:37.567	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "3e5afef6-cb00-4417-a6d4-1b546000e153", "method": "GET", "path": "/api/staff", "query": "page=1&limit=100", "status": 200, "duration": "868.285µs", "ip": "172.19.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:37:38.465	[35mDEBUG[0m	middleware/auth.go:257	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:37:38.466	[34mINFO[0m	gin@v1.11.0/context.go:192	listing staff	{"request_id": "c981fa0b-a285-4b1a-b74c-3d56b1200738", "endpoint": "ListStaff", "handler": "StaffHandler", "page": 1, "limit": 100}
+13:37:38.466	[34mINFO[0m	handler/staff_handler.go:340	staff list retrieved successfully from database	{"request_id": "c981fa0b-a285-4b1a-b74c-3d56b1200738", "service": "StaffService", "method": "ListStaff", "page": 1, "limit": 100, "total_records": 18, "returned_records": 18, "total_pages": 1}
+13:37:38.466	[34mINFO[0m	gin@v1.11.0/context.go:192	staff list retrieved successfully	{"request_id": "c981fa0b-a285-4b1a-b74c-3d56b1200738", "endpoint": "ListStaff", "handler": "StaffHandler", "total_results": 18}
+13:37:38.466	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "c981fa0b-a285-4b1a-b74c-3d56b1200738", "method": "GET", "path": "/api/staff", "query": "role=teacher&limit=100", "status": 200, "duration": "1.002268ms", "ip": "172.19.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:37:38.469	[35mDEBUG[0m	middleware/auth.go:257	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:37:38.469	[34mINFO[0m	gin@v1.11.0/context.go:192	listing staff	{"request_id": "ad5478ef-d15c-4cc1-bbb4-f6c00b687c05", "endpoint": "ListStaff", "handler": "StaffHandler", "page": 1, "limit": 100}
+13:37:38.469	[34mINFO[0m	handler/staff_handler.go:340	staff list retrieved successfully from database	{"request_id": "ad5478ef-d15c-4cc1-bbb4-f6c00b687c05", "service": "StaffService", "method": "ListStaff", "page": 1, "limit": 100, "total_records": 18, "returned_records": 18, "total_pages": 1}
+13:37:38.469	[34mINFO[0m	gin@v1.11.0/context.go:192	staff list retrieved successfully	{"request_id": "ad5478ef-d15c-4cc1-bbb4-f6c00b687c05", "endpoint": "ListStaff", "handler": "StaffHandler", "total_results": 18}
+13:37:38.470	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "ad5478ef-d15c-4cc1-bbb4-f6c00b687c05", "method": "GET", "path": "/api/staff", "query": "role=teacher&limit=100", "status": 200, "duration": "797.602µs", "ip": "172.19.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:37:39.262	[35mDEBUG[0m	middleware/auth.go:257	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:37:39.262	[34mINFO[0m	gin@v1.11.0/context.go:192	listing staff	{"request_id": "c3455b34-0762-4eb3-b4f9-fcb23a280142", "endpoint": "ListStaff", "handler": "StaffHandler", "page": 1, "limit": 100}
+13:37:39.263	[34mINFO[0m	handler/staff_handler.go:340	staff list retrieved successfully from database	{"request_id": "c3455b34-0762-4eb3-b4f9-fcb23a280142", "service": "StaffService", "method": "ListStaff", "page": 1, "limit": 100, "total_records": 18, "returned_records": 18, "total_pages": 1}
+13:37:39.263	[34mINFO[0m	gin@v1.11.0/context.go:192	staff list retrieved successfully	{"request_id": "c3455b34-0762-4eb3-b4f9-fcb23a280142", "endpoint": "ListStaff", "handler": "StaffHandler", "total_results": 18}
+13:37:39.263	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "c3455b34-0762-4eb3-b4f9-fcb23a280142", "method": "GET", "path": "/api/staff", "query": "page=1&limit=100", "status": 200, "duration": "857.994µs", "ip": "172.19.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:37:39.268	[35mDEBUG[0m	middleware/auth.go:257	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:37:39.268	[34mINFO[0m	gin@v1.11.0/context.go:192	listing staff	{"request_id": "776533b9-b5ba-49eb-9c57-f0d05a10841c", "endpoint": "ListStaff", "handler": "StaffHandler", "page": 1, "limit": 100}
+13:37:39.269	[34mINFO[0m	handler/staff_handler.go:340	staff list retrieved successfully from database	{"request_id": "776533b9-b5ba-49eb-9c57-f0d05a10841c", "service": "StaffService", "method": "ListStaff", "page": 1, "limit": 100, "total_records": 18, "returned_records": 18, "total_pages": 1}
+13:37:39.269	[34mINFO[0m	gin@v1.11.0/context.go:192	staff list retrieved successfully	{"request_id": "776533b9-b5ba-49eb-9c57-f0d05a10841c", "endpoint": "ListStaff", "handler": "StaffHandler", "total_results": 18}
+13:37:39.269	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "776533b9-b5ba-49eb-9c57-f0d05a10841c", "method": "GET", "path": "/api/staff", "query": "page=1&limit=100", "status": 200, "duration": "1.295647ms", "ip": "172.19.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:37:51.670	[35mDEBUG[0m	middleware/auth.go:257	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:37:51.670	[34mINFO[0m	gin@v1.11.0/context.go:192	listing staff	{"request_id": "758252f5-beb5-4d0d-ae25-6c84adf129e3", "endpoint": "ListStaff", "handler": "StaffHandler", "page": 1, "limit": 100}
+13:37:51.673	[34mINFO[0m	handler/staff_handler.go:340	staff list retrieved successfully from database	{"request_id": "758252f5-beb5-4d0d-ae25-6c84adf129e3", "service": "StaffService", "method": "ListStaff", "page": 1, "limit": 100, "total_records": 18, "returned_records": 18, "total_pages": 1}
+13:37:51.673	[34mINFO[0m	gin@v1.11.0/context.go:192	staff list retrieved successfully	{"request_id": "758252f5-beb5-4d0d-ae25-6c84adf129e3", "endpoint": "ListStaff", "handler": "StaffHandler", "total_results": 18}
+13:37:51.673	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "758252f5-beb5-4d0d-ae25-6c84adf129e3", "method": "GET", "path": "/api/staff", "query": "role=teacher&limit=100", "status": 200, "duration": "3.21095ms", "ip": "172.19.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:37:51.676	[35mDEBUG[0m	middleware/auth.go:257	user extracted from headers	{"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+13:37:51.676	[34mINFO[0m	gin@v1.11.0/context.go:192	listing staff	{"request_id": "cf92b5b2-c567-422a-9964-5e675a420ee7", "endpoint": "ListStaff", "handler": "StaffHandler", "page": 1, "limit": 100}
+13:37:51.676	[34mINFO[0m	handler/staff_handler.go:340	staff list retrieved successfully from database	{"request_id": "cf92b5b2-c567-422a-9964-5e675a420ee7", "service": "StaffService", "method": "ListStaff", "page": 1, "limit": 100, "total_records": 18, "returned_records": 18, "total_pages": 1}
+13:37:51.676	[34mINFO[0m	gin@v1.11.0/context.go:192	staff list retrieved successfully	{"request_id": "cf92b5b2-c567-422a-9964-5e675a420ee7", "endpoint": "ListStaff", "handler": "StaffHandler", "total_results": 18}
+13:37:51.676	[34mINFO[0m	middleware/logger.go:60	http request	{"request_id": "cf92b5b2-c567-422a-9964-5e675a420ee7", "method": "GET", "path": "/api/staff", "query": "role=teacher&limit=100", "status": 200, "duration": "739.741µs", "ip": "172.19.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0", "user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+23:04:49.549	[31mERROR[0m	rabbitmq/connection.go:94	rabbitmq connection lost	{"error": "Exception (320) Reason: \"CONNECTION_FORCED - broker forced connection closure with reason 'shutdown'\""}
+github.com/baaaki/mydreamcampus/shared/rabbitmq.(*Connection).handleReconnect
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/rabbitmq/connection.go:94
+23:04:49.549	[34mINFO[0m	rabbitmq/connection.go:99	attempting to reconnect to rabbitmq...
+23:04:54.550	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+23:04:54.550	[31mERROR[0m	rabbitmq/connection.go:103	rabbitmq reconnection failed	{"error": "failed to connect to rabbitmq: Exception (501) Reason: \"read tcp 127.0.0.1:55158->127.0.0.1:5672: read: connection reset by peer\""}
+github.com/baaaki/mydreamcampus/shared/rabbitmq.(*Connection).handleReconnect
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/rabbitmq/connection.go:103
+23:04:54.550	[34mINFO[0m	rabbitmq/connection.go:99	attempting to reconnect to rabbitmq...
+23:04:59.550	[34mINFO[0m	rabbitmq/connection.go:53	connecting to rabbitmq	{"url": "amqp://rabbitmq:rabbitmq@localhost:5672/"}
+23:04:59.562	[34mINFO[0m	rabbitmq/connection.go:85	rabbitmq connection established
+23:04:59.562	[34mINFO[0m	rabbitmq/connection.go:107	rabbitmq reconnection successful
+23:06:49.840	[31mERROR[0m	rabbitmq/connection.go:94	rabbitmq connection lost	{"error": "Exception (320) Reason: \"CONNECTION_FORCED - broker forced connection closure with reason 'shutdown'\""}
+github.com/baaaki/mydreamcampus/shared/rabbitmq.(*Connection).handleReconnect
+	/home/nautilus/Desktop/Playground/mydreamcampus/backend/shared/rabbitmq/connection.go:94
+23:06:49.841	[34mINFO[0m	rabbitmq/connection.go:99	attempting to reconnect to rabbitmq...
+cleaning...
+23:06:50.008	[34mINFO[0m	cmd/main.go:151	shutting down server...
+23:06:50.008	[34mINFO[0m	cmd/main.go:166	server exited
+23:06:50.008	[34mINFO[0m	redis/redis.go:48	closing redis connection
+23:06:50.008	[34mINFO[0m	worker/outbox_worker.go:53	stopping outbox worker
+see you again~

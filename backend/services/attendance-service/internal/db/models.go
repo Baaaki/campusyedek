@@ -96,6 +96,16 @@ func (ns NullSessionTypeEnum) Value() (driver.Value, error) {
 	return string(ns.SessionTypeEnum), nil
 }
 
+type AcademicPeriod struct {
+	ID          pgtype.UUID        `json:"id"`
+	Semester    string             `json:"semester"`
+	PeriodStart pgtype.Timestamptz `json:"period_start"`
+	PeriodEnd   pgtype.Timestamptz `json:"period_end"`
+	IsActive    bool               `json:"is_active"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
 type AttendanceRecord struct {
 	ID               pgtype.UUID      `json:"id"`
 	SessionID        pgtype.UUID      `json:"session_id"`

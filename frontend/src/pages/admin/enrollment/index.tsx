@@ -64,13 +64,15 @@ export default function EnrollmentPage() {
     newCourse.schedule_sessions.forEach(newSlot => {
       existingCourses.forEach(existingCourse => {
         existingCourse.schedule_sessions.forEach(existingSlot => {
-          if (
-            newSlot.day === existingSlot.day &&
-            newSlot.slot === existingSlot.slot
-          ) {
-            const conflictStr = `${newCourse.course_code} & ${existingCourse.course_code}`;
-            if (!conflicts.includes(conflictStr)) {
-              conflicts.push(conflictStr);
+          if (newSlot.day_of_week.toLowerCase() === existingSlot.day_of_week.toLowerCase()) {
+            const commonSlots = newSlot.slot_numbers.filter(s =>
+              existingSlot.slot_numbers.includes(s)
+            );
+            if (commonSlots.length > 0) {
+              const conflictStr = `${newCourse.course_code} & ${existingCourse.course_code}`;
+              if (!conflicts.includes(conflictStr)) {
+                conflicts.push(conflictStr);
+              }
             }
           }
         });

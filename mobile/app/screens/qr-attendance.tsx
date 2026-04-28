@@ -1,11 +1,12 @@
 import { useState, useCallback } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Text, Surface, Banner, ActivityIndicator, useTheme } from 'react-native-paper';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { useMyAttendance, useScanQR } from '@/hooks/useAttendance';
-import type { CourseAttendance, WeeklyRecord } from '@/types/attendance.types';
+import type { CourseAttendance, QRPayload, WeeklyRecord } from '@/types/attendance.types';
+import { QRScannerModal } from '@/components/QRScannerModal';
 import {
   SectionHeader,
   StatusChip,
@@ -26,6 +27,25 @@ export default function QRAttendanceScreen() {
   const { data: attendance, isLoading, error } = useMyAttendance();
   const scanMutation = useScanQR();
   const [lastScan, setLastScan] = useState<{ course: string; message: string } | null>(null);
+  const [scannerOpen, setScannerOpen] = useState(false);
+
+  const handleScanned = useCallback(
+    (payload: QRPayload) => {
+      setScannerOpen(false);
+      scanMutation.mutate(
+        { qr_payload: payload },
+        {
+          onSuccess: (res) => {
+            setLastScan({
+              course: `${res.course_code} ${res.course_name}`,
+              message: res.message,
+            });
+          },
+        },
+      );
+    },
+    [scanMutation],
+  );
 
   const recentRecords: (WeeklyRecord & { courseName: string; courseCode: string })[] = [];
   if (attendance?.courses) {
@@ -46,14 +66,26 @@ export default function QRAttendanceScreen() {
 
   return (
     <ScreenWrapper onRefresh={handleRefresh}>
+      <QRScannerModal
+        visible={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onScanned={handleScanned}
+      />
+
       {/* QR Scan Area */}
       <Surface style={[styles.qrArea, { backgroundColor: colors.surface }]} elevation={2}>
-        <View
-          style={[styles.qrIconBox, { borderColor: colors.primary }]}
-          accessibilityLabel="QR kod tarama alani"
+        <Pressable
+          onPress={() => setScannerOpen(true)}
+          disabled={scanMutation.isPending}
+          style={({ pressed }) => [
+            styles.qrIconBox,
+            { borderColor: colors.primary, opacity: pressed ? 0.7 : 1 },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="QR kod tarayiciyi ac"
         >
           <FontAwesome name="qrcode" size={72} color={colors.primary} />
-        </View>
+        </Pressable>
         <Text variant="bodyLarge" style={{ color: colors.onSurfaceVariant, marginTop: spacing.md }}>
           Yoklama icin QR kodu tarayin
         </Text>

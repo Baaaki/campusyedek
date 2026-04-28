@@ -198,6 +198,7 @@ type ClosedDay struct {
 	Date      pgtype.Date        `json:"date"`
 	Reason    string             `json:"reason"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	Semester  pgtype.Text        `json:"semester"`
 }
 
 type MonthlyMenu struct {

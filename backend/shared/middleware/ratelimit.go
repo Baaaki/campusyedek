@@ -20,9 +20,13 @@ type RateLimitStore interface {
 }
 
 // EndpointLimit defines rate limit for a specific endpoint group.
+// FailClosed: when true, Redis errors return 503 instead of allowing
+// the request. Use for sensitive endpoints (login, password change,
+// grade writes, financial) where bypassing rate limit is unacceptable.
 type EndpointLimit struct {
-	Limit  int
-	Window time.Duration
+	Limit      int
+	Window     time.Duration
+	FailClosed bool
 }
 
 // RateLimitConfig holds rate limiting configuration.
@@ -173,7 +177,16 @@ func EndpointRateLimit(group string) gin.HandlerFunc {
 				zap.Error(err),
 				zap.String("group", group),
 				zap.String("key", key),
+				zap.Bool("fail_closed", endpointLimit.FailClosed),
 			)
+			if endpointLimit.FailClosed {
+				c.JSON(http.StatusServiceUnavailable, gin.H{
+					"error":   "SERVICE_UNAVAILABLE",
+					"message": "Service temporarily unavailable, please try again later",
+				})
+				c.Abort()
+				return
+			}
 			c.Next()
 			return
 		}

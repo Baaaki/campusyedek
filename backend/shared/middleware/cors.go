@@ -8,10 +8,33 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// defaultAllowedOrigins is the list of origins allowed in development.
-var defaultAllowedOrigins = []string{
+// devDefaultOrigins is used only when CORS_ALLOWED_ORIGINS is unset and
+// ENVIRONMENT != "production".
+var devDefaultOrigins = []string{
 	"http://localhost:3000",
 	"http://localhost:3002",
+}
+
+// resolveAllowedOrigins reads CORS_ALLOWED_ORIGINS (comma-separated). In
+// production the env var must be set; otherwise the constructor panics so
+// the misconfiguration surfaces at startup rather than as a silent reflect-all.
+func resolveAllowedOrigins() []string {
+	raw := os.Getenv("CORS_ALLOWED_ORIGINS")
+	if raw != "" {
+		parts := strings.Split(raw, ",")
+		origins := make([]string, 0, len(parts))
+		for _, p := range parts {
+			if trimmed := strings.TrimSpace(p); trimmed != "" {
+				origins = append(origins, trimmed)
+			}
+		}
+		return origins
+	}
+
+	if os.Getenv("ENVIRONMENT") == "production" {
+		panic("CORS_ALLOWED_ORIGINS environment variable must be set in production")
+	}
+	return devDefaultOrigins
 }
 
 // CORS handles Cross-Origin Resource Sharing headers.
@@ -19,10 +42,12 @@ var defaultAllowedOrigins = []string{
 // and reflects the specific origin instead of using a wildcard,
 // so Access-Control-Allow-Credentials can be safely set to true.
 func CORS() gin.HandlerFunc {
+	allowedOrigins := resolveAllowedOrigins()
+
 	return func(c *gin.Context) {
 		origin := c.Request.Header.Get("Origin")
 
-		if slices.Contains(defaultAllowedOrigins, origin) {
+		if slices.Contains(allowedOrigins, origin) {
 			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
 			c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
 			c.Writer.Header().Set("Vary", "Origin")
@@ -69,17 +94,12 @@ func CORSWithOrigins(allowedOrigins []string) gin.HandlerFunc {
 	}
 }
 
-// productionAllowedOrigins is the list of origins allowed in production for mobile CORS.
-// Add your production domain(s) here.
-var productionAllowedOrigins = []string{
-	// "https://mydreamcampus.com",
-}
-
 // CORSForMobile allows CORS for web and mobile apps.
-// In production (APP_ENV=production), only known origins are allowed.
+// In production, only origins in CORS_ALLOWED_ORIGINS are allowed.
 // In development, localhost and Expo origins are also permitted.
 func CORSForMobile() gin.HandlerFunc {
-	isProduction := os.Getenv("APP_ENV") == "production"
+	isProduction := os.Getenv("ENVIRONMENT") == "production"
+	allowedOrigins := resolveAllowedOrigins()
 
 	return func(c *gin.Context) {
 		origin := c.Request.Header.Get("Origin")
@@ -99,13 +119,11 @@ func CORSForMobile() gin.HandlerFunc {
 
 		allowed := false
 		if isProduction {
-			// In production, only allow explicitly listed origins
-			allowed = slices.Contains(productionAllowedOrigins, origin)
+			allowed = slices.Contains(allowedOrigins, origin)
 		} else {
-			// In development, allow localhost, exp:// (Expo Go)
 			allowed = strings.HasPrefix(origin, "http://localhost") ||
 				strings.HasPrefix(origin, "exp://") ||
-				slices.Contains(productionAllowedOrigins, origin)
+				slices.Contains(allowedOrigins, origin)
 		}
 
 		if allowed {

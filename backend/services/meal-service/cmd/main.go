@@ -99,8 +99,12 @@ func main() {
 	}
 	defer paymentClient.Close()
 
-	// Initialize closed days repository
-	closedDaysRepo := repository.NewClosedDaysRepository(dbPool)
+	// Initialize closed days repository wrapped with an in-memory TTL cache.
+	// Closed days rarely change; the reservation hot path answers from memory.
+	closedDaysRepo := repository.NewClosedDaysCache(
+		repository.NewClosedDaysRepository(dbPool),
+		5*time.Minute,
+	)
 
 	// Initialize audit logger (via catalog service HTTP)
 	auditLogger := audit.NewHTTPLogger(cfg.CatalogService.BaseURL, "meal")
@@ -150,6 +154,17 @@ func main() {
 	// Setup HTTP server
 	router := setupRouter(cfg, mealHandler, timeHandler, closedDaysHandler, log)
 
+	// Health: liveness (process up). Ready: deps reachable.
+	healthChecks := map[string]sharedHandler.HealthCheck{
+		"database": dbPool.Ping,
+		"rabbitmq": rabbitConn.Ping,
+	}
+	if redisClient != nil {
+		healthChecks["redis"] = redisClient.Ping
+	}
+	router.GET("/health", sharedHandler.LivenessHandler("meal-service"))
+	router.GET("/ready", sharedHandler.ReadinessHandler("meal-service", healthChecks))
+
 	srv := &http.Server{
 		Addr:    ":" + cfg.Server.Port,
 		Handler: router,
@@ -175,7 +190,7 @@ func main() {
 	outboxWorker.Stop()
 
 	// Graceful shutdown
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
@@ -194,13 +209,13 @@ func setupRouter(cfg *config.Config, handler *handler.MealHandler, timeHandler *
 
 	// Global middleware
 	router.Use(middleware.Recovery())
+	router.Use(middleware.SecurityHeaders())
 	router.Use(middleware.RequestLogger())
 	router.Use(middleware.CORS())
 	router.Use(middleware.IPRateLimit())
 	router.Use(middleware.SetCSRFToken(cfg.Server.Environment == "production"))
 
-	// Health check
-	router.GET("/health", handler.Health)
+	// Health endpoints registered in main() with dependency checks
 
 	// API routes
 	api := router.Group("/api/meals")
@@ -219,7 +234,7 @@ func setupRouter(cfg *config.Config, handler *handler.MealHandler, timeHandler *
 			auth.GET("/cafeterias", handler.GetCafeterias)
 
 			// Admin only routes
-			admin := auth.Group("")
+			admin := auth.Group("/admin")
 			admin.Use(middleware.RequireAdmin())
 			{
 				admin.POST("/cafeterias", handler.CreateCafeteria)
@@ -244,6 +259,13 @@ func setupRouter(cfg *config.Config, handler *handler.MealHandler, timeHandler *
 				student.POST("/reservations/use", handler.UseReservation)
 			}
 		}
+	}
+
+	// Internal routes (service-to-service, no auth)
+	internal := router.Group("/api/meals/internal")
+	internal.Use(middleware.StripInternalHeaders())
+	{
+		closedDaysHandler.RegisterInternalRoutes(internal)
 	}
 
 	return router

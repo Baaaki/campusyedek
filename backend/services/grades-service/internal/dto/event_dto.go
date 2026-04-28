@@ -66,54 +66,6 @@ type CourseSemesterCreatedEvent struct {
 	AssessmentSchema   []AssessmentSchemaItem `json:"assessment_schema"`
 }
 
-type CourseSemesterUpdatedEvent struct {
-	EventID            string                 `json:"event_id"`
-	EventType          string                 `json:"event_type"`
-	Timestamp          string                 `json:"timestamp"`
-	SemesterCourseID   uuid.UUID              `json:"semester_course_id"`
-	CourseCode         string                 `json:"course_code"`
-	CourseName         string                 `json:"course_name"`
-	Credits            int16                  `json:"credits"`
-	Semester           string                 `json:"semester"`
-	Department         string                 `json:"department"`
-	InstructorID       uuid.UUID              `json:"instructor_id"`
-	InstructorFullname string                 `json:"instructor_fullname"`
-	AssessmentSchema   []AssessmentSchemaItem `json:"assessment_schema"`
-}
-
-type CourseSemesterDeletedEvent struct {
-	EventID          string    `json:"event_id"`
-	EventType        string    `json:"event_type"`
-	Timestamp        string    `json:"timestamp"`
-	SemesterCourseID uuid.UUID `json:"semester_course_id"`
-	Semester         string    `json:"semester"`
-	CourseCode       string    `json:"course_code"`
-	CourseName       string    `json:"course_name"`
-	Department       string    `json:"department"`
-}
-
-type CourseInstructorChangedEvent struct {
-	EventID            string    `json:"event_id"`
-	EventType          string    `json:"event_type"`
-	Timestamp          string    `json:"timestamp"`
-	SemesterCourseID   uuid.UUID `json:"semester_course_id"`
-	InstructorID       uuid.UUID `json:"instructor_id"`
-	InstructorFullname string    `json:"instructor_fullname"`
-}
-
-type CoursePrerequisitesUpdatedEvent struct {
-	EventID             string               `json:"event_id"`
-	EventType           string               `json:"event_type"`
-	Timestamp           string               `json:"timestamp"`
-	PrerequisiteCourses []PrerequisiteCourse `json:"prerequisite_courses"`
-	UpdatedAt           time.Time            `json:"updated_at"`
-}
-
-type PrerequisiteCourse struct {
-	CourseCode string    `json:"course_code"`
-	CourseID   uuid.UUID `json:"course_id"`
-}
-
 type AssessmentSchemaItem struct {
 	Slug   string `json:"slug"`
 	Name   string `json:"name"`
@@ -158,6 +110,19 @@ type GradeSubmittedEvent struct {
 		CourseCode string    `json:"course_code"`
 		Slug       string    `json:"slug"`
 		Score      float64   `json:"score"`
+	} `json:"data"`
+}
+
+// GradeFinalizeRequestedEvent is published by the grades-service back to itself
+// when the last assessment of a course is locked. The finalize consumer picks
+// this up and runs the heavy AutoFinalize computation off the request path.
+type GradeFinalizeRequestedEvent struct {
+	EventType string    `json:"event_type"`
+	Timestamp time.Time `json:"timestamp"`
+	Data      struct {
+		CourseID     uuid.UUID `json:"course_id"`
+		InstructorID uuid.UUID `json:"instructor_id"`
+		TriggeredBy  string    `json:"triggered_by"`
 	} `json:"data"`
 }
 

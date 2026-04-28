@@ -23,5 +23,3 @@ FROM courses_cache
 WHERE id = $1
 LIMIT 1;
 
--- name: DeleteCourseCache :exec
-DELETE FROM courses_cache WHERE id = $1;

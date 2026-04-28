@@ -17,6 +17,7 @@ import (
 	"github.com/baaaki/mydreamcampus/shared/audit"
 	"github.com/baaaki/mydreamcampus/shared/client"
 	"github.com/baaaki/mydreamcampus/shared/database"
+	"github.com/baaaki/mydreamcampus/shared/events"
 	sharedHandler "github.com/baaaki/mydreamcampus/shared/handler"
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	sharedMiddleware "github.com/baaaki/mydreamcampus/shared/middleware"
@@ -159,6 +160,17 @@ func main() {
 	// Setup HTTP server
 	router := setupRouter(cfg, attendanceHandler, timeHandler, periodHandler, internalPeriodHandler)
 
+	// Health: liveness (process up). Ready: deps reachable.
+	healthChecks := map[string]sharedHandler.HealthCheck{
+		"database": pool.Ping,
+		"rabbitmq": rabbitConn.Ping,
+		"redis": func(ctx context.Context) error {
+			return redisClient.Ping(ctx).Err()
+		},
+	}
+	router.GET("/health", sharedHandler.LivenessHandler("attendance-service"))
+	router.GET("/ready", sharedHandler.ReadinessHandler("attendance-service", healthChecks))
+
 	srv := &http.Server{
 		Addr:    ":" + cfg.Server.Port,
 		Handler: router,
@@ -179,7 +191,7 @@ func main() {
 
 	logger.Info("shutting down server...")
 
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutdownCancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
@@ -203,10 +215,7 @@ func setupRouter(cfg *config.Config, attendanceHandler *handler.AttendanceHandle
 	router.Use(sharedMiddleware.IPRateLimit())
 	router.Use(sharedMiddleware.SetCSRFToken(cfg.Server.Environment == "production"))
 
-	// Health check
-	router.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "ok", "service": "attendance-service"})
-	})
+	// Health endpoints registered in main() with dependency checks
 
 	// API routes - All routes are protected via Traefik forward-auth
 	// User info is extracted from X-User-* headers set by Traefik
@@ -294,7 +303,7 @@ func setupRabbitMQ(conn *rabbitmq.Connection) error {
 	// Pre-declare downstream consumer queues so messages persist even when consumers are offline
 	publisher := rabbitmq.NewPublisher(conn)
 
-	if err := publisher.DeclareAndBindQueue("grades-service-attendance", "attendance.events", "attendance.semester.failed"); err != nil {
+	if err := publisher.DeclareAndBindQueue("grades-service-attendance", "attendance.events", events.EventAttendanceSemesterFailed); err != nil {
 		return fmt.Errorf("failed to declare downstream queue: %w", err)
 	}
 

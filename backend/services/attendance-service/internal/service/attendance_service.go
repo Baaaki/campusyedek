@@ -13,6 +13,7 @@ import (
 	"github.com/baaaki/mydreamcampus/attendance-service/internal/repository"
 	"github.com/baaaki/mydreamcampus/shared/client"
 	"github.com/baaaki/mydreamcampus/shared/clock"
+	"github.com/baaaki/mydreamcampus/shared/events"
 	"github.com/baaaki/mydreamcampus/shared/logger"
 	sharedRepo "github.com/baaaki/mydreamcampus/shared/repository"
 	"github.com/baaaki/mydreamcampus/shared/rules"
@@ -203,14 +204,9 @@ func (s *AttendanceService) ScanQR(ctx context.Context, studentID uuid.UUID, req
 		return dto.ScanQRResponse{}, errors.ErrNotEnrolled
 	}
 
-	// 5. Check if already scanned (via persistent scanned SET - survives buffer flush)
-	alreadyScanned, err := s.redisService.IsAlreadyScanned(ctx, sessionID, studentID.String())
-	if err == nil && alreadyScanned {
-		return dto.ScanQRResponse{}, errors.ErrAlreadyMarked
-	}
-
-	// 6. Write to Redis buffer (or direct DB if Redis down)
-	// DB UNIQUE(session_id, student_id) with ON CONFLICT DO NOTHING handles duplicates
+	// 5. Build record params. Dedup is handled atomically by AddToBuffer via SADD.
+	// DB UNIQUE(session_id, student_id) + ON CONFLICT DO NOTHING covers the
+	// fallback path when Redis is unavailable.
 	recordParams := db.CreateAttendanceRecordQRParams{
 		SessionID:   session.ID,
 		StudentID:   utils.UUIDToPgUUID(studentID),
@@ -229,12 +225,15 @@ func (s *AttendanceService) ScanQR(ctx context.Context, studentID uuid.UUID, req
 	// Scanned SET TTL = session remaining time + 1 hour safety buffer
 	scannedTTL := time.Until(utils.PgTimestampToTime(session.ExpiresAt)) + 1*time.Hour
 
-	if err := s.redisService.AddToBuffer(ctx, sessionID, studentID.String(), string(bufferJSON), scannedTTL); err != nil {
-		// Redis down, write directly to DB
+	added, err := s.redisService.AddToBuffer(ctx, sessionID, studentID.String(), string(bufferJSON), scannedTTL)
+	if err != nil {
+		// Redis down, write directly to DB. ON CONFLICT keeps this safe on duplicates.
 		logger.Warn("Redis down, writing directly to DB", zap.Error(err))
 		if err := s.attendanceRepo.CreateAttendanceRecordQR(ctx, recordParams); err != nil {
 			return dto.ScanQRResponse{}, err
 		}
+	} else if !added {
+		return dto.ScanQRResponse{}, errors.ErrAlreadyMarked
 	}
 
 	// Get course info for response
@@ -521,50 +520,7 @@ func (s *AttendanceService) FinalizeAttendance(ctx context.Context, courseID, in
 		}
 	}
 
-	// Merge failing students: a student fails if they fail EITHER theory OR lab
-	type failInfo struct {
-		studentNumber string
-		studentName   string
-		studentEmail  string
-		theoryPresent int
-		theoryAbsent  int
-		theoryFailed  bool
-		labPresent    int
-		labAbsent     int
-		labFailed     bool
-	}
-
-	failMap := make(map[uuid.UUID]*failInfo)
-
-	for _, s := range theoryFailing {
-		sid := utils.PgUUIDToUUID(s.StudentID)
-		failMap[sid] = &failInfo{
-			studentNumber: s.StudentNumber,
-			studentName:   fmt.Sprintf("%s %s", utils.PgTextToString(s.FirstName), utils.PgTextToString(s.LastName)),
-			studentEmail:  utils.PgTextToString(s.Email),
-			theoryPresent: int(s.PresentCount),
-			theoryAbsent:  int(s.AbsentCount),
-			theoryFailed:  true,
-		}
-	}
-
-	for _, s := range labFailing {
-		sid := utils.PgUUIDToUUID(s.StudentID)
-		if info, exists := failMap[sid]; exists {
-			info.labPresent = int(s.PresentCount)
-			info.labAbsent = int(s.AbsentCount)
-			info.labFailed = true
-		} else {
-			failMap[sid] = &failInfo{
-				studentNumber: s.StudentNumber,
-				studentName:   fmt.Sprintf("%s %s", utils.PgTextToString(s.FirstName), utils.PgTextToString(s.LastName)),
-				studentEmail:  utils.PgTextToString(s.Email),
-				labPresent:    int(s.PresentCount),
-				labAbsent:     int(s.AbsentCount),
-				labFailed:     true,
-			}
-		}
-	}
+	failMap := mergeFailureRows(theoryFailing, labFailing)
 
 	// Get all students for total count
 	allStudents, err := s.cacheRepo.GetEnrolledStudentsByCourse(ctx, courseID, semester)
@@ -577,37 +533,32 @@ func (s *AttendanceService) FinalizeAttendance(ctx context.Context, courseID, in
 	eventsPublished := 0
 
 	for studentID, info := range failMap {
-		failedType := "both"
-		if info.theoryFailed && !info.labFailed {
-			failedType = "theory"
-		} else if !info.theoryFailed && info.labFailed {
-			failedType = "lab"
-		}
+		failedType := deriveFailedType(info.TheoryFailed, info.LabFailed)
 
 		failedStudent := dto.FailedStudent{
 			StudentID:     studentID,
-			StudentNumber: info.studentNumber,
-			StudentName:   info.studentName,
+			StudentNumber: info.StudentNumber,
+			StudentName:   info.StudentName,
 			FailedType:    failedType,
 		}
 
 		if theoryTotal > 0 {
 			failedStudent.Theory = &dto.SessionTypeAttendance{
-				PresentCount:  info.theoryPresent,
-				AbsentCount:   info.theoryAbsent,
+				PresentCount:  info.TheoryPresent,
+				AbsentCount:   info.TheoryAbsent,
 				TotalSessions: int(theoryTotal),
 				MinRequired:   MinTheoryAttendance,
-				Passed:        !info.theoryFailed,
+				Passed:        !info.TheoryFailed,
 			}
 		}
 
 		if labTotal > 0 {
 			failedStudent.Lab = &dto.SessionTypeAttendance{
-				PresentCount:  info.labPresent,
-				AbsentCount:   info.labAbsent,
+				PresentCount:  info.LabPresent,
+				AbsentCount:   info.LabAbsent,
 				TotalSessions: int(labTotal),
 				MinRequired:   MinLabAttendance,
-				Passed:        !info.labFailed,
+				Passed:        !info.LabFailed,
 			}
 		}
 
@@ -616,8 +567,8 @@ func (s *AttendanceService) FinalizeAttendance(ctx context.Context, courseID, in
 		// Publish event
 		eventData := dto.AttendanceSemesterFailedEventData{
 			StudentID:     studentID,
-			StudentNumber: info.studentNumber,
-			StudentEmail:  info.studentEmail,
+			StudentNumber: info.StudentNumber,
+			StudentEmail:  info.StudentEmail,
 			CourseID:      courseID,
 			CourseCode:    course.CourseCode,
 			CourseName:    course.CourseName,
@@ -629,8 +580,8 @@ func (s *AttendanceService) FinalizeAttendance(ctx context.Context, courseID, in
 		if theoryTotal > 0 {
 			eventData.Theory = &dto.AttendanceFailedTypeDetail{
 				TotalSessions: int(theoryTotal),
-				PresentCount:  info.theoryPresent,
-				AbsentCount:   info.theoryAbsent,
+				PresentCount:  info.TheoryPresent,
+				AbsentCount:   info.TheoryAbsent,
 				MinRequired:   MinTheoryAttendance,
 			}
 		}
@@ -638,8 +589,8 @@ func (s *AttendanceService) FinalizeAttendance(ctx context.Context, courseID, in
 		if labTotal > 0 {
 			eventData.Lab = &dto.AttendanceFailedTypeDetail{
 				TotalSessions: int(labTotal),
-				PresentCount:  info.labPresent,
-				AbsentCount:   info.labAbsent,
+				PresentCount:  info.LabPresent,
+				AbsentCount:   info.LabAbsent,
 				MinRequired:   MinLabAttendance,
 			}
 		}
@@ -761,30 +712,16 @@ func (s *AttendanceService) getSessionWithFallback(ctx context.Context, sessionI
 	if err != nil {
 		return db.AttendanceSession{}, fmt.Errorf("invalid session ID: %w", err)
 	}
-
-	// Try Redis first
-	sessionData, redisErr := s.redisService.GetSessionCache(ctx, sessionID)
-	if redisErr == nil && len(sessionData) > 0 {
-		return s.sessionRepo.GetSessionByID(ctx, sessionUUID)
-	}
-
-	// Fallback to DB
-	session, err := s.sessionRepo.GetActiveSessionByID(ctx, sessionUUID)
-	if err != nil {
-		return db.AttendanceSession{}, err
-	}
-
-	return session, nil
+	// DB is source of truth; session cache is cleared on close and not rehydrated here.
+	return s.sessionRepo.GetActiveSessionByID(ctx, sessionUUID)
 }
 
 func (s *AttendanceService) checkEnrollmentWithFallback(ctx context.Context, sessionID string, studentID, courseID uuid.UUID, semester string) (bool, error) {
-	// Try Redis first
+	// Positive hit trusted; miss may be stale (late enrollment) so verify against DB.
 	enrolled, err := s.redisService.IsStudentEnrolled(ctx, sessionID, studentID.String())
-	if err == nil {
-		return enrolled, nil
+	if err == nil && enrolled {
+		return true, nil
 	}
-
-	// Fallback to DB
 	return s.cacheRepo.CheckEnrollment(ctx, studentID, courseID, semester)
 }
 
@@ -792,7 +729,7 @@ func (s *AttendanceService) checkEnrollmentWithFallback(ctx context.Context, ses
 func (s *AttendanceService) publishFailedAttendanceEvent(ctx context.Context, data dto.AttendanceSemesterFailedEventData) error {
 	payload, err := json.Marshal(dto.BaseEvent{
 		EventID:   uuid.New(),
-		EventType: "attendance.semester.failed",
+		EventType: events.EventAttendanceSemesterFailed,
 		Timestamp: clock.Now(),
 		Data:      data,
 	})
@@ -800,7 +737,7 @@ func (s *AttendanceService) publishFailedAttendanceEvent(ctx context.Context, da
 		return err
 	}
 
-	return s.outboxRepo.CreateOutboxEvent(ctx, "attendance.semester.failed", "attendance.semester.failed", payload)
+	return s.outboxRepo.CreateOutboxEvent(ctx, events.EventAttendanceSemesterFailed, events.EventAttendanceSemesterFailed, payload)
 }
 
 // GetSessionDetails returns session details for instructor
