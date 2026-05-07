@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/baaaki/mydreamcampus/course-catalog-service/internal/db"
@@ -44,7 +45,7 @@ func (r *SemesterRepository) GetSemesterCourseByID(ctx context.Context, id uuid.
 		Semester: semester,
 	})
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return db.SemesterCourse{}, fmt.Errorf("%w: semester course with id %s not found", catalogErrors.ErrSemesterCourseNotFoundRepo, id)
 		}
 		return db.SemesterCourse{}, fmt.Errorf("%w: failed to get semester course: %v", sharedErrors.ErrQueryFailed, err)
@@ -74,7 +75,7 @@ func (r *SemesterRepository) GetSemesterCourseBySemesterAndCode(ctx context.Cont
 		CourseCode: courseCode,
 	})
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			// Not found is valid for existence check - return empty course
 			return db.SemesterCourse{}, nil
 		}
@@ -172,7 +173,8 @@ func JSONToAssessmentSchema(data []byte) ([]dto.AssessmentItem, error) {
 
 // Helper: Check if error is a PostgreSQL unique constraint violation
 func isPgUniqueViolation(err error) bool {
-	if pgErr, ok := err.(*pgconn.PgError); ok {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
 		return pgErr.Code == "23505" // unique_violation
 	}
 	return false

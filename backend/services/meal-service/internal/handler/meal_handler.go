@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
@@ -46,6 +47,9 @@ func NewMealHandler(
 // @Success 200 {object} dto.CafeteriaListResponse
 // @Router /api/v1/meals/cafeterias [get]
 func (h *MealHandler) GetCafeterias(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
 	// Check if user is admin to show all cafeterias including inactive
 	role, _ := c.Get("role")
 
@@ -53,9 +57,9 @@ func (h *MealHandler) GetCafeterias(c *gin.Context) {
 	var err error
 
 	if role == "admin" {
-		cafeterias, err = h.cafeteriaService.GetAllCafeterias(c.Request.Context())
+		cafeterias, err = h.cafeteriaService.GetAllCafeterias(ctx)
 	} else {
-		cafeterias, err = h.cafeteriaService.GetActiveCafeterias(c.Request.Context())
+		cafeterias, err = h.cafeteriaService.GetActiveCafeterias(ctx)
 	}
 
 	if err != nil {
@@ -78,6 +82,9 @@ func (h *MealHandler) GetCafeterias(c *gin.Context) {
 // @Success 201 {object} dto.CafeteriaResponse
 // @Router /api/v1/meals/cafeterias [post]
 func (h *MealHandler) CreateCafeteria(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
 	var req dto.CreateCafeteriaRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.logger.Error("invalid request body", zap.Error(err))
@@ -85,7 +92,7 @@ func (h *MealHandler) CreateCafeteria(c *gin.Context) {
 		return
 	}
 
-	cafeteria, err := h.cafeteriaService.CreateCafeteria(c.Request.Context(), req)
+	cafeteria, err := h.cafeteriaService.CreateCafeteria(ctx, req)
 	if err != nil {
 		h.handleError(c, err)
 		return
@@ -107,6 +114,9 @@ func (h *MealHandler) CreateCafeteria(c *gin.Context) {
 // @Success 200 {object} dto.CafeteriaResponse
 // @Router /api/v1/meals/cafeterias/{cafeteria_id} [put]
 func (h *MealHandler) UpdateCafeteria(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
 	cafeteriaID := c.Param("cafeteria_id")
 
 	var req dto.UpdateCafeteriaRequest
@@ -116,7 +126,7 @@ func (h *MealHandler) UpdateCafeteria(c *gin.Context) {
 		return
 	}
 
-	cafeteria, err := h.cafeteriaService.UpdateCafeteria(c.Request.Context(), cafeteriaID, req)
+	cafeteria, err := h.cafeteriaService.UpdateCafeteria(ctx, cafeteriaID, req)
 	if err != nil {
 		h.handleError(c, err)
 		return
@@ -137,9 +147,12 @@ func (h *MealHandler) UpdateCafeteria(c *gin.Context) {
 // @Success 200 {object} dto.MessageResponse
 // @Router /api/v1/meals/cafeterias/{cafeteria_id} [delete]
 func (h *MealHandler) DeleteCafeteria(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
 	cafeteriaID := c.Param("cafeteria_id")
 
-	err := h.cafeteriaService.DeactivateCafeteria(c.Request.Context(), cafeteriaID)
+	err := h.cafeteriaService.DeactivateCafeteria(ctx, cafeteriaID)
 	if err != nil {
 		h.handleError(c, err)
 		return
@@ -167,6 +180,9 @@ func (h *MealHandler) DeleteCafeteria(c *gin.Context) {
 // @Success 200 {object} dto.CreateReservationResponse
 // @Router /api/v1/meals/reservations [post]
 func (h *MealHandler) CreateReservation(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
 	// Get student ID from JWT
 	studentID, err := h.getStudentIDFromContext(c)
 	if err != nil {
@@ -181,7 +197,7 @@ func (h *MealHandler) CreateReservation(c *gin.Context) {
 		return
 	}
 
-	reservation, err := h.reservationService.CreateReservation(c.Request.Context(), studentID, req)
+	reservation, err := h.reservationService.CreateReservation(ctx, studentID, req)
 	if err != nil {
 		h.handleError(c, err)
 		return
@@ -202,6 +218,9 @@ func (h *MealHandler) CreateReservation(c *gin.Context) {
 // @Success 200 {object} dto.CreateBatchReservationResponse
 // @Router /api/v1/meals/reservations/batch [post]
 func (h *MealHandler) CreateBatchReservation(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
 	// Get student ID from JWT
 	studentID, err := h.getStudentIDFromContext(c)
 	if err != nil {
@@ -216,7 +235,7 @@ func (h *MealHandler) CreateBatchReservation(c *gin.Context) {
 		return
 	}
 
-	reservation, err := h.reservationService.CreateBatchReservation(c.Request.Context(), studentID, req)
+	reservation, err := h.reservationService.CreateBatchReservation(ctx, studentID, req)
 	if err != nil {
 		h.logger.Error("failed to create batch reservation", zap.Error(err))
 		h.handleError(c, err)
@@ -240,6 +259,9 @@ func (h *MealHandler) CreateBatchReservation(c *gin.Context) {
 // @Success 200 {object} dto.MyReservationsResponse
 // @Router /api/v1/meals/reservations/my [get]
 func (h *MealHandler) GetMyReservations(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
 	// Get student ID from JWT
 	studentID, err := h.getStudentIDFromContext(c)
 	if err != nil {
@@ -254,7 +276,7 @@ func (h *MealHandler) GetMyReservations(c *gin.Context) {
 		return
 	}
 
-	reservations, err := h.reservationService.GetMyReservations(c.Request.Context(), studentID, query)
+	reservations, err := h.reservationService.GetMyReservations(ctx, studentID, query)
 	if err != nil {
 		h.handleError(c, err)
 		return
@@ -275,6 +297,9 @@ func (h *MealHandler) GetMyReservations(c *gin.Context) {
 // @Success 200 {object} dto.CancelReservationResponse
 // @Router /api/v1/meals/reservations/{reservation_id} [delete]
 func (h *MealHandler) CancelReservation(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
 	// Get student ID from JWT
 	studentID, err := h.getStudentIDFromContext(c)
 	if err != nil {
@@ -284,7 +309,7 @@ func (h *MealHandler) CancelReservation(c *gin.Context) {
 
 	reservationID := c.Param("reservation_id")
 
-	response, err := h.reservationService.CancelReservation(c.Request.Context(), studentID, reservationID)
+	response, err := h.reservationService.CancelReservation(ctx, studentID, reservationID)
 	if err != nil {
 		h.handleError(c, err)
 		return
@@ -305,6 +330,9 @@ func (h *MealHandler) CancelReservation(c *gin.Context) {
 // @Success 200 {object} dto.UseReservationResponse
 // @Router /api/v1/meals/reservations/use [post]
 func (h *MealHandler) UseReservation(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
 	// Get student ID from JWT
 	studentID, err := h.getStudentIDFromContext(c)
 	if err != nil {
@@ -319,7 +347,7 @@ func (h *MealHandler) UseReservation(c *gin.Context) {
 		return
 	}
 
-	response, err := h.reservationService.UseReservation(c.Request.Context(), studentID, req)
+	response, err := h.reservationService.UseReservation(ctx, studentID, req)
 	if err != nil {
 		h.handleError(c, err)
 		return
@@ -344,6 +372,9 @@ func (h *MealHandler) UseReservation(c *gin.Context) {
 // @Success 201 {object} dto.MonthlyMenuResponse
 // @Router /api/v1/meals/menu/monthly [post]
 func (h *MealHandler) CreateMonthlyMenu(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
 	var req dto.CreateMonthlyMenuRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.logger.Error("invalid request body", zap.Error(err))
@@ -351,7 +382,7 @@ func (h *MealHandler) CreateMonthlyMenu(c *gin.Context) {
 		return
 	}
 
-	menu, err := h.menuService.CreateOrUpdateMonthlyMenu(c.Request.Context(), req)
+	menu, err := h.menuService.CreateOrUpdateMonthlyMenu(ctx, req)
 	if err != nil {
 		h.handleError(c, err)
 		return
@@ -373,6 +404,9 @@ func (h *MealHandler) CreateMonthlyMenu(c *gin.Context) {
 // @Success 200 {object} dto.MonthlyMenuResponse
 // @Router /api/v1/meals/menu/monthly [get]
 func (h *MealHandler) GetMonthlyMenu(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
 	var query dto.GetMonthlyMenuQuery
 	if err := c.ShouldBindQuery(&query); err != nil {
 		h.logger.Error("invalid query parameters", zap.Error(err))
@@ -380,7 +414,7 @@ func (h *MealHandler) GetMonthlyMenu(c *gin.Context) {
 		return
 	}
 
-	menu, err := h.menuService.GetMonthlyMenu(c.Request.Context(), query.Year, query.Month)
+	menu, err := h.menuService.GetMonthlyMenu(ctx, query.Year, query.Month)
 	if err != nil {
 		h.handleError(c, err)
 		return
@@ -407,6 +441,9 @@ func (h *MealHandler) GetMonthlyMenu(c *gin.Context) {
 // @Success 200 {object} dto.QRResponse
 // @Router /api/v1/meals/cafeterias/{cafeteria_id}/qr [get]
 func (h *MealHandler) GenerateQR(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
 	cafeteriaID := c.Param("cafeteria_id")
 
 	var query dto.GenerateQRRequest
@@ -416,7 +453,7 @@ func (h *MealHandler) GenerateQR(c *gin.Context) {
 		return
 	}
 
-	qr, err := h.reservationService.GenerateQR(c.Request.Context(), cafeteriaID, query.Date, query.MealTime)
+	qr, err := h.reservationService.GenerateQR(ctx, cafeteriaID, query.Date, query.MealTime)
 	if err != nil {
 		h.handleError(c, err)
 		return

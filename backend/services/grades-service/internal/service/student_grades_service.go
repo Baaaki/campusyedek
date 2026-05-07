@@ -39,10 +39,15 @@ func NewStudentGradesService(
 }
 
 func (s *StudentGradesService) GetMyGrades(ctx context.Context, studentID uuid.UUID) (*dto.MyGradesResponse, error) {
+	log := logger.WithContextAndFields(ctx,
+		zap.String("service", "StudentGradesService"),
+		zap.String("method", "GetMyGrades"),
+	)
+
 	// 1. Check if student is active
 	student, err := s.cacheRepo.GetStudentCacheByID(ctx, studentID)
 	if err != nil {
-		logger.Error("failed to get student", zap.Error(err))
+		log.Error("failed to get student", zap.Error(err))
 		return nil, errors.ErrStudentNotFound
 	}
 
@@ -53,7 +58,7 @@ func (s *StudentGradesService) GetMyGrades(ctx context.Context, studentID uuid.U
 	// 2. Get active courses (registrations not yet finalized into completed_courses)
 	activeRows, err := s.registrationRepo.GetActiveRegistrationsByStudent(ctx, studentID)
 	if err != nil {
-		logger.Error("failed to get active registrations", zap.Error(err))
+		log.Error("failed to get active registrations", zap.Error(err))
 		return nil, err
 	}
 
@@ -61,7 +66,7 @@ func (s *StudentGradesService) GetMyGrades(ctx context.Context, studentID uuid.U
 	for _, ar := range activeRows {
 		scoresMap, err := decodeScoresJSON(ar.Scores)
 		if err != nil {
-			logger.Error("failed to decode active course scores",
+			log.Error("failed to decode active course scores",
 				zap.String("course_code", ar.CourseCode),
 				zap.Error(err))
 			scoresMap = map[string]dto.ScoreDetail{}
@@ -78,7 +83,7 @@ func (s *StudentGradesService) GetMyGrades(ctx context.Context, studentID uuid.U
 	// 3. Get completed courses
 	completedCourses, err := s.completedRepo.GetCompletedCoursesByStudent(ctx, studentID)
 	if err != nil {
-		logger.Error("failed to get completed courses", zap.Error(err))
+		log.Error("failed to get completed courses", zap.Error(err))
 		return nil, err
 	}
 
@@ -86,7 +91,7 @@ func (s *StudentGradesService) GetMyGrades(ctx context.Context, studentID uuid.U
 	for _, cc := range completedCourses {
 		weightedAvg, err := utils.PgNumericToFloat64(cc.WeightedAverage)
 		if err != nil {
-			logger.Error("failed to convert weighted average", zap.Error(err))
+			log.Error("failed to convert weighted average", zap.Error(err))
 			weightedAvg = 0.0
 		}
 
@@ -94,7 +99,7 @@ func (s *StudentGradesService) GetMyGrades(ctx context.Context, studentID uuid.U
 		var assessmentScores map[string]float64
 		if len(cc.AssessmentScores) > 0 {
 			if err := json.Unmarshal(cc.AssessmentScores, &assessmentScores); err != nil {
-				logger.Error("failed to unmarshal assessment scores", zap.Error(err))
+				log.Error("failed to unmarshal assessment scores", zap.Error(err))
 				assessmentScores = nil
 			}
 		}
@@ -113,7 +118,7 @@ func (s *StudentGradesService) GetMyGrades(ctx context.Context, studentID uuid.U
 	// 4. Calculate GPA
 	gpaResult, err := s.completedRepo.CalculateStudentGPA(ctx, studentID)
 	if err != nil {
-		logger.Error("failed to calculate GPA", zap.Error(err))
+		log.Error("failed to calculate GPA", zap.Error(err))
 		return nil, err
 	}
 

@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/baaaki/mydreamcampus/shared/events"
@@ -274,7 +275,8 @@ func (r *StudentRepository) CreateStudentWithEvent(ctx context.Context, params d
 	student, err := qtx.CreateStudent(ctx, params)
 	if err != nil {
 		// Check for duplicate constraints
-		if pgxErr, ok := err.(*pgconn.PgError); ok {
+		var pgxErr *pgconn.PgError
+		if errors.As(err, &pgxErr) {
 			if pgxErr.Code == "23505" { // unique_violation
 				if pgxErr.ConstraintName == "students_student_number_key" {
 					return db.Student{}, fmt.Errorf("%w: student number already exists", serviceErrors.ErrStudentNumberExistsRepo)
@@ -315,7 +317,7 @@ func (r *StudentRepository) CreateStudentWithEvent(ctx context.Context, params d
 func (r *StudentRepository) GetStudentByID(ctx context.Context, id uuid.UUID) (db.Student, error) {
 	student, err := r.queries.GetStudentByID(ctx, utils.UUIDToPgtype(id))
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return db.Student{}, fmt.Errorf("%w: student with id %s not found", serviceErrors.ErrStudentNotFoundRepo, id)
 		}
 		return db.Student{}, fmt.Errorf("%w: failed to get student: %v", sharedErrors.ErrQueryFailed, err)
@@ -328,7 +330,7 @@ func (r *StudentRepository) GetStudentByID(ctx context.Context, id uuid.UUID) (d
 func (r *StudentRepository) GetStudentByEmail(ctx context.Context, email string) (db.Student, error) {
 	student, err := r.queries.GetStudentByEmail(ctx, email)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return db.Student{}, nil // Not found is not an error for existence check
 		}
 		return db.Student{}, fmt.Errorf("%w: failed to check student existence by email: %v", sharedErrors.ErrQueryFailed, err)
@@ -341,7 +343,7 @@ func (r *StudentRepository) GetStudentByEmail(ctx context.Context, email string)
 func (r *StudentRepository) GetStudentByNumber(ctx context.Context, studentNumber string) (db.Student, error) {
 	student, err := r.queries.GetStudentByNumber(ctx, studentNumber)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return db.Student{}, nil
 		}
 		return db.Student{}, fmt.Errorf("%w: failed to check student existence by number: %v", sharedErrors.ErrQueryFailed, err)
@@ -362,7 +364,7 @@ func (r *StudentRepository) UpdateStudentWithEvent(ctx context.Context, id uuid.
 	// Update student
 	student, err := qtx.UpdateStudent(ctx, params)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return db.Student{}, fmt.Errorf("%w: student with id %s not found for update", serviceErrors.ErrStudentNotFoundRepo, id)
 		}
 		return db.Student{}, fmt.Errorf("%w: failed to update student: %v", sharedErrors.ErrQueryFailed, err)
@@ -402,7 +404,7 @@ func (r *StudentRepository) SoftDeleteStudentWithEvent(ctx context.Context, id u
 	// Soft delete student
 	err = qtx.SoftDeleteStudent(ctx, utils.UUIDToPgtype(id))
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf("%w: student with id %s not found for deletion", serviceErrors.ErrStudentNotFoundRepo, id)
 		}
 		return fmt.Errorf("%w: failed to delete student: %v", sharedErrors.ErrQueryFailed, err)
@@ -496,7 +498,7 @@ func (r *StudentRepository) BulkAssignAdvisor(ctx context.Context, studentIDs []
 	err = qtx.BulkAssignAdvisor(ctx, db.BulkAssignAdvisorParams{
 		Column1:     pgStudentIDs,
 		AdvisorID:   utils.UUIDToPgtype(advisorID),
-		AdvisorName: pgtype.Text{String: advisorName, Valid: true},
+		AdvisorName: utils.StringToPgText(advisorName),
 	})
 	if err != nil {
 		return fmt.Errorf("%w: failed to bulk assign advisor: %v", sharedErrors.ErrQueryFailed, err)

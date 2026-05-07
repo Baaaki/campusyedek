@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	sharedErrors "github.com/baaaki/mydreamcampus/shared/errors"
@@ -30,7 +31,7 @@ func NewAuthRepository(pool *pgxpool.Pool) *AuthRepository {
 func (r *AuthRepository) GetUserByEmail(ctx context.Context, email string) (db.User, error) {
 	user, err := r.queries.GetUserByEmail(ctx, email)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return db.User{}, fmt.Errorf("%w: user with email %s not found", serviceErrors.ErrUserNotFoundRepo, email)
 		}
 		return db.User{}, fmt.Errorf("%w: failed to get user: %v", sharedErrors.ErrQueryFailed, err)
@@ -42,7 +43,7 @@ func (r *AuthRepository) GetUserByEmail(ctx context.Context, email string) (db.U
 func (r *AuthRepository) GetUserByID(ctx context.Context, id uuid.UUID) (db.User, error) {
 	user, err := r.queries.GetUserByID(ctx, utils.UUIDToPgtype(id))
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return db.User{}, fmt.Errorf("%w: user with id %s not found", serviceErrors.ErrUserNotFoundRepo, id)
 		}
 		return db.User{}, fmt.Errorf("%w: failed to get user: %v", sharedErrors.ErrQueryFailed, err)
@@ -55,7 +56,8 @@ func (r *AuthRepository) CreateUser(ctx context.Context, params db.CreateUserPar
 	user, err := r.queries.CreateUser(ctx, params)
 	if err != nil {
 		// Check for duplicate email constraint violation
-		if pgxErr, ok := err.(*pgconn.PgError); ok {
+		var pgxErr *pgconn.PgError
+		if errors.As(err, &pgxErr) {
 			if pgxErr.Code == "23505" { // unique_violation
 				return db.CreateUserRow{}, fmt.Errorf("%w: email already exists", serviceErrors.ErrUserExistsRepo)
 			}
@@ -74,7 +76,7 @@ func (r *AuthRepository) UpdatePassword(ctx context.Context, userID uuid.UUID, p
 		ForcePasswordChange: &forceChange,
 	})
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf("%w: user not found for password update", serviceErrors.ErrUserNotFoundRepo)
 		}
 		return fmt.Errorf("%w: failed to update password: %v", sharedErrors.ErrQueryFailed, err)
@@ -86,7 +88,7 @@ func (r *AuthRepository) UpdatePassword(ctx context.Context, userID uuid.UUID, p
 func (r *AuthRepository) UpdateUser(ctx context.Context, params db.UpdateUserParams) error {
 	err := r.queries.UpdateUser(ctx, params)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf("%w: user not found for update", serviceErrors.ErrUserNotFoundRepo)
 		}
 		return fmt.Errorf("%w: failed to update user: %v", sharedErrors.ErrQueryFailed, err)
@@ -98,7 +100,7 @@ func (r *AuthRepository) UpdateUser(ctx context.Context, params db.UpdateUserPar
 func (r *AuthRepository) IncrementTokenVersion(ctx context.Context, userID uuid.UUID) (int32, error) {
 	version, err := r.queries.IncrementTokenVersion(ctx, utils.UUIDToPgtype(userID))
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return 0, fmt.Errorf("%w: user not found for token version increment", serviceErrors.ErrUserNotFoundRepo)
 		}
 		return 0, fmt.Errorf("%w: failed to increment token version: %v", sharedErrors.ErrQueryFailed, err)
@@ -140,7 +142,7 @@ func (r *AuthRepository) LockAccount(ctx context.Context, params db.LockAccountP
 func (r *AuthRepository) DeactivateUser(ctx context.Context, userID uuid.UUID) error {
 	err := r.queries.DeactivateUser(ctx, utils.UUIDToPgtype(userID))
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf("%w: user not found for deactivation", serviceErrors.ErrUserNotFoundRepo)
 		}
 		return fmt.Errorf("%w: failed to deactivate user: %v", sharedErrors.ErrQueryFailed, err)
@@ -164,7 +166,7 @@ func (r *AuthRepository) CheckEmailVersionSync(ctx context.Context, userID uuid.
 		Email: newEmail,
 	})
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			// Email didn't change, return 0
 			return 0, nil
 		}

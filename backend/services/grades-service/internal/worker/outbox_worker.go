@@ -33,7 +33,8 @@ func NewOutboxWorker(
 }
 
 func (w *OutboxWorker) Start(ctx context.Context) {
-	logger.Info("starting outbox worker",
+	log := logger.WithContextAndFields(ctx, zap.String("worker", "OutboxWorker"))
+	log.Info("starting outbox worker",
 		zap.Duration("poll_interval", w.pollInterval),
 		zap.Int32("batch_size", w.batchSize),
 	)
@@ -47,7 +48,7 @@ func (w *OutboxWorker) Start(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			logger.Info("outbox worker stopped")
+			log.Info("outbox worker stopped")
 			return
 		case <-ticker.C:
 			w.processBatch(ctx)
@@ -56,10 +57,15 @@ func (w *OutboxWorker) Start(ctx context.Context) {
 }
 
 func (w *OutboxWorker) processBatch(ctx context.Context) {
+	log := logger.WithContextAndFields(ctx,
+		zap.String("worker", "OutboxWorker"),
+		zap.String("method", "processBatch"),
+	)
+
 	// Get pending events
 	events, err := w.outboxRepo.GetPendingOutboxEvents(ctx, w.batchSize)
 	if err != nil {
-		logger.Error("failed to get pending outbox events", zap.Error(err))
+		log.Error("failed to get pending outbox events", zap.Error(err))
 		return
 	}
 
@@ -67,11 +73,11 @@ func (w *OutboxWorker) processBatch(ctx context.Context) {
 		return
 	}
 
-	logger.Info("processing outbox events", zap.Int("count", len(events)))
+	log.Info("processing outbox events", zap.Int("count", len(events)))
 
 	for _, event := range events {
 		if err := w.processEvent(ctx, event.ID, event.EventType, event.RoutingKey, event.Payload); err != nil {
-			logger.Warn("failed to process outbox event, will retry on next poll",
+			log.Warn("failed to process outbox event, will retry on next poll",
 				zap.Error(err),
 				zap.String("event_id", event.ID.String()),
 				zap.String("event_type", event.EventType),
@@ -81,7 +87,7 @@ func (w *OutboxWorker) processBatch(ctx context.Context) {
 
 		// Mark as processed
 		if err := w.outboxRepo.MarkOutboxEventProcessed(ctx, event.ID); err != nil {
-			logger.Error("failed to mark outbox event as processed",
+			log.Error("failed to mark outbox event as processed",
 				zap.Error(err),
 				zap.String("event_id", event.ID.String()),
 			)
@@ -90,7 +96,12 @@ func (w *OutboxWorker) processBatch(ctx context.Context) {
 }
 
 func (w *OutboxWorker) processEvent(ctx context.Context, eventID uuid.UUID, eventType string, routingKey string, payload []byte) error {
-	logger.Debug("publishing outbox event",
+	log := logger.WithContextAndFields(ctx,
+		zap.String("worker", "OutboxWorker"),
+		zap.String("method", "processEvent"),
+	)
+
+	log.Debug("publishing outbox event",
 		zap.String("event_id", eventID.String()),
 		zap.String("event_type", eventType),
 		zap.String("routing_key", routingKey),
@@ -104,7 +115,7 @@ func (w *OutboxWorker) processEvent(ctx context.Context, eventID uuid.UUID, even
 		return err
 	}
 
-	logger.Info("outbox event published",
+	log.Info("outbox event published",
 		zap.String("event_id", eventID.String()),
 		zap.String("event_type", eventType),
 	)

@@ -19,7 +19,6 @@ import (
 	"github.com/baaaki/mydreamcampus/shared/rules"
 	"github.com/baaaki/mydreamcampus/shared/utils"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
 )
 
@@ -119,7 +118,7 @@ func (s *AttendanceService) CreateSession(ctx context.Context, instructorID uuid
 		InstructorID:       utils.UUIDToPgUUID(instructorID),
 		Semester:           course.Semester,
 		WeekNumber:         req.WeekNumber,
-		SessionDate:        pgtype.Date{Time: now, Valid: true},
+		SessionDate:        utils.TimeToPgDate(now),
 		QrSecret:  qrSecret,
 		StartedAt: utils.TimeToPgTimestamp(now),
 		ExpiresAt:          utils.TimeToPgTimestamp(expiresAt),
@@ -927,8 +926,8 @@ func (s *AttendanceService) GetSessionStudents(ctx context.Context, sessionID, i
 
 // GetSessionsByDateRange returns all sessions within a date range (admin use)
 func (s *AttendanceService) GetSessionsByDateRange(ctx context.Context, startDate, endDate time.Time) (dto.AdminSessionsResponse, error) {
-	start := pgtype.Date{Time: startDate, Valid: true}
-	end := pgtype.Date{Time: endDate, Valid: true}
+	start := utils.TimeToPgDate(startDate)
+	end := utils.TimeToPgDate(endDate)
 
 	rows, err := s.sessionRepo.GetSessionsByDateRange(ctx, db.GetSessionsByDateRangeParams{
 		StartDate: start,

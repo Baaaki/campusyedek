@@ -27,12 +27,13 @@ func (w *OutboxWorker) Start(ctx context.Context) {
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
-	logger.Info("Outbox worker started")
+	log := logger.WithContextAndFields(ctx, zap.String("worker", "OutboxWorker"))
+	log.Info("Outbox worker started")
 
 	for {
 		select {
 		case <-ctx.Done():
-			logger.Info("Outbox worker stopped")
+			log.Info("Outbox worker stopped")
 			return
 		case <-ticker.C:
 			w.processEvents(ctx)
@@ -41,25 +42,30 @@ func (w *OutboxWorker) Start(ctx context.Context) {
 }
 
 func (w *OutboxWorker) processEvents(ctx context.Context) {
+	log := logger.WithContextAndFields(ctx,
+		zap.String("worker", "OutboxWorker"),
+		zap.String("method", "processEvents"),
+	)
+
 	events, err := w.outboxRepo.GetPendingOutboxEvents(ctx, 100)
 	if err != nil {
-		logger.Error("failed to get pending outbox events", zap.Error(err))
+		log.Error("failed to get pending outbox events", zap.Error(err))
 		return
 	}
 
 	for _, event := range events {
 		var payload any
 		if err := json.Unmarshal(event.Payload, &payload); err != nil {
-			logger.Error("failed to unmarshal payload", zap.Error(err))
+			log.Error("failed to unmarshal payload", zap.Error(err), zap.String("event_id", event.ID.String()))
 			w.outboxRepo.MarkOutboxEventFailed(ctx, event.ID, err.Error())
 			continue
 		}
 
 		if err := w.publisher.Publish(ctx, "attendance.events", event.RoutingKey, payload); err != nil {
-			logger.Warn("failed to publish event, will retry on next poll", zap.Error(err), zap.String("routing_key", event.RoutingKey))
+			log.Warn("failed to publish event, will retry on next poll", zap.Error(err), zap.String("routing_key", event.RoutingKey))
 		} else {
 			w.outboxRepo.MarkOutboxEventProcessed(ctx, event.ID)
-			logger.Debug("event published", zap.String("routing_key", event.RoutingKey))
+			log.Debug("event published", zap.String("routing_key", event.RoutingKey))
 		}
 	}
 }

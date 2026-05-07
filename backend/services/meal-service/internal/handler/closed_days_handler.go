@@ -12,6 +12,8 @@ import (
 	"go.uber.org/zap"
 )
 
+const requestTimeout = 10 * time.Second
+
 // ClosedDaysStore is the set of operations ClosedDaysHandler needs from the
 // repository. Declared as an interface so a caching wrapper can be injected.
 type ClosedDaysStore interface {
@@ -68,6 +70,9 @@ type closedDayResponse struct {
 // CreateClosedDay adds a closed day.
 // POST /admin/closed-days
 func (h *ClosedDaysHandler) CreateClosedDay(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
 	var req createClosedDayRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -86,7 +91,7 @@ func (h *ClosedDaysHandler) CreateClosedDay(c *gin.Context) {
 		return
 	}
 
-	closedDay, err := h.repo.CreateClosedDay(c.Request.Context(), db.CreateClosedDayParams{
+	closedDay, err := h.repo.CreateClosedDay(ctx, db.CreateClosedDayParams{
 		Date:   pgtype.Date{Time: date, Valid: true},
 		Reason: req.Reason,
 		Semester: pgtype.Text{},
@@ -103,7 +108,7 @@ func (h *ClosedDaysHandler) CreateClosedDay(c *gin.Context) {
 	// Audit log
 	if h.auditLogger != nil {
 		actorID, _ := c.Get("user_id")
-		h.auditLogger.Log(c.Request.Context(), audit.AuditEvent{
+		h.auditLogger.Log(ctx, audit.AuditEvent{
 			ActorID:      actorID.(string),
 			ActorRole:    "admin",
 			Action:       "closed_day.created",
@@ -127,6 +132,9 @@ func (h *ClosedDaysHandler) CreateClosedDay(c *gin.Context) {
 // ListClosedDays lists closed days with optional date range filter.
 // GET /admin/closed-days?from=2025-01-01&to=2025-12-31
 func (h *ClosedDaysHandler) ListClosedDays(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
 	var fromDate, toDate pgtype.Date
 
 	if from := c.Query("from"); from != "" {
@@ -153,7 +161,7 @@ func (h *ClosedDaysHandler) ListClosedDays(c *gin.Context) {
 		toDate = pgtype.Date{Time: t, Valid: true}
 	}
 
-	days, err := h.repo.ListClosedDays(c.Request.Context(), db.ListClosedDaysParams{
+	days, err := h.repo.ListClosedDays(ctx, db.ListClosedDaysParams{
 		Column1: fromDate,
 		Column2: toDate,
 	})
@@ -177,6 +185,9 @@ func (h *ClosedDaysHandler) ListClosedDays(c *gin.Context) {
 // DeleteClosedDay removes a closed day.
 // DELETE /admin/closed-days/:id
 func (h *ClosedDaysHandler) DeleteClosedDay(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
 	idStr := c.Param("id")
 
 	var id pgtype.UUID
@@ -188,7 +199,7 @@ func (h *ClosedDaysHandler) DeleteClosedDay(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.DeleteClosedDay(c.Request.Context(), id); err != nil {
+	if err := h.repo.DeleteClosedDay(ctx, id); err != nil {
 		h.logger.Error("failed to delete closed day", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "failed to delete closed day",
@@ -200,7 +211,7 @@ func (h *ClosedDaysHandler) DeleteClosedDay(c *gin.Context) {
 	// Audit log
 	if h.auditLogger != nil {
 		actorID, _ := c.Get("user_id")
-		h.auditLogger.Log(c.Request.Context(), audit.AuditEvent{
+		h.auditLogger.Log(ctx, audit.AuditEvent{
 			ActorID:      actorID.(string),
 			ActorRole:    "admin",
 			Action:       "closed_day.deleted",
@@ -229,6 +240,9 @@ type batchCreateClosedDaysResponse struct {
 // BatchCreateClosedDays adds multiple closed days at once, skipping duplicates.
 // POST /internal/closed-days/batch
 func (h *ClosedDaysHandler) BatchCreateClosedDays(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
 	var req batchCreateClosedDaysRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -248,7 +262,7 @@ func (h *ClosedDaysHandler) BatchCreateClosedDays(c *gin.Context) {
 			continue
 		}
 
-		closedDay, err := h.repo.CreateClosedDay(c.Request.Context(), db.CreateClosedDayParams{
+		closedDay, err := h.repo.CreateClosedDay(ctx, db.CreateClosedDayParams{
 			Date:     pgtype.Date{Time: date, Valid: true},
 			Reason:   entry.Reason,
 			Semester: pgtype.Text{String: req.Semester, Valid: req.Semester != ""},
@@ -276,13 +290,16 @@ func (h *ClosedDaysHandler) BatchCreateClosedDays(c *gin.Context) {
 // DeleteClosedDaysBySemester removes all closed days for a semester.
 // DELETE /internal/closed-days/by-semester/:semester
 func (h *ClosedDaysHandler) DeleteClosedDaysBySemester(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
 	semester := c.Param("semester")
 	if semester == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "semester is required", "code": "VALIDATION_ERROR"})
 		return
 	}
 
-	if err := h.repo.DeleteClosedDaysBySemester(c.Request.Context(), semester); err != nil {
+	if err := h.repo.DeleteClosedDaysBySemester(ctx, semester); err != nil {
 		h.logger.Error("failed to delete closed days by semester", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete closed days", "code": "INTERNAL_ERROR"})
 		return
@@ -298,6 +315,9 @@ type updateClosedDaysBySemesterRequest struct {
 // UpdateClosedDaysBySemester replaces all closed days for a semester.
 // PUT /internal/closed-days/by-semester/:semester
 func (h *ClosedDaysHandler) UpdateClosedDaysBySemester(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
 	semester := c.Param("semester")
 	if semester == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "semester is required", "code": "VALIDATION_ERROR"})
@@ -309,8 +329,6 @@ func (h *ClosedDaysHandler) UpdateClosedDaysBySemester(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body", "code": "VALIDATION_ERROR"})
 		return
 	}
-
-	ctx := c.Request.Context()
 
 	// Delete existing closed days for this semester
 	if err := h.repo.DeleteClosedDaysBySemester(ctx, semester); err != nil {

@@ -33,7 +33,8 @@ func NewEventConsumer(
 
 // Start begins consuming events from RabbitMQ
 func (c *EventConsumer) Start(ctx context.Context) error {
-	logger.Info("starting event consumer")
+	log := logger.WithContextAndFields(ctx, zap.String("worker", "EventConsumer"))
+	log.Info("starting event consumer")
 
 	// Consume staff events using shared events constants
 	err := c.consumer.Consume(events.QueueStudentStaffEvents, func(msg []byte) error {
@@ -43,18 +44,23 @@ func (c *EventConsumer) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to start consuming: %w", err)
 	}
 
-	logger.Info("event consumer started successfully")
+	log.Info("event consumer started successfully")
 	return nil
 }
 
 // handleMessage processes incoming messages
 func (c *EventConsumer) handleMessage(ctx context.Context, msgBody []byte) error {
-	logger.Info("received event")
+	log := logger.WithContextAndFields(ctx,
+		zap.String("worker", "EventConsumer"),
+		zap.String("method", "handleMessage"),
+	)
+
+	log.Info("received event")
 
 	// Parse generic event to get event_id
 	var genericEvent dto.Event
 	if err := json.Unmarshal(msgBody, &genericEvent); err != nil {
-		logger.Error("failed to unmarshal event",
+		log.Error("failed to unmarshal event",
 			zap.Error(err),
 		)
 		return err // Don't requeue malformed messages
@@ -63,7 +69,7 @@ func (c *EventConsumer) handleMessage(ctx context.Context, msgBody []byte) error
 	// Check if event already processed (idempotency)
 	processed, err := c.processedEventsRepo.IsEventProcessed(ctx, genericEvent.EventID)
 	if err != nil {
-		logger.Error("failed to check event processing status",
+		log.Error("failed to check event processing status",
 			zap.Error(err),
 			zap.String("event_id", genericEvent.EventID),
 		)
@@ -71,7 +77,7 @@ func (c *EventConsumer) handleMessage(ctx context.Context, msgBody []byte) error
 	}
 
 	if processed {
-		logger.Info("event already processed, skipping",
+		log.Info("event already processed, skipping",
 			zap.String("event_id", genericEvent.EventID),
 			zap.String("event_type", genericEvent.EventType),
 		)
@@ -83,7 +89,7 @@ func (c *EventConsumer) handleMessage(ctx context.Context, msgBody []byte) error
 	case events.EventStaffDeactivated:
 		return c.handleStaffDeactivated(ctx, msgBody, genericEvent.EventID)
 	default:
-		logger.Warn("unknown event type",
+		log.Warn("unknown event type",
 			zap.String("event_type", genericEvent.EventType),
 		)
 		return nil // Acknowledge unknown events to avoid DLQ
@@ -92,15 +98,20 @@ func (c *EventConsumer) handleMessage(ctx context.Context, msgBody []byte) error
 
 // handleStaffDeactivated handles staff.deactivated events
 func (c *EventConsumer) handleStaffDeactivated(ctx context.Context, msgBody []byte, eventID string) error {
+	log := logger.WithContextAndFields(ctx,
+		zap.String("worker", "EventConsumer"),
+		zap.String("method", "handleStaffDeactivated"),
+	)
+
 	var event dto.StaffDeactivatedEvent
 	if err := json.Unmarshal(msgBody, &event); err != nil {
-		logger.Error("failed to unmarshal staff.deactivated event",
+		log.Error("failed to unmarshal staff.deactivated event",
 			zap.Error(err),
 		)
 		return err
 	}
 
-	logger.Info("processing staff.deactivated event",
+	log.Info("processing staff.deactivated event",
 		zap.String("event_id", eventID),
 		zap.String("staff_id", event.Data.StaffID.String()),
 	)
@@ -108,14 +119,14 @@ func (c *EventConsumer) handleStaffDeactivated(ctx context.Context, msgBody []by
 	// Unassign advisor and mark event as processed in single transaction (atomicity)
 	err := c.studentRepo.UnassignAdvisorByStaffIDWithEventMarking(ctx, event.Data.StaffID, eventID, event.EventType)
 	if err != nil {
-		logger.Error("failed to process staff.deactivated event",
+		log.Error("failed to process staff.deactivated event",
 			zap.Error(err),
 			zap.String("staff_id", event.Data.StaffID.String()),
 		)
 		return err // Requeue for retry
 	}
 
-	logger.Info("staff.deactivated event processed successfully",
+	log.Info("staff.deactivated event processed successfully",
 		zap.String("event_id", eventID),
 		zap.String("staff_id", event.Data.StaffID.String()),
 	)

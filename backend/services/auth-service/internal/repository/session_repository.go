@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	sharedErrors "github.com/baaaki/mydreamcampus/shared/errors"
@@ -38,7 +39,7 @@ func (r *SessionRepository) CreateSession(ctx context.Context, params db.CreateS
 func (r *SessionRepository) GetSessionByJTI(ctx context.Context, jti string) (db.Session, error) {
 	session, err := r.queries.GetSessionByJTI(ctx, jti)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return db.Session{}, fmt.Errorf("%w: session with jti %s not found", serviceErrors.ErrSessionNotFoundRepo, jti)
 		}
 		return db.Session{}, fmt.Errorf("%w: failed to get session: %v", sharedErrors.ErrQueryFailed, err)
@@ -59,7 +60,7 @@ func (r *SessionRepository) GetSessionsByUserID(ctx context.Context, userID uuid
 func (r *SessionRepository) UpdateSessionLastUsed(ctx context.Context, jti string) error {
 	err := r.queries.UpdateSessionLastUsed(ctx, jti)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf("%w: session not found for update", serviceErrors.ErrSessionNotFoundRepo)
 		}
 		return fmt.Errorf("%w: failed to update session last used: %v", sharedErrors.ErrQueryFailed, err)
@@ -71,7 +72,7 @@ func (r *SessionRepository) UpdateSessionLastUsed(ctx context.Context, jti strin
 func (r *SessionRepository) DeleteSession(ctx context.Context, jti string) error {
 	err := r.queries.DeleteSession(ctx, jti)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf("%w: session not found for deletion", serviceErrors.ErrSessionNotFoundRepo)
 		}
 		return fmt.Errorf("%w: failed to delete session: %v", sharedErrors.ErrQueryFailed, err)
@@ -86,7 +87,7 @@ func (r *SessionRepository) DeleteSessionByID(ctx context.Context, sessionID, us
 		UserID: utils.UUIDToPgtype(userID),
 	})
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf("%w: session not found for deletion", serviceErrors.ErrSessionNotFoundRepo)
 		}
 		return fmt.Errorf("%w: failed to delete session: %v", sharedErrors.ErrQueryFailed, err)

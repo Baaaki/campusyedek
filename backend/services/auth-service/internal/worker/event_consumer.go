@@ -30,7 +30,8 @@ func NewEventConsumer(
 
 // Start begins consuming events from RabbitMQ
 func (w *EventConsumer) Start(ctx context.Context) error {
-	logger.Info("starting event consumer")
+	log := logger.WithContextAndFields(ctx, zap.String("worker", "EventConsumer"))
+	log.Info("starting event consumer")
 
 	// Declare queue using shared events constants
 	err := w.consumer.DeclareQueue(events.QueueAuthStaffEvents)
@@ -46,7 +47,7 @@ func (w *EventConsumer) Start(ctx context.Context) error {
 			return fmt.Errorf("failed to unmarshal base event: %w", err)
 		}
 
-		logger.Info("received event",
+		log.Info("received event",
 			zap.String("event_type", baseEvent.EventType),
 			zap.String("event_id", baseEvent.EventID),
 		)
@@ -62,7 +63,7 @@ func (w *EventConsumer) Start(ctx context.Context) error {
 		case events.EventStudentDeactivated, events.EventStaffDeactivated:
 			return w.handleUserDeactivated(ctx, body)
 		default:
-			logger.Warn("unknown event type",
+			log.Warn("unknown event type",
 				zap.String("event_type", baseEvent.EventType),
 			)
 			return nil // Ack unknown events to avoid infinite loop
@@ -75,16 +76,21 @@ func (w *EventConsumer) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to start consumer: %w", err)
 	}
 
-	logger.Info("event consumer started successfully")
+	log.Info("event consumer started successfully")
 	return nil
 }
 
 
 // handleStudentCreated processes student.created event
 func (w *EventConsumer) handleStudentCreated(ctx context.Context, body []byte) error {
+	log := logger.WithContextAndFields(ctx,
+		zap.String("worker", "EventConsumer"),
+		zap.String("method", "handleStudentCreated"),
+	)
+
 	var event dto.StudentCreatedEvent
 	if err := json.Unmarshal(body, &event); err != nil {
-		logger.Error("failed to unmarshal student.created event",
+		log.Error("failed to unmarshal student.created event",
 			zap.Error(err),
 		)
 		return err
@@ -95,9 +101,14 @@ func (w *EventConsumer) handleStudentCreated(ctx context.Context, body []byte) e
 
 // handleStaffCreated processes staff.created event
 func (w *EventConsumer) handleStaffCreated(ctx context.Context, body []byte) error {
+	log := logger.WithContextAndFields(ctx,
+		zap.String("worker", "EventConsumer"),
+		zap.String("method", "handleStaffCreated"),
+	)
+
 	var event dto.StaffCreatedEvent
 	if err := json.Unmarshal(body, &event); err != nil {
-		logger.Error("failed to unmarshal staff.created event",
+		log.Error("failed to unmarshal staff.created event",
 			zap.Error(err),
 		)
 		return err
@@ -108,9 +119,14 @@ func (w *EventConsumer) handleStaffCreated(ctx context.Context, body []byte) err
 
 // handleUserUpdated processes student.updated and staff.updated events
 func (w *EventConsumer) handleUserUpdated(ctx context.Context, body []byte) error {
+	log := logger.WithContextAndFields(ctx,
+		zap.String("worker", "EventConsumer"),
+		zap.String("method", "handleUserUpdated"),
+	)
+
 	var event dto.UserUpdatedEvent
 	if err := json.Unmarshal(body, &event); err != nil {
-		logger.Error("failed to unmarshal user.updated event",
+		log.Error("failed to unmarshal user.updated event",
 			zap.Error(err),
 		)
 		return err
@@ -121,9 +137,14 @@ func (w *EventConsumer) handleUserUpdated(ctx context.Context, body []byte) erro
 
 // handleUserDeactivated processes student.deactivated and staff.deactivated events
 func (w *EventConsumer) handleUserDeactivated(ctx context.Context, body []byte) error {
+	log := logger.WithContextAndFields(ctx,
+		zap.String("worker", "EventConsumer"),
+		zap.String("method", "handleUserDeactivated"),
+	)
+
 	var event dto.UserDeactivatedEvent
 	if err := json.Unmarshal(body, &event); err != nil {
-		logger.Error("failed to unmarshal user.deactivated event",
+		log.Error("failed to unmarshal user.deactivated event",
 			zap.Error(err),
 		)
 		return err

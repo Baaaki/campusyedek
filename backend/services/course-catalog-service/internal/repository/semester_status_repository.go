@@ -65,6 +65,11 @@ func (r *SemesterStatusRepository) CompleteSemester(ctx context.Context, id uuid
 // If hard_deadline has passed, it auto-completes the semester and writes an audit log.
 // This method satisfies the semester.Checker interface.
 func (r *SemesterStatusRepository) IsSemesterActive(ctx context.Context, semesterName string) (bool, error) {
+	log := logger.WithContextAndFields(ctx,
+		zap.String("repository", "SemesterStatusRepository"),
+		zap.String("method", "IsSemesterActive"),
+	)
+
 	semester, err := r.queries.GetSemesterByName(ctx, semesterName)
 	if err != nil {
 		return false, err
@@ -81,7 +86,7 @@ func (r *SemesterStatusRepository) IsSemesterActive(ctx context.Context, semeste
 	if semester.HardDeadline.Valid && time.Now().After(semester.HardDeadline.Time) {
 		// Auto-complete: hard deadline has passed
 		if err := r.queries.AutoCompleteSemester(ctx, semesterName); err != nil {
-			logger.Warn("failed to auto-complete semester",
+			log.Warn("failed to auto-complete semester",
 				zap.String("semester", semesterName),
 				zap.Error(err),
 			)
@@ -101,7 +106,7 @@ func (r *SemesterStatusRepository) IsSemesterActive(ctx context.Context, semeste
 					},
 				})
 			}
-			logger.Info("semester auto-completed due to hard deadline",
+			log.Info("semester auto-completed due to hard deadline",
 				zap.String("semester", semesterName),
 			)
 		}

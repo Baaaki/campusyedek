@@ -34,12 +34,17 @@ type AdvisorDetails struct {
 
 // GetAdvisorInfo validates advisor and returns their full name
 func (c *StaffClient) GetAdvisorInfo(ctx context.Context, advisorID uuid.UUID) (*AdvisorDetails, error) {
+	log := logger.WithContextAndFields(ctx,
+		zap.String("service", "StaffClient"),
+		zap.String("method", "GetAdvisorInfo"),
+	)
+
 	// Use internal endpoint for service-to-service communication (no auth required)
 	url := fmt.Sprintf("%s/internal/staff/%s", c.baseURL, advisorID.String())
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		logger.Error("failed to create request",
+		log.Error("failed to create request",
 			zap.Error(err),
 			zap.String("url", url),
 		)
@@ -48,7 +53,7 @@ func (c *StaffClient) GetAdvisorInfo(ctx context.Context, advisorID uuid.UUID) (
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		logger.Error("failed to call staff service",
+		log.Error("failed to call staff service",
 			zap.Error(err),
 			zap.String("url", url),
 		)
@@ -61,7 +66,7 @@ func (c *StaffClient) GetAdvisorInfo(ctx context.Context, advisorID uuid.UUID) (
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		logger.Error("staff service returned error",
+		log.Error("staff service returned error",
 			zap.Int("status_code", resp.StatusCode),
 			zap.String("url", url),
 		)
@@ -78,7 +83,7 @@ func (c *StaffClient) GetAdvisorInfo(ctx context.Context, advisorID uuid.UUID) (
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&staffResponse); err != nil {
-		logger.Error("failed to decode staff response",
+		log.Error("failed to decode staff response",
 			zap.Error(err),
 		)
 		return nil, fmt.Errorf("failed to decode response: %w", err)
@@ -106,11 +111,16 @@ func (c *StaffClient) ValidateAdvisor(ctx context.Context, advisorID uuid.UUID) 
 
 // GetInstructorsByDepartment retrieves list of instructor IDs for a department
 func (c *StaffClient) GetInstructorsByDepartment(ctx context.Context, department string) ([]uuid.UUID, error) {
+	log := logger.WithContextAndFields(ctx,
+		zap.String("service", "StaffClient"),
+		zap.String("method", "GetInstructorsByDepartment"),
+	)
+
 	url := fmt.Sprintf("%s/api/v1/staff/instructors?department=%s", c.baseURL, department)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		logger.Error("failed to create request",
+		log.Error("failed to create request",
 			zap.Error(err),
 			zap.String("url", url),
 		)
@@ -119,7 +129,7 @@ func (c *StaffClient) GetInstructorsByDepartment(ctx context.Context, department
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		logger.Error("failed to call staff service",
+		log.Error("failed to call staff service",
 			zap.Error(err),
 			zap.String("url", url),
 		)
@@ -128,7 +138,7 @@ func (c *StaffClient) GetInstructorsByDepartment(ctx context.Context, department
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		logger.Error("staff service returned error",
+		log.Error("staff service returned error",
 			zap.Int("status_code", resp.StatusCode),
 			zap.String("url", url),
 		)
@@ -143,7 +153,7 @@ func (c *StaffClient) GetInstructorsByDepartment(ctx context.Context, department
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&instructorsResponse); err != nil {
-		logger.Error("failed to decode instructors response",
+		log.Error("failed to decode instructors response",
 			zap.Error(err),
 		)
 		return nil, fmt.Errorf("failed to decode response: %w", err)
@@ -154,7 +164,7 @@ func (c *StaffClient) GetInstructorsByDepartment(ctx context.Context, department
 	for _, instructor := range instructorsResponse.Data {
 		id, err := uuid.Parse(instructor.ID)
 		if err != nil {
-			logger.Warn("invalid instructor ID",
+			log.Warn("invalid instructor ID",
 				zap.String("id", instructor.ID),
 			)
 			continue
@@ -162,7 +172,7 @@ func (c *StaffClient) GetInstructorsByDepartment(ctx context.Context, department
 		instructorIDs = append(instructorIDs, id)
 	}
 
-	logger.Info("fetched instructors for department",
+	log.Info("fetched instructors for department",
 		zap.String("department", department),
 		zap.Int("count", len(instructorIDs)),
 	)

@@ -254,6 +254,19 @@ func PgTimestamptzToTimePtr(t pgtype.Timestamptz) *time.Time {
 	return &t.Time
 }
 
+// TimeToPgDate converts time.Time to pgtype.Date
+func TimeToPgDate(t time.Time) pgtype.Date {
+	return pgtype.Date{Time: t, Valid: true}
+}
+
+// PgDateToTime converts pgtype.Date to time.Time
+func PgDateToTime(d pgtype.Date) time.Time {
+	if !d.Valid {
+		return time.Time{}
+	}
+	return d.Time
+}
+
 // Aliases for consistency
 func UUIDToPgUUID(id uuid.UUID) pgtype.UUID {
 	return UUIDToPgtype(id)

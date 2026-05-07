@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/baaaki/mydreamcampus/shared/events"
@@ -43,7 +44,8 @@ func (r *StaffRepository) CreateStaffWithEvent(ctx context.Context, params db.Cr
 	staff, err := qtx.CreateStaff(ctx, params)
 	if err != nil {
 		// Check for duplicate email constraint violation
-		if pgxErr, ok := err.(*pgconn.PgError); ok {
+		var pgxErr *pgconn.PgError
+		if errors.As(err, &pgxErr) {
 			if pgxErr.Code == "23505" { // unique_violation
 				return db.Staff{}, fmt.Errorf("%w: email already exists", serviceErrors.ErrStaffExistsRepo)
 			}
@@ -90,7 +92,7 @@ func (r *StaffRepository) CreateStaffWithEvent(ctx context.Context, params db.Cr
 func (r *StaffRepository) GetStaffByID(ctx context.Context, id uuid.UUID) (db.Staff, error) {
 	staff, err := r.queries.GetStaffByID(ctx, utils.UUIDToPgtype(id))
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return db.Staff{}, fmt.Errorf("%w: staff with id %s not found", serviceErrors.ErrStaffNotFoundRepo, id)
 		}
 		return db.Staff{}, fmt.Errorf("%w: failed to get staff: %v", sharedErrors.ErrQueryFailed, err)
@@ -103,7 +105,7 @@ func (r *StaffRepository) GetStaffByID(ctx context.Context, id uuid.UUID) (db.St
 func (r *StaffRepository) GetStaffByEmail(ctx context.Context, email string) (db.Staff, error) {
 	staff, err := r.queries.GetStaffByEmail(ctx, email)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			// Not found is not an error for existence check - return empty staff
 			return db.Staff{}, nil
 		}
@@ -125,7 +127,7 @@ func (r *StaffRepository) UpdateStaffWithEvent(ctx context.Context, id uuid.UUID
 	// Update staff
 	staff, err := qtx.UpdateStaff(ctx, params)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return db.Staff{}, fmt.Errorf("%w: staff with id %s not found for update", serviceErrors.ErrStaffNotFoundRepo, id)
 		}
 		return db.Staff{}, fmt.Errorf("%w: failed to update staff: %v", sharedErrors.ErrQueryFailed, err)
@@ -165,7 +167,7 @@ func (r *StaffRepository) SoftDeleteStaffWithEvent(ctx context.Context, id uuid.
 	// Soft delete staff
 	err = qtx.SoftDeleteStaff(ctx, utils.UUIDToPgtype(id))
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf("%w: staff with id %s not found for deletion", serviceErrors.ErrStaffNotFoundRepo, id)
 		}
 		return fmt.Errorf("%w: failed to delete staff: %v", sharedErrors.ErrQueryFailed, err)

@@ -597,6 +597,11 @@ func (s *SemesterService) DeleteSemesterCourse(ctx context.Context, semester, co
 // checkInstructorConflict checks if instructor has schedule conflict
 // currentDepartment is used to detect cross-department conflicts and return a detailed error
 func (s *SemesterService) checkInstructorConflict(ctx context.Context, semester string, instructorID uuid.UUID, sessions []dto.ScheduleSession, excludeCourseID uuid.UUID, currentDepartment string) error {
+	log := logger.WithContextAndFields(ctx,
+		zap.String("service", "SemesterService"),
+		zap.String("method", "checkInstructorConflict"),
+	)
+
 	// Build parallel arrays of (day, slot) pairs for tuple matching
 	var dayEnums []db.DayOfWeekEnum
 	var slots []int16
@@ -627,7 +632,7 @@ func (s *SemesterService) checkInstructorConflict(ctx context.Context, semester 
 	// Check for cross-department conflict first
 	for _, c := range conflicts {
 		if c.Department != currentDepartment {
-			logger.Warn("instructor has cross-department schedule conflict",
+			log.Warn("instructor has cross-department schedule conflict",
 				zap.String("instructor_id", instructorID.String()),
 				zap.String("conflicting_course", c.CourseCode),
 				zap.String("conflicting_department", c.Department),
@@ -639,7 +644,7 @@ func (s *SemesterService) checkInstructorConflict(ctx context.Context, semester 
 
 	// Same department conflict
 	if len(conflicts) > 0 {
-		logger.Warn("instructor has schedule conflict",
+		log.Warn("instructor has schedule conflict",
 			zap.String("instructor_id", instructorID.String()),
 			zap.String("conflicting_course", conflicts[0].CourseCode),
 		)

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -36,6 +37,14 @@ func (h *AuditHandler) RegisterInternalRoutes(rg *gin.RouterGroup) {
 
 // ListAuditLog handles GET /admin/audit-log
 func (h *AuditHandler) ListAuditLog(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	log := logger.WithContextAndFields(ctx,
+		zap.String("handler", "AuditHandler"),
+		zap.String("method", "ListAuditLog"),
+	)
+
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
 	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
 
@@ -64,9 +73,9 @@ func (h *AuditHandler) ListAuditLog(c *gin.Context) {
 		}
 	}
 
-	logs, err := h.repo.ListAuditLog(c.Request.Context(), params)
+	logs, err := h.repo.ListAuditLog(ctx, params)
 	if err != nil {
-		logger.Error("failed to list audit logs", zap.Error(err))
+		log.Error("failed to list audit logs", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list audit logs", "code": "INTERNAL_ERROR"})
 		return
 	}
@@ -77,9 +86,9 @@ func (h *AuditHandler) ListAuditLog(c *gin.Context) {
 		ActorID: params.ActorID,
 	}
 
-	total, err := h.repo.CountAuditLog(c.Request.Context(), countParams)
+	total, err := h.repo.CountAuditLog(ctx, countParams)
 	if err != nil {
-		logger.Error("failed to count audit logs", zap.Error(err))
+		log.Error("failed to count audit logs", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to count audit logs", "code": "INTERNAL_ERROR"})
 		return
 	}
@@ -100,6 +109,14 @@ func (h *AuditHandler) ListAuditLog(c *gin.Context) {
 
 // CreateAuditLog handles POST /internal/audit-log
 func (h *AuditHandler) CreateAuditLog(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	log := logger.WithContextAndFields(ctx,
+		zap.String("handler", "AuditHandler"),
+		zap.String("method", "CreateAuditLog"),
+	)
+
 	var event audit.AuditEvent
 	if err := c.ShouldBindJSON(&event); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
@@ -138,9 +155,9 @@ func (h *AuditHandler) CreateAuditLog(c *gin.Context) {
 		}
 	}
 
-	_, err := h.repo.InsertAuditLog(c.Request.Context(), params)
+	_, err := h.repo.InsertAuditLog(ctx, params)
 	if err != nil {
-		logger.Error("failed to insert audit log", zap.Error(err))
+		log.Error("failed to insert audit log", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to insert audit log"})
 		return
 	}

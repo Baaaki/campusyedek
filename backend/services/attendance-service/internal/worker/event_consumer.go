@@ -33,51 +33,57 @@ func NewEventConsumer(
 }
 
 func (w *EventConsumer) Start(ctx context.Context) error {
-	logger.Info("Event consumer started")
+	log := logger.WithContextAndFields(ctx, zap.String("worker", "EventConsumer"))
+	log.Info("Event consumer started")
 
 	// Start consuming from the queue. The closure captures the root ctx so
 	// in-flight event processing is canceled on graceful shutdown.
 	if err := w.consumer.Consume("attendance.events", func(body []byte) error {
 		return w.handleMessage(ctx, body)
 	}); err != nil {
-		logger.Error("failed to start consuming", zap.Error(err))
+		log.Error("failed to start consuming", zap.Error(err))
 		return err
 	}
 
 	go func() {
 		<-ctx.Done()
-		logger.Info("Event consumer stopped")
+		log.Info("Event consumer stopped")
 	}()
 
 	return nil
 }
 
 func (w *EventConsumer) handleMessage(ctx context.Context, body []byte) error {
+	log := logger.WithContextAndFields(ctx,
+		zap.String("worker", "EventConsumer"),
+		zap.String("method", "handleMessage"),
+	)
+
 	var event dto.BaseEvent
 	if err := json.Unmarshal(body, &event); err != nil {
-		logger.Error("failed to unmarshal event", zap.Error(err))
+		log.Error("failed to unmarshal event", zap.Error(err))
 		return err
 	}
 
 	// Check if already processed (idempotency)
 	eventID, err := uuid.Parse(event.EventID.String())
 	if err != nil {
-		logger.Error("invalid event ID", zap.Error(err))
+		log.Error("invalid event ID", zap.Error(err))
 		return err
 	}
 
 	processed, err := w.eventRepo.IsEventProcessed(ctx, eventID)
 	if err != nil {
-		logger.Error("failed to check if event processed", zap.Error(err))
+		log.Error("failed to check if event processed", zap.Error(err))
 		return err
 	}
 
 	if processed {
-		logger.Debug("event already processed, skipping", zap.String("event_id", eventID.String()))
+		log.Debug("event already processed, skipping", zap.String("event_id", eventID.String()))
 		return nil
 	}
 
-	logger.Info("processing event",
+	log.Info("processing event",
 		zap.String("type", event.EventType),
 		zap.String("event_id", eventID.String()),
 	)
@@ -95,13 +101,18 @@ func (w *EventConsumer) handleMessage(ctx context.Context, body []byte) error {
 	case "enrollment.program.approved":
 		return w.handleEnrollmentProgramApproved(ctx, body, eventID)
 	default:
-		logger.Warn("unknown event type", zap.String("type", event.EventType))
+		log.Warn("unknown event type", zap.String("type", event.EventType))
 		// Mark as processed anyway to avoid reprocessing
 		return w.eventRepo.MarkEventProcessed(ctx, eventID, event.EventType)
 	}
 }
 
 func (w *EventConsumer) handleStudentCreated(ctx context.Context, body []byte, eventID uuid.UUID) error {
+	log := logger.WithContextAndFields(ctx,
+		zap.String("worker", "EventConsumer"),
+		zap.String("method", "handleStudentCreated"),
+	)
+
 	eventData, err := unwrapEventData[dto.StudentCreatedEventData](body)
 	if err != nil {
 		return err
@@ -118,11 +129,11 @@ func (w *EventConsumer) handleStudentCreated(ctx context.Context, body []byte, e
 		IsActive:      utils.BoolToPgBool(true),
 	})
 	if err != nil {
-		logger.Error("failed to upsert student cache", zap.Error(err))
+		log.Error("failed to upsert student cache", zap.Error(err))
 		return err
 	}
 
-	logger.Info("student cache created",
+	log.Info("student cache created",
 		zap.String("student_id", eventData.StudentID.String()),
 		zap.String("student_number", eventData.StudentNumber),
 	)
@@ -131,6 +142,11 @@ func (w *EventConsumer) handleStudentCreated(ctx context.Context, body []byte, e
 }
 
 func (w *EventConsumer) handleStudentUpdated(ctx context.Context, body []byte, eventID uuid.UUID) error {
+	log := logger.WithContextAndFields(ctx,
+		zap.String("worker", "EventConsumer"),
+		zap.String("method", "handleStudentUpdated"),
+	)
+
 	// Two-step unwrap: BaseEvent wraps the actual data in "data" field
 	var baseEvent dto.BaseEvent
 	if err := json.Unmarshal(body, &baseEvent); err != nil {
@@ -156,11 +172,11 @@ func (w *EventConsumer) handleStudentUpdated(ctx context.Context, body []byte, e
 		IsActive:      utils.BoolToPgBool(true),
 	})
 	if err != nil {
-		logger.Error("failed to upsert student cache", zap.Error(err))
+		log.Error("failed to upsert student cache", zap.Error(err))
 		return err
 	}
 
-	logger.Info("student cache updated",
+	log.Info("student cache updated",
 		zap.String("student_id", eventData.StudentID.String()),
 		zap.String("student_number", eventData.StudentNumber),
 	)
@@ -169,6 +185,11 @@ func (w *EventConsumer) handleStudentUpdated(ctx context.Context, body []byte, e
 }
 
 func (w *EventConsumer) handleStudentDeactivated(ctx context.Context, body []byte, eventID uuid.UUID) error {
+	log := logger.WithContextAndFields(ctx,
+		zap.String("worker", "EventConsumer"),
+		zap.String("method", "handleStudentDeactivated"),
+	)
+
 	// Two-step unwrap: BaseEvent wraps the actual data in "data" field
 	var baseEvent dto.BaseEvent
 	if err := json.Unmarshal(body, &baseEvent); err != nil {
@@ -185,16 +206,21 @@ func (w *EventConsumer) handleStudentDeactivated(ctx context.Context, body []byt
 
 	// Deactivate student in cache
 	if err := w.cacheRepo.DeactivateStudentCache(ctx, eventData.StudentID); err != nil {
-		logger.Error("failed to deactivate student cache", zap.Error(err))
+		log.Error("failed to deactivate student cache", zap.Error(err))
 		return err
 	}
 
-	logger.Info("student cache deactivated", zap.String("student_id", eventData.StudentID.String()))
+	log.Info("student cache deactivated", zap.String("student_id", eventData.StudentID.String()))
 
 	return w.eventRepo.MarkEventProcessed(ctx, eventID, "student.deactivated")
 }
 
 func (w *EventConsumer) handleCourseSemesterCreated(ctx context.Context, body []byte, eventID uuid.UUID) error {
+	log := logger.WithContextAndFields(ctx,
+		zap.String("worker", "EventConsumer"),
+		zap.String("method", "handleCourseSemesterCreated"),
+	)
+
 	var eventData dto.CourseSemesterCreatedEventData
 	if err := json.Unmarshal(body, &eventData); err != nil {
 		return err
@@ -223,11 +249,11 @@ func (w *EventConsumer) handleCourseSemesterCreated(ctx context.Context, body []
 		HasLab:             hasLab,
 	})
 	if err != nil {
-		logger.Error("failed to upsert course cache", zap.Error(err))
+		log.Error("failed to upsert course cache", zap.Error(err))
 		return err
 	}
 
-	logger.Info("course cache created",
+	log.Info("course cache created",
 		zap.String("course_id", eventData.SemesterCourseID.String()),
 		zap.String("course_code", eventData.CourseCode),
 	)
@@ -236,6 +262,11 @@ func (w *EventConsumer) handleCourseSemesterCreated(ctx context.Context, body []
 }
 
 func (w *EventConsumer) handleEnrollmentProgramApproved(ctx context.Context, body []byte, eventID uuid.UUID) error {
+	log := logger.WithContextAndFields(ctx,
+		zap.String("worker", "EventConsumer"),
+		zap.String("method", "handleEnrollmentProgramApproved"),
+	)
+
 	// Parse the wrapped event: { event_id, event_type, data: { ... } }
 	var wrapper struct {
 		Data dto.EnrollmentProgramApprovedEventData `json:"data"`
@@ -256,7 +287,7 @@ func (w *EventConsumer) handleEnrollmentProgramApproved(ctx context.Context, bod
 			eventData.Semester,
 		)
 		if err != nil {
-			logger.Error("failed to create enrollment cache",
+			log.Error("failed to create enrollment cache",
 				zap.String("student_id", eventData.StudentID.String()),
 				zap.String("course_id", courseID.String()),
 				zap.Error(err),
@@ -266,7 +297,7 @@ func (w *EventConsumer) handleEnrollmentProgramApproved(ctx context.Context, bod
 		}
 
 		successCount++
-		logger.Info("enrollment cache created",
+		log.Info("enrollment cache created",
 			zap.String("student_id", eventData.StudentID.String()),
 			zap.String("course_id", courseID.String()),
 			zap.String("semester", eventData.Semester),
@@ -275,7 +306,7 @@ func (w *EventConsumer) handleEnrollmentProgramApproved(ctx context.Context, bod
 
 	// If all enrollments failed (e.g. FK constraint: student not in cache yet), requeue for retry
 	if successCount == 0 && lastErr != nil {
-		logger.Warn("all enrollment cache entries failed, will retry",
+		log.Warn("all enrollment cache entries failed, will retry",
 			zap.String("student_id", eventData.StudentID.String()),
 			zap.Int("total_courses", len(eventData.CourseIDs)),
 			zap.Error(lastErr),

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	sharedErrors "github.com/baaaki/mydreamcampus/shared/errors"
@@ -37,7 +38,7 @@ func (r *StudentCacheRepository) UpsertStudentCache(ctx context.Context, params 
 func (r *StudentCacheRepository) GetStudentCacheByID(ctx context.Context, id uuid.UUID) (db.StudentsCache, error) {
 	student, err := r.queries.GetStudentCacheByID(ctx, utils.UUIDToPgtype(id))
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return db.StudentsCache{}, fmt.Errorf("%w", sharedErrors.ErrNotFoundRepo)
 		}
 		return db.StudentsCache{}, fmt.Errorf("%w: failed to get student cache: %v", sharedErrors.ErrQueryFailed, err)

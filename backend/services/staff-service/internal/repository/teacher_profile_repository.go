@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	sharedErrors "github.com/baaaki/mydreamcampus/shared/errors"
@@ -29,7 +30,7 @@ func NewTeacherProfileRepository(pool *pgxpool.Pool) *TeacherProfileRepository {
 func (r *TeacherProfileRepository) GetTeacherProfileByStaffID(ctx context.Context, staffID uuid.UUID) (db.GetTeacherProfileByStaffIDRow, error) {
 	profile, err := r.queries.GetTeacherProfileByStaffID(ctx, utils.UUIDToPgtype(staffID))
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return db.GetTeacherProfileByStaffIDRow{}, fmt.Errorf("%w: teacher profile for staff %s not found", serviceErrors.ErrTeacherProfileNotFoundRepo, staffID)
 		}
 		return db.GetTeacherProfileByStaffIDRow{}, fmt.Errorf("%w: failed to get teacher profile: %v", sharedErrors.ErrQueryFailed, err)
@@ -55,7 +56,7 @@ func (r *TeacherProfileRepository) CreateTeacherProfile(ctx context.Context, sta
 func (r *TeacherProfileRepository) UpdateTeacherProfile(ctx context.Context, params db.UpdateTeacherProfileParams) (db.TeacherProfile, error) {
 	profile, err := r.queries.UpdateTeacherProfile(ctx, params)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return db.TeacherProfile{}, fmt.Errorf("%w: teacher profile not found for update", serviceErrors.ErrTeacherProfileNotFoundRepo)
 		}
 		return db.TeacherProfile{}, fmt.Errorf("%w: failed to update teacher profile: %v", sharedErrors.ErrQueryFailed, err)

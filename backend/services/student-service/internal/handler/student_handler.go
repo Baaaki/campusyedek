@@ -195,9 +195,14 @@ func (h *StudentHandler) DeleteStudent(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
 	defer cancel()
 
+	reqLogger := logger.WithContextAndFields(ctx,
+		zap.String("handler", "StudentHandler"),
+		zap.String("method", "DeleteStudent"),
+	)
+
 	id := c.Param("id")
 
-	logger.Info("deleting student",
+	reqLogger.Info("deleting student",
 		zap.String("student_id", id),
 	)
 
@@ -218,7 +223,7 @@ func (h *StudentHandler) DeleteStudent(c *gin.Context) {
 		return
 	}
 
-	logger.Info("student deleted successfully",
+	reqLogger.Info("student deleted successfully",
 		zap.String("student_id", id),
 	)
 
@@ -232,9 +237,14 @@ func (h *StudentHandler) ListStudents(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
 	defer cancel()
 
+	reqLogger := logger.WithContextAndFields(ctx,
+		zap.String("handler", "StudentHandler"),
+		zap.String("method", "ListStudents"),
+	)
+
 	var query dto.PaginationQuery
 	if err := c.ShouldBindQuery(&query); err != nil {
-		logger.Error("invalid query parameters",
+		reqLogger.Error("invalid query parameters",
 			zap.Error(err),
 			zap.String("endpoint", "ListStudents"),
 		)
@@ -259,7 +269,7 @@ func (h *StudentHandler) ListStudents(c *gin.Context) {
 		query.Limit = defaultLimit
 	}
 
-	logger.Info("listing students",
+	reqLogger.Info("listing students",
 		zap.Int("page", query.Page),
 		zap.Int("limit", query.Limit),
 	)
@@ -289,6 +299,11 @@ func (h *StudentHandler) GetMyAdvisees(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
 	defer cancel()
 
+	reqLogger := logger.WithContextAndFields(ctx,
+		zap.String("handler", "StudentHandler"),
+		zap.String("method", "GetMyAdvisees"),
+	)
+
 	// Extract advisor ID from JWT context (prevents IDOR)
 	userIDStr, exists := c.Get("user_id")
 	if !exists {
@@ -308,7 +323,7 @@ func (h *StudentHandler) GetMyAdvisees(c *gin.Context) {
 		return
 	}
 
-	logger.Info("getting advisor's students",
+	reqLogger.Info("getting advisor's students",
 		zap.String("advisor_id", advisorID.String()),
 	)
 
@@ -337,9 +352,14 @@ func (h *StudentHandler) ListOrphanedStudents(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
 	defer cancel()
 
+	reqLogger := logger.WithContextAndFields(ctx,
+		zap.String("handler", "StudentHandler"),
+		zap.String("method", "ListOrphanedStudents"),
+	)
+
 	var query dto.PaginationQuery
 	if err := c.ShouldBindQuery(&query); err != nil {
-		logger.Error("invalid query parameters",
+		reqLogger.Error("invalid query parameters",
 			zap.Error(err),
 			zap.String("endpoint", "ListOrphanedStudents"),
 		)
@@ -364,7 +384,7 @@ func (h *StudentHandler) ListOrphanedStudents(c *gin.Context) {
 		query.Limit = defaultLimit
 	}
 
-	logger.Info("listing orphaned students",
+	reqLogger.Info("listing orphaned students",
 		zap.Int("page", query.Page),
 		zap.Int("limit", query.Limit),
 	)
@@ -394,9 +414,14 @@ func (h *StudentHandler) BulkAssignAdvisor(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
 	defer cancel()
 
+	reqLogger := logger.WithContextAndFields(ctx,
+		zap.String("handler", "StudentHandler"),
+		zap.String("method", "BulkAssignAdvisor"),
+	)
+
 	var req dto.BulkAdvisorAssignRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		logger.Error("invalid request body",
+		reqLogger.Error("invalid request body",
 			zap.Error(err),
 			zap.String("endpoint", "BulkAssignAdvisor"),
 		)
@@ -407,7 +432,7 @@ func (h *StudentHandler) BulkAssignAdvisor(c *gin.Context) {
 		return
 	}
 
-	logger.Info("bulk assigning advisor",
+	reqLogger.Info("bulk assigning advisor",
 		zap.Int("student_count", len(req.StudentIDs)),
 		zap.String("advisor_id", req.AdvisorID.String()),
 	)
@@ -429,7 +454,7 @@ func (h *StudentHandler) BulkAssignAdvisor(c *gin.Context) {
 		return
 	}
 
-	logger.Info("bulk advisor assignment completed",
+	reqLogger.Info("bulk advisor assignment completed",
 		zap.Int("updated_count", response.UpdatedCount),
 	)
 

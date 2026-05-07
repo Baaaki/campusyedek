@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/baaaki/mydreamcampus/grades-service/internal/dto"
 	"github.com/baaaki/mydreamcampus/grades-service/internal/service"
@@ -12,6 +13,8 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
+
+const requestTimeout = 10 * time.Second
 
 type GradeHandler struct {
 	gradeService        *service.GradeService
@@ -34,7 +37,10 @@ func NewGradeHandler(
 
 // GetCourseStatus - GET /api/v1/grades/course/:courseId/status
 func (h *GradeHandler) GetCourseStatus(c *gin.Context) {
-	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	handlerLogger := logger.WithContextAndFields(ctx,
 		zap.String("handler", "GradeHandler"),
 		zap.String("method", "GetCourseStatus"),
 	)
@@ -83,7 +89,7 @@ func (h *GradeHandler) GetCourseStatus(c *gin.Context) {
 	)
 
 	// Get course status
-	status, err := h.gradeService.GetCourseStatus(c.Request.Context(), instructorID, courseID, isAdmin)
+	status, err := h.gradeService.GetCourseStatus(ctx, instructorID, courseID, isAdmin)
 	if err != nil {
 		handlerLogger.Error("failed to get course status", zap.Error(err))
 		h.handleError(c, err)
@@ -95,7 +101,10 @@ func (h *GradeHandler) GetCourseStatus(c *gin.Context) {
 
 // GetCourseStudents - GET /api/v1/grades/course/:courseId/students
 func (h *GradeHandler) GetCourseStudents(c *gin.Context) {
-	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	handlerLogger := logger.WithContextAndFields(ctx,
 		zap.String("handler", "GradeHandler"),
 		zap.String("method", "GetCourseStudents"),
 	)
@@ -144,7 +153,7 @@ func (h *GradeHandler) GetCourseStudents(c *gin.Context) {
 	)
 
 	// Get course students
-	students, err := h.gradeService.GetCourseStudents(c.Request.Context(), instructorID, courseID, isAdmin)
+	students, err := h.gradeService.GetCourseStudents(ctx, instructorID, courseID, isAdmin)
 	if err != nil {
 		handlerLogger.Error("failed to get course students", zap.Error(err))
 		h.handleError(c, err)
@@ -156,7 +165,10 @@ func (h *GradeHandler) GetCourseStudents(c *gin.Context) {
 
 // SubmitScore - POST /api/v1/grades/course/:courseId/scores
 func (h *GradeHandler) SubmitScore(c *gin.Context) {
-	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	handlerLogger := logger.WithContextAndFields(ctx,
 		zap.String("handler", "GradeHandler"),
 		zap.String("method", "SubmitScore"),
 	)
@@ -213,7 +225,7 @@ func (h *GradeHandler) SubmitScore(c *gin.Context) {
 	)
 
 	// Submit score
-	result, err := h.gradeService.SubmitScore(c.Request.Context(), instructorID, courseID, req)
+	result, err := h.gradeService.SubmitScore(ctx, instructorID, courseID, req)
 	if err != nil {
 		handlerLogger.Error("failed to submit score", zap.Error(err))
 		h.handleError(c, err)
@@ -226,7 +238,10 @@ func (h *GradeHandler) SubmitScore(c *gin.Context) {
 
 // BulkSubmitScores - POST /api/v1/grades/course/:courseId/scores/bulk
 func (h *GradeHandler) BulkSubmitScores(c *gin.Context) {
-	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	handlerLogger := logger.WithContextAndFields(ctx,
 		zap.String("handler", "GradeHandler"),
 		zap.String("method", "BulkSubmitScores"),
 	)
@@ -283,7 +298,7 @@ func (h *GradeHandler) BulkSubmitScores(c *gin.Context) {
 	)
 
 	// Bulk submit scores
-	result, err := h.gradeService.BulkSubmitScores(c.Request.Context(), instructorID, courseID, req)
+	result, err := h.gradeService.BulkSubmitScores(ctx, instructorID, courseID, req)
 	if err != nil {
 		handlerLogger.Error("failed to bulk submit scores", zap.Error(err))
 		h.handleError(c, err)
@@ -301,7 +316,10 @@ func (h *GradeHandler) BulkSubmitScores(c *gin.Context) {
 // Instructor-only: marks every student's score for this assessment as final.
 // Once all assessments are locked, the course auto-finalizes.
 func (h *GradeHandler) LockAssessment(c *gin.Context) {
-	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	handlerLogger := logger.WithContextAndFields(ctx,
 		zap.String("handler", "GradeHandler"),
 		zap.String("method", "LockAssessment"),
 	)
@@ -338,7 +356,7 @@ func (h *GradeHandler) LockAssessment(c *gin.Context) {
 		zap.String("slug", slug),
 	)
 
-	result, err := h.gradeService.LockAssessmentBySlug(c.Request.Context(), instructorID, courseID, slug)
+	result, err := h.gradeService.LockAssessmentBySlug(ctx, instructorID, courseID, slug)
 	if err != nil {
 		handlerLogger.Warn("failed to lock assessment", zap.Error(err))
 		h.handleError(c, err)
@@ -354,7 +372,10 @@ func (h *GradeHandler) LockAssessment(c *gin.Context) {
 
 // GetMyGrades - GET /api/v1/grades/student/my
 func (h *GradeHandler) GetMyGrades(c *gin.Context) {
-	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	handlerLogger := logger.WithContextAndFields(ctx,
 		zap.String("handler", "GradeHandler"),
 		zap.String("method", "GetMyGrades"),
 	)
@@ -386,7 +407,7 @@ func (h *GradeHandler) GetMyGrades(c *gin.Context) {
 	)
 
 	// Get my grades
-	grades, err := h.studentGradeService.GetMyGrades(c.Request.Context(), studentID)
+	grades, err := h.studentGradeService.GetMyGrades(ctx, studentID)
 	if err != nil {
 		handlerLogger.Error("failed to get my grades", zap.Error(err))
 		h.handleError(c, err)
@@ -398,7 +419,10 @@ func (h *GradeHandler) GetMyGrades(c *gin.Context) {
 
 // GetTranscript - GET /api/v1/grades/transcript/:studentId
 func (h *GradeHandler) GetTranscript(c *gin.Context) {
-	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	handlerLogger := logger.WithContextAndFields(ctx,
 		zap.String("handler", "GradeHandler"),
 		zap.String("method", "GetTranscript"),
 	)
@@ -455,7 +479,7 @@ func (h *GradeHandler) GetTranscript(c *gin.Context) {
 
 	// Get transcript
 	transcript, err := h.studentGradeService.GetTranscript(
-		c.Request.Context(),
+		ctx,
 		requesterID,
 		requesterRole.(string),
 		studentID,
@@ -476,7 +500,10 @@ func (h *GradeHandler) GetTranscript(c *gin.Context) {
 // ProcessAppeal - POST /api/v1/grades/admin/appeal
 // Admin only: Recalculate a student's grade after score correction using frozen statistics
 func (h *GradeHandler) ProcessAppeal(c *gin.Context) {
-	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+	parentCtx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	handlerLogger := logger.WithContextAndFields(parentCtx,
 		zap.String("handler", "GradeHandler"),
 		zap.String("method", "ProcessAppeal"),
 	)
@@ -512,7 +539,7 @@ func (h *GradeHandler) ProcessAppeal(c *gin.Context) {
 
 	// Add user_id to context for audit logging
 	userID, _ := c.Get("user_id")
-	ctx := context.WithValue(c.Request.Context(), "user_id", userID)
+	ctx := context.WithValue(parentCtx, "user_id", userID)
 
 	// Process appeal
 	result, err := h.gradeService.ProcessAppeal(ctx, req)
@@ -532,7 +559,10 @@ func (h *GradeHandler) ProcessAppeal(c *gin.Context) {
 // UnlockScore - POST /api/grades/admin/scores/unlock
 // Admin only: Unlock a specific score so the teacher can re-enter it
 func (h *GradeHandler) UnlockScore(c *gin.Context) {
-	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	handlerLogger := logger.WithContextAndFields(ctx,
 		zap.String("handler", "GradeHandler"),
 		zap.String("method", "UnlockScore"),
 	)
@@ -552,7 +582,7 @@ func (h *GradeHandler) UnlockScore(c *gin.Context) {
 		zap.String("slug", req.Slug),
 	)
 
-	if err := h.gradeService.UnlockScore(c.Request.Context(), req.RegistrationID, req.Slug); err != nil {
+	if err := h.gradeService.UnlockScore(ctx, req.RegistrationID, req.Slug); err != nil {
 		handlerLogger.Error("failed to unlock score", zap.Error(err))
 		h.handleError(c, err)
 		return
@@ -569,7 +599,10 @@ func (h *GradeHandler) UnlockScore(c *gin.Context) {
 // LockScore - POST /api/grades/admin/scores/lock
 // Admin only: Lock a specific score to prevent modification
 func (h *GradeHandler) LockScore(c *gin.Context) {
-	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	handlerLogger := logger.WithContextAndFields(ctx,
 		zap.String("handler", "GradeHandler"),
 		zap.String("method", "LockScore"),
 	)
@@ -589,7 +622,7 @@ func (h *GradeHandler) LockScore(c *gin.Context) {
 		zap.String("slug", req.Slug),
 	)
 
-	if err := h.gradeService.LockScore(c.Request.Context(), req.RegistrationID, req.Slug); err != nil {
+	if err := h.gradeService.LockScore(ctx, req.RegistrationID, req.Slug); err != nil {
 		handlerLogger.Error("failed to lock score", zap.Error(err))
 		h.handleError(c, err)
 		return

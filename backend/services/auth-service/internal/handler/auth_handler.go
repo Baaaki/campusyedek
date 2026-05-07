@@ -360,6 +360,11 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
 	defer cancel()
 
+	log := logger.WithContextAndFields(ctx,
+		zap.String("handler", "AuthHandler"),
+		zap.String("method", "ChangePassword"),
+	)
+
 	// Get user ID from JWT
 	userIDStr, exists := c.Get("user_id")
 	if !exists {
@@ -391,7 +396,7 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 	// Perform password change
 	response, newRefreshToken, err := h.authService.ChangePassword(ctx, userID, req)
 	if err != nil {
-		logger.Error("change password failed",
+		log.Error("change password failed",
 			zap.Error(err),
 			zap.String("user_id", userID.String()),
 		)
@@ -428,6 +433,11 @@ func (h *AuthHandler) GetSessions(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
 	defer cancel()
 
+	log := logger.WithContextAndFields(ctx,
+		zap.String("handler", "AuthHandler"),
+		zap.String("method", "GetSessions"),
+	)
+
 	// Get user ID from JWT
 	userIDStr, exists := c.Get("user_id")
 	if !exists {
@@ -457,7 +467,7 @@ func (h *AuthHandler) GetSessions(c *gin.Context) {
 	// Get sessions
 	response, err := h.authService.GetUserSessions(ctx, userID, jti)
 	if err != nil {
-		logger.Error("get sessions failed",
+		log.Error("get sessions failed",
 			zap.Error(err),
 			zap.String("user_id", userID.String()),
 		)
@@ -510,6 +520,11 @@ func (h *AuthHandler) DeleteSession(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
 	defer cancel()
 
+	log := logger.WithContextAndFields(ctx,
+		zap.String("handler", "AuthHandler"),
+		zap.String("method", "DeleteSession"),
+	)
+
 	// Get user ID from JWT
 	userIDStr, exists := c.Get("user_id")
 	if !exists {
@@ -550,7 +565,7 @@ func (h *AuthHandler) DeleteSession(c *gin.Context) {
 	// Delete session
 	err = h.authService.DeleteSession(ctx, sessionID, userID, jti)
 	if err != nil {
-		logger.Error("delete session failed",
+		log.Error("delete session failed",
 			zap.Error(err),
 			zap.String("session_id", sessionID.String()),
 		)

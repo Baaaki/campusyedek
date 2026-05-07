@@ -3,7 +3,6 @@ package worker
 import (
 	"context"
 	"encoding/json"
-	"strings"
 
 	"github.com/baaaki/mydreamcampus/meal-service/internal/db"
 	"github.com/baaaki/mydreamcampus/shared/utils"
@@ -54,20 +53,16 @@ func (c *PaymentEventConsumer) HandlePaymentCompleted(ctx context.Context, body 
 	}
 
 	// Parse reference_id to determine if it's single or batch
-	isBatch := strings.HasPrefix(event.Data.ReferenceID, "bat_")
-	refID := strings.TrimPrefix(event.Data.ReferenceID, "res_")
-	refID = strings.TrimPrefix(refID, "bat_")
+	parsedID, isBatch, parseErr := parseReferenceID(event.Data.ReferenceID)
+	if parseErr != nil {
+		c.logger.Error("invalid reference_id", zap.Error(parseErr), zap.String("reference_id", event.Data.ReferenceID))
+		return parseErr
+	}
 
 	if isBatch {
 		// Update all reservations in batch
-		batchID, err := uuid.Parse(refID)
-		if err != nil {
-			c.logger.Error("invalid batch ID", zap.Error(err), zap.String("reference_id", event.Data.ReferenceID))
-			return err
-		}
-
 		err = c.reservationRepo.UpdateReservationsByBatchID(ctx, db.UpdateReservationsByBatchIDParams{
-			BatchID:   pgtype.UUID{Bytes: batchID, Valid: true},
+			BatchID:   pgtype.UUID{Bytes: parsedID, Valid: true},
 			Status:    db.ReservationStatusEnumConfirmed,
 			ExpiresAt: pgtype.Timestamptz{Valid: false}, // Clear expires_at
 		})
@@ -76,17 +71,11 @@ func (c *PaymentEventConsumer) HandlePaymentCompleted(ctx context.Context, body 
 			return err
 		}
 
-		c.logger.Info("batch reservations confirmed", zap.String("batch_id", batchID.String()))
+		c.logger.Info("batch reservations confirmed", zap.String("batch_id", parsedID.String()))
 	} else {
 		// Update single reservation
-		reservationID, err := uuid.Parse(refID)
-		if err != nil {
-			c.logger.Error("invalid reservation ID", zap.Error(err), zap.String("reference_id", event.Data.ReferenceID))
-			return err
-		}
-
 		_, err = c.reservationRepo.UpdateReservationByID(ctx, db.UpdateReservationByIDParams{
-			ID: utils.UUIDToPgtype(reservationID),
+			ID:        utils.UUIDToPgtype(parsedID),
 			Status:    db.ReservationStatusEnumConfirmed,
 			ExpiresAt: pgtype.Timestamptz{Valid: false}, // Clear expires_at
 		})
@@ -95,7 +84,7 @@ func (c *PaymentEventConsumer) HandlePaymentCompleted(ctx context.Context, body 
 			return err
 		}
 
-		c.logger.Info("reservation confirmed", zap.String("reservation_id", reservationID.String()))
+		c.logger.Info("reservation confirmed", zap.String("reservation_id", parsedID.String()))
 	}
 
 	// Mark event as processed
@@ -130,20 +119,16 @@ func (c *PaymentEventConsumer) HandlePaymentFailed(ctx context.Context, body []b
 	}
 
 	// Parse reference_id
-	isBatch := strings.HasPrefix(event.Data.ReferenceID, "bat_")
-	refID := strings.TrimPrefix(event.Data.ReferenceID, "res_")
-	refID = strings.TrimPrefix(refID, "bat_")
+	parsedID, isBatch, parseErr := parseReferenceID(event.Data.ReferenceID)
+	if parseErr != nil {
+		c.logger.Error("invalid reference_id", zap.Error(parseErr), zap.String("reference_id", event.Data.ReferenceID))
+		return parseErr
+	}
 
 	if isBatch {
 		// Expire all reservations in batch
-		batchID, err := uuid.Parse(refID)
-		if err != nil {
-			c.logger.Error("invalid batch ID", zap.Error(err))
-			return err
-		}
-
 		err = c.reservationRepo.UpdateReservationsByBatchID(ctx, db.UpdateReservationsByBatchIDParams{
-			BatchID:   pgtype.UUID{Bytes: batchID, Valid: true},
+			BatchID:   pgtype.UUID{Bytes: parsedID, Valid: true},
 			Status:    db.ReservationStatusEnumExpired,
 			ExpiresAt: pgtype.Timestamptz{Valid: false},
 		})
@@ -152,17 +137,11 @@ func (c *PaymentEventConsumer) HandlePaymentFailed(ctx context.Context, body []b
 			return err
 		}
 
-		c.logger.Info("batch reservations expired due to payment failure", zap.String("batch_id", batchID.String()))
+		c.logger.Info("batch reservations expired due to payment failure", zap.String("batch_id", parsedID.String()))
 	} else {
 		// Expire single reservation
-		reservationID, err := uuid.Parse(refID)
-		if err != nil {
-			c.logger.Error("invalid reservation ID", zap.Error(err))
-			return err
-		}
-
 		_, err = c.reservationRepo.UpdateReservationByID(ctx, db.UpdateReservationByIDParams{
-			ID: utils.UUIDToPgtype(reservationID),
+			ID:        utils.UUIDToPgtype(parsedID),
 			Status:    db.ReservationStatusEnumExpired,
 			ExpiresAt: pgtype.Timestamptz{Valid: false},
 		})
@@ -171,7 +150,7 @@ func (c *PaymentEventConsumer) HandlePaymentFailed(ctx context.Context, body []b
 			return err
 		}
 
-		c.logger.Info("reservation expired due to payment failure", zap.String("reservation_id", reservationID.String()))
+		c.logger.Info("reservation expired due to payment failure", zap.String("reservation_id", parsedID.String()))
 	}
 
 	// Mark event as processed

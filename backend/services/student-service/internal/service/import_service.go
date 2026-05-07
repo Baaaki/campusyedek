@@ -39,6 +39,11 @@ func NewImportService(
 
 // BulkImportStudents handles CSV bulk import
 func (s *ImportService) BulkImportStudents(ctx context.Context, fileName string, fileReader io.Reader, createdBy uuid.UUID) (string, error) {
+	log := logger.WithContextAndFields(ctx,
+		zap.String("service", "ImportService"),
+		zap.String("method", "BulkImportStudents"),
+	)
+
 	// Parse CSV
 	csvReader := csv.NewReader(fileReader)
 	csvReader.TrimLeadingSpace = true
@@ -46,7 +51,7 @@ func (s *ImportService) BulkImportStudents(ctx context.Context, fileName string,
 	// Read header
 	header, err := csvReader.Read()
 	if err != nil {
-		logger.Error("failed to read CSV header",
+		log.Error("failed to read CSV header",
 			zap.Error(err),
 		)
 		return "", errors.ErrValidation
@@ -55,7 +60,7 @@ func (s *ImportService) BulkImportStudents(ctx context.Context, fileName string,
 	// Validate header
 	expectedHeader := []string{"student_number", "first_name", "last_name", "email", "faculty", "department", "enrollment_year", "class_level"}
 	if !validateHeader(header, expectedHeader) {
-		logger.Error("invalid CSV header",
+		log.Error("invalid CSV header",
 			zap.Strings("expected", expectedHeader),
 			zap.Strings("got", header),
 		)
@@ -73,7 +78,7 @@ func (s *ImportService) BulkImportStudents(ctx context.Context, fileName string,
 			break
 		}
 		if err != nil {
-			logger.Error("failed to read CSV record",
+			log.Error("failed to read CSV record",
 				zap.Error(err),
 				zap.Int("line", lineNumber+1),
 			)
@@ -103,7 +108,7 @@ func (s *ImportService) BulkImportStudents(ctx context.Context, fileName string,
 		CreatedBy:    utils.UUIDToPgtype(createdBy),
 	})
 	if err != nil {
-		logger.Error("failed to create import job",
+		log.Error("failed to create import job",
 			zap.Error(err),
 		)
 		return "", errors.ErrInternal
@@ -114,7 +119,7 @@ func (s *ImportService) BulkImportStudents(ctx context.Context, fileName string,
 	// Start background processing
 	go s.processImport(context.Background(), utils.PgtypeToUUID(job.ID), students, importErrors)
 
-	logger.Info("bulk import job created",
+	log.Info("bulk import job created",
 		zap.String("job_id", jobID),
 		zap.Int("total_records", totalRecords),
 		zap.Int("valid_records", len(students)),
@@ -125,23 +130,28 @@ func (s *ImportService) BulkImportStudents(ctx context.Context, fileName string,
 
 // processImport processes the import in background
 func (s *ImportService) processImport(ctx context.Context, jobID uuid.UUID, students []db.CreateStudentParams, initialErrors []string) {
+	log := logger.WithContextAndFields(ctx,
+		zap.String("service", "ImportService"),
+		zap.String("method", "processImport"),
+	)
+
 	// Mark job as processing
 	if err := s.importRepo.StartImportJob(ctx, jobID); err != nil {
-		logger.Error("failed to start import job",
+		log.Error("failed to start import job",
 			zap.Error(err),
 			zap.String("job_id", jobID.String()),
 		)
 		return
 	}
 
-	logger.Info("starting import processing",
+	log.Info("starting import processing",
 		zap.String("job_id", jobID.String()),
 		zap.Int("student_count", len(students)),
 	)
 
 	// Auto-assign advisors using round-robin
 	if err := s.autoAssignAdvisors(ctx, students); err != nil {
-		logger.Error("failed to auto-assign advisors",
+		log.Error("failed to auto-assign advisors",
 			zap.Error(err),
 		)
 		// Continue without advisors
@@ -154,7 +164,7 @@ func (s *ImportService) processImport(ctx context.Context, jobID uuid.UUID, stud
 
 	if len(students) > 0 {
 		if err := s.importRepo.BulkInsertStudents(ctx, students); err != nil {
-			logger.Error("bulk insert failed",
+			log.Error("bulk insert failed",
 				zap.Error(err),
 				zap.String("job_id", jobID.String()),
 			)
@@ -162,7 +172,7 @@ func (s *ImportService) processImport(ctx context.Context, jobID uuid.UUID, stud
 			allErrors = append(allErrors, fmt.Sprintf("Bulk insert failed: %v", err))
 		} else {
 			successCount = len(students)
-			logger.Info("bulk insert successful",
+			log.Info("bulk insert successful",
 				zap.Int("count", successCount),
 				zap.String("job_id", jobID.String()),
 			)
@@ -182,7 +192,7 @@ func (s *ImportService) processImport(ctx context.Context, jobID uuid.UUID, stud
 		FailedRecords:     int32(failCount),
 		Errors:            errorsJSON,
 	}); err != nil {
-		logger.Error("failed to update job progress",
+		log.Error("failed to update job progress",
 			zap.Error(err),
 		)
 	}
@@ -194,7 +204,7 @@ func (s *ImportService) processImport(ctx context.Context, jobID uuid.UUID, stud
 		s.importRepo.CompleteImportJob(ctx, jobID)
 	}
 
-	logger.Info("import processing completed",
+	log.Info("import processing completed",
 		zap.String("job_id", jobID.String()),
 		zap.Int("success", successCount),
 		zap.Int("failed", failCount),
@@ -203,6 +213,11 @@ func (s *ImportService) processImport(ctx context.Context, jobID uuid.UUID, stud
 
 // autoAssignAdvisors assigns advisors to students using round-robin
 func (s *ImportService) autoAssignAdvisors(ctx context.Context, students []db.CreateStudentParams) error {
+	log := logger.WithContextAndFields(ctx,
+		zap.String("service", "ImportService"),
+		zap.String("method", "autoAssignAdvisors"),
+	)
+
 	// Group students by department
 	departmentMap := make(map[string][]int)
 	for i, student := range students {
@@ -214,7 +229,7 @@ func (s *ImportService) autoAssignAdvisors(ctx context.Context, students []db.Cr
 		// Get instructors for this department from staff service
 		instructors, err := s.staffService.GetInstructorsByDepartment(ctx, department)
 		if err != nil {
-			logger.Warn("failed to get instructors for department",
+			log.Warn("failed to get instructors for department",
 				zap.String("department", department),
 				zap.Error(err),
 			)
@@ -222,7 +237,7 @@ func (s *ImportService) autoAssignAdvisors(ctx context.Context, students []db.Cr
 		}
 
 		if len(instructors) == 0 {
-			logger.Warn("no instructors found for department",
+			log.Warn("no instructors found for department",
 				zap.String("department", department),
 			)
 			continue
@@ -234,7 +249,7 @@ func (s *ImportService) autoAssignAdvisors(ctx context.Context, students []db.Cr
 			students[studentIdx].AdvisorID = utils.UUIDToPgtype(instructors[instructorIdx])
 		}
 
-		logger.Info("assigned advisors for department",
+		log.Info("assigned advisors for department",
 			zap.String("department", department),
 			zap.Int("student_count", len(indices)),
 			zap.Int("instructor_count", len(instructors)),
@@ -246,6 +261,11 @@ func (s *ImportService) autoAssignAdvisors(ctx context.Context, students []db.Cr
 
 // GetImportJobStatus retrieves import job status
 func (s *ImportService) GetImportJobStatus(ctx context.Context, jobID string) (dto.ImportJobResponse, error) {
+	log := logger.WithContextAndFields(ctx,
+		zap.String("service", "ImportService"),
+		zap.String("method", "GetImportJobStatus"),
+	)
+
 	id, err := uuid.Parse(jobID)
 	if err != nil {
 		return dto.ImportJobResponse{}, errors.ErrInvalidID
@@ -253,7 +273,7 @@ func (s *ImportService) GetImportJobStatus(ctx context.Context, jobID string) (d
 
 	job, err := s.importRepo.GetImportJobByID(ctx, id)
 	if err != nil {
-		logger.Error("failed to get import job",
+		log.Error("failed to get import job",
 			zap.Error(err),
 			zap.String("job_id", jobID),
 		)
@@ -265,6 +285,11 @@ func (s *ImportService) GetImportJobStatus(ctx context.Context, jobID string) (d
 
 // ListImportJobs lists import jobs for a user
 func (s *ImportService) ListImportJobs(ctx context.Context, userID uuid.UUID, query dto.ImportJobFilterQuery) (dto.ImportJobListResponse, error) {
+	log := logger.WithContextAndFields(ctx,
+		zap.String("service", "ImportService"),
+		zap.String("method", "ListImportJobs"),
+	)
+
 	limit := int32(20)
 	offset := int32(0)
 
@@ -277,7 +302,7 @@ func (s *ImportService) ListImportJobs(ctx context.Context, userID uuid.UUID, qu
 
 	jobs, total, err := s.importRepo.ListImportJobsByUser(ctx, userID, limit, offset)
 	if err != nil {
-		logger.Error("failed to list import jobs",
+		log.Error("failed to list import jobs",
 			zap.Error(err),
 		)
 		return dto.ImportJobListResponse{}, errors.ErrInternal

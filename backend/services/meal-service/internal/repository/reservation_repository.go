@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/baaaki/mydreamcampus/meal-service/internal/db"
@@ -95,7 +96,7 @@ func (r *ReservationRepository) CreateBatchReservations(ctx context.Context, res
 func (r *ReservationRepository) GetReservationByID(ctx context.Context, id uuid.UUID) (db.GetReservationByIDRow, error) {
 	reservation, err := r.queries.GetReservationByID(ctx, utils.UUIDToPgtype(id))
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return db.GetReservationByIDRow{}, fmt.Errorf("%w", serviceErrors.ErrReservationNotFoundRepo)
 		}
 		return db.GetReservationByIDRow{}, fmt.Errorf("%w: failed to get reservation: %v", sharedErrors.ErrQueryFailed, err)
@@ -107,7 +108,7 @@ func (r *ReservationRepository) GetReservationByID(ctx context.Context, id uuid.
 func (r *ReservationRepository) CheckActiveReservation(ctx context.Context, params db.CheckActiveReservationParams) (*db.CheckActiveReservationRow, error) {
 	reservation, err := r.queries.CheckActiveReservation(ctx, params)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil // No active reservation found
 		}
 		return nil, fmt.Errorf("%w: failed to check active reservation: %v", sharedErrors.ErrQueryFailed, err)
@@ -155,7 +156,7 @@ func (r *ReservationRepository) CountStudentReservationsFiltered(ctx context.Con
 func (r *ReservationRepository) UpdateReservationByID(ctx context.Context, params db.UpdateReservationByIDParams) (db.Reservation, error) {
 	reservation, err := r.queries.UpdateReservationByID(ctx, params)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return db.Reservation{}, fmt.Errorf("%w", serviceErrors.ErrReservationNotFoundRepo)
 		}
 		return db.Reservation{}, fmt.Errorf("%w: failed to update reservation: %v", sharedErrors.ErrQueryFailed, err)
@@ -176,7 +177,7 @@ func (r *ReservationRepository) UpdateReservationsByBatchID(ctx context.Context,
 func (r *ReservationRepository) MarkReservationUsed(ctx context.Context, id uuid.UUID) (db.Reservation, error) {
 	reservation, err := r.queries.MarkReservationUsed(ctx, utils.UUIDToPgtype(id))
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return db.Reservation{}, fmt.Errorf("%w", serviceErrors.ErrReservationNotFoundRepo)
 		}
 		return db.Reservation{}, fmt.Errorf("%w: failed to mark reservation as used: %v", sharedErrors.ErrQueryFailed, err)
@@ -188,7 +189,7 @@ func (r *ReservationRepository) MarkReservationUsed(ctx context.Context, id uuid
 func (r *ReservationRepository) FindReservationForQR(ctx context.Context, params db.FindReservationForQRParams) (db.FindReservationForQRRow, error) {
 	reservation, err := r.queries.FindReservationForQR(ctx, params)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return db.FindReservationForQRRow{}, fmt.Errorf("%w", serviceErrors.ErrReservationNotFoundRepo)
 		}
 		return db.FindReservationForQRRow{}, fmt.Errorf("%w: failed to find reservation for QR: %v", sharedErrors.ErrQueryFailed, err)
@@ -209,7 +210,7 @@ func (r *ReservationRepository) CancelReservationWithRefund(ctx context.Context,
 	// Cancel reservation
 	reservation, err := qtx.CancelReservation(ctx, utils.UUIDToPgtype(reservationID))
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return db.Reservation{}, fmt.Errorf("%w", serviceErrors.ErrReservationNotFoundRepo)
 		}
 		return db.Reservation{}, fmt.Errorf("%w: failed to cancel reservation: %v", sharedErrors.ErrQueryFailed, err)

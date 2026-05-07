@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -12,6 +13,8 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
+
+const requestTimeout = 10 * time.Second
 
 type AttendanceHandler struct {
 	service *service.AttendanceService
@@ -48,7 +51,10 @@ func parseUserID(c *gin.Context) (uuid.UUID, error) {
 // @Success 201 {object} dto.CreateSessionResponse
 // @Router /api/v1/attendance/sessions [post]
 func (h *AttendanceHandler) CreateSession(c *gin.Context) {
-	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	handlerLogger := logger.WithContextAndFields(ctx,
 		zap.String("handler", "AttendanceHandler"),
 		zap.String("method", "CreateSession"),
 	)
@@ -79,7 +85,7 @@ func (h *AttendanceHandler) CreateSession(c *gin.Context) {
 		zap.String("course_id", req.CourseID.String()),
 	)
 
-	resp, err := h.service.CreateSession(c.Request.Context(), instructorID, req)
+	resp, err := h.service.CreateSession(ctx, instructorID, req)
 	if err != nil {
 		handlerLogger.Error("failed to create session", zap.Error(err))
 		h.handleError(c, err)
@@ -101,7 +107,10 @@ func (h *AttendanceHandler) CreateSession(c *gin.Context) {
 // @Success 200 {object} dto.ScanQRResponse
 // @Router /api/v1/attendance/scan [post]
 func (h *AttendanceHandler) ScanQR(c *gin.Context) {
-	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	handlerLogger := logger.WithContextAndFields(ctx,
 		zap.String("handler", "AttendanceHandler"),
 		zap.String("method", "ScanQR"),
 	)
@@ -131,7 +140,7 @@ func (h *AttendanceHandler) ScanQR(c *gin.Context) {
 		zap.String("student_id", studentID.String()),
 	)
 
-	resp, err := h.service.ScanQR(c.Request.Context(), studentID, req)
+	resp, err := h.service.ScanQR(ctx, studentID, req)
 	if err != nil {
 		handlerLogger.Error("failed to scan QR", zap.Error(err))
 		h.handleError(c, err)
@@ -150,7 +159,10 @@ func (h *AttendanceHandler) ScanQR(c *gin.Context) {
 // @Success 200 {object} dto.GetQRResponse
 // @Router /api/v1/attendance/sessions/{sessionId}/qr [get]
 func (h *AttendanceHandler) GetQRCode(c *gin.Context) {
-	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	handlerLogger := logger.WithContextAndFields(ctx,
 		zap.String("handler", "AttendanceHandler"),
 		zap.String("method", "GetQRCode"),
 	)
@@ -180,7 +192,7 @@ func (h *AttendanceHandler) GetQRCode(c *gin.Context) {
 		zap.String("instructor_id", instructorID.String()),
 	)
 
-	resp, err := h.service.GetQRCode(c.Request.Context(), sessionID, instructorID)
+	resp, err := h.service.GetQRCode(ctx, sessionID, instructorID)
 	if err != nil {
 		handlerLogger.Error("failed to get QR code", zap.Error(err))
 		h.handleError(c, err)
@@ -200,7 +212,10 @@ func (h *AttendanceHandler) GetQRCode(c *gin.Context) {
 // @Success 201 {object} dto.ManualAttendanceResponse
 // @Router /api/v1/attendance/sessions/{sessionId}/manual [post]
 func (h *AttendanceHandler) CreateManualAttendance(c *gin.Context) {
-	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	handlerLogger := logger.WithContextAndFields(ctx,
 		zap.String("handler", "AttendanceHandler"),
 		zap.String("method", "CreateManualAttendance"),
 	)
@@ -240,7 +255,7 @@ func (h *AttendanceHandler) CreateManualAttendance(c *gin.Context) {
 		zap.String("instructor_id", instructorID.String()),
 	)
 
-	resp, err := h.service.CreateManualAttendance(c.Request.Context(), sessionID, instructorID, req)
+	resp, err := h.service.CreateManualAttendance(ctx, sessionID, instructorID, req)
 	if err != nil {
 		handlerLogger.Error("failed to create manual attendance", zap.Error(err))
 		h.handleError(c, err)
@@ -259,7 +274,10 @@ func (h *AttendanceHandler) CreateManualAttendance(c *gin.Context) {
 // @Success 200 {object} dto.CloseSessionResponse
 // @Router /api/v1/attendance/sessions/{sessionId}/close [post]
 func (h *AttendanceHandler) CloseSession(c *gin.Context) {
-	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	handlerLogger := logger.WithContextAndFields(ctx,
 		zap.String("handler", "AttendanceHandler"),
 		zap.String("method", "CloseSession"),
 	)
@@ -289,7 +307,7 @@ func (h *AttendanceHandler) CloseSession(c *gin.Context) {
 		zap.String("instructor_id", instructorID.String()),
 	)
 
-	resp, err := h.service.CloseSession(c.Request.Context(), sessionID, instructorID)
+	resp, err := h.service.CloseSession(ctx, sessionID, instructorID)
 	if err != nil {
 		handlerLogger.Error("failed to close session", zap.Error(err))
 		h.handleError(c, err)
@@ -311,7 +329,10 @@ func (h *AttendanceHandler) CloseSession(c *gin.Context) {
 // @Success 200 {object} dto.GetMyAttendanceResponse
 // @Router /api/v1/attendance/my [get]
 func (h *AttendanceHandler) GetMyAttendance(c *gin.Context) {
-	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	handlerLogger := logger.WithContextAndFields(ctx,
 		zap.String("handler", "AttendanceHandler"),
 		zap.String("method", "GetMyAttendance"),
 	)
@@ -332,7 +353,7 @@ func (h *AttendanceHandler) GetMyAttendance(c *gin.Context) {
 		zap.String("semester", semester),
 	)
 
-	resp, err := h.service.GetMyAttendance(c.Request.Context(), studentID, semester)
+	resp, err := h.service.GetMyAttendance(ctx, studentID, semester)
 	if err != nil {
 		handlerLogger.Error("failed to get attendance", zap.Error(err))
 		h.handleError(c, err)
@@ -351,7 +372,10 @@ func (h *AttendanceHandler) GetMyAttendance(c *gin.Context) {
 // @Success 200 {object} dto.FinalizeAttendanceResponse
 // @Router /api/v1/attendance/courses/{courseId}/finalize [post]
 func (h *AttendanceHandler) FinalizeAttendance(c *gin.Context) {
-	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	handlerLogger := logger.WithContextAndFields(ctx,
 		zap.String("handler", "AttendanceHandler"),
 		zap.String("method", "FinalizeAttendance"),
 	)
@@ -392,7 +416,7 @@ func (h *AttendanceHandler) FinalizeAttendance(c *gin.Context) {
 		zap.String("instructor_id", instructorID.String()),
 	)
 
-	resp, err := h.service.FinalizeAttendance(c.Request.Context(), courseID, instructorID, semester)
+	resp, err := h.service.FinalizeAttendance(ctx, courseID, instructorID, semester)
 	if err != nil {
 		handlerLogger.Error("failed to finalize attendance", zap.Error(err))
 		h.handleError(c, err)
@@ -414,7 +438,10 @@ func (h *AttendanceHandler) FinalizeAttendance(c *gin.Context) {
 // @Success 200 {object} dto.GetSessionDetailsResponse
 // @Router /api/v1/attendance/sessions/{sessionId} [get]
 func (h *AttendanceHandler) GetSessionDetails(c *gin.Context) {
-	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	handlerLogger := logger.WithContextAndFields(ctx,
 		zap.String("handler", "AttendanceHandler"),
 		zap.String("method", "GetSessionDetails"),
 	)
@@ -443,7 +470,7 @@ func (h *AttendanceHandler) GetSessionDetails(c *gin.Context) {
 		zap.String("session_id", sessionID.String()),
 	)
 
-	resp, err := h.service.GetSessionDetails(c.Request.Context(), sessionID, instructorID)
+	resp, err := h.service.GetSessionDetails(ctx, sessionID, instructorID)
 	if err != nil {
 		handlerLogger.Error("failed to get session details", zap.Error(err))
 		h.handleError(c, err)
@@ -461,7 +488,10 @@ func (h *AttendanceHandler) GetSessionDetails(c *gin.Context) {
 // @Success 200 {object} dto.GetSessionRecordsResponse
 // @Router /api/v1/attendance/sessions/{sessionId}/records [get]
 func (h *AttendanceHandler) GetSessionRecords(c *gin.Context) {
-	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	handlerLogger := logger.WithContextAndFields(ctx,
 		zap.String("handler", "AttendanceHandler"),
 		zap.String("method", "GetSessionRecords"),
 	)
@@ -490,7 +520,7 @@ func (h *AttendanceHandler) GetSessionRecords(c *gin.Context) {
 		zap.String("session_id", sessionID.String()),
 	)
 
-	resp, err := h.service.GetSessionRecords(c.Request.Context(), sessionID, instructorID)
+	resp, err := h.service.GetSessionRecords(ctx, sessionID, instructorID)
 	if err != nil {
 		handlerLogger.Error("failed to get session records", zap.Error(err))
 		h.handleError(c, err)
@@ -509,7 +539,10 @@ func (h *AttendanceHandler) GetSessionRecords(c *gin.Context) {
 // @Success 200 {object} dto.GetSessionStudentsResponse
 // @Router /api/v1/attendance/sessions/{sessionId}/students [get]
 func (h *AttendanceHandler) GetSessionStudents(c *gin.Context) {
-	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	handlerLogger := logger.WithContextAndFields(ctx,
 		zap.String("handler", "AttendanceHandler"),
 		zap.String("method", "GetSessionStudents"),
 	)
@@ -540,7 +573,7 @@ func (h *AttendanceHandler) GetSessionStudents(c *gin.Context) {
 		zap.String("search", search),
 	)
 
-	resp, err := h.service.GetSessionStudents(c.Request.Context(), sessionID, instructorID, search)
+	resp, err := h.service.GetSessionStudents(ctx, sessionID, instructorID, search)
 	if err != nil {
 		handlerLogger.Error("failed to get session students", zap.Error(err))
 		h.handleError(c, err)
@@ -553,7 +586,10 @@ func (h *AttendanceHandler) GetSessionStudents(c *gin.Context) {
 // handleError maps service errors to HTTP status codes
 // AdminListSessions lists all attendance sessions in a date range (admin only)
 func (h *AttendanceHandler) AdminListSessions(c *gin.Context) {
-	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	handlerLogger := logger.WithContextAndFields(ctx,
 		zap.String("handler", "AttendanceHandler"),
 		zap.String("method", "AdminListSessions"),
 	)
@@ -592,7 +628,7 @@ func (h *AttendanceHandler) AdminListSessions(c *gin.Context) {
 		zap.String("end_date", endStr),
 	)
 
-	response, err := h.service.GetSessionsByDateRange(c.Request.Context(), startDate, endDate)
+	response, err := h.service.GetSessionsByDateRange(ctx, startDate, endDate)
 	if err != nil {
 		h.handleError(c, err)
 		return

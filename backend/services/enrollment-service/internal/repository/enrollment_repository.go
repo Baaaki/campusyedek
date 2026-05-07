@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/baaaki/mydreamcampus/enrollment-service/internal/db"
@@ -114,7 +115,7 @@ func (r *EnrollmentRepository) CreateProgramWithCoursesAndEvent(
 func (r *EnrollmentRepository) GetEnrollmentProgramByID(ctx context.Context, id uuid.UUID) (db.EnrollmentProgram, error) {
 	program, err := r.queries.GetEnrollmentProgramByID(ctx, utils.UUIDToPgtype(id))
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return db.EnrollmentProgram{}, fmt.Errorf("%w: enrollment program not found", sharedErrors.ErrNotFound)
 		}
 		return db.EnrollmentProgram{}, fmt.Errorf("%w: failed to get enrollment program: %v", sharedErrors.ErrQueryFailed, err)
@@ -128,7 +129,7 @@ func (r *EnrollmentRepository) GetEnrollmentProgramByStudentAndSemester(ctx cont
 		Semester:  semester,
 	})
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return db.EnrollmentProgram{}, fmt.Errorf("%w: enrollment program not found", sharedErrors.ErrNotFound)
 		}
 		return db.EnrollmentProgram{}, fmt.Errorf("%w: failed to get enrollment program: %v", sharedErrors.ErrQueryFailed, err)
@@ -230,6 +231,11 @@ func (r *EnrollmentRepository) RejectProgramWithEventAndLog(
 	courseIDs []uuid.UUID,
 	eventPayload map[string]any,
 ) error {
+	log := logger.WithContextAndFields(ctx,
+		zap.String("repository", "EnrollmentRepository"),
+		zap.String("method", "RejectProgramWithEventAndLog"),
+	)
+
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("%w: failed to begin transaction: %v", sharedErrors.ErrTransactionFailed, err)
@@ -257,7 +263,7 @@ func (r *EnrollmentRepository) RejectProgramWithEventAndLog(
 			return fmt.Errorf("%w: failed to decrement enrollment: %v", sharedErrors.ErrQueryFailed, err)
 		}
 		if rowsAffected == 0 {
-			logger.Warn("decrement enrollment affected 0 rows — possible counter inconsistency",
+			log.Warn("decrement enrollment affected 0 rows — possible counter inconsistency",
 				zap.String("course_id", courseID.String()),
 				zap.String("program_id", programID.String()),
 				zap.String("context", "reject"),
@@ -298,7 +304,7 @@ func (r *EnrollmentRepository) GetLatestRejectionByStudentAndSemester(ctx contex
 		Semester:  semester,
 	})
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return db.EnrollmentRejectionLog{}, fmt.Errorf("%w: no rejection found", sharedErrors.ErrNotFound)
 		}
 		return db.EnrollmentRejectionLog{}, fmt.Errorf("%w: failed to get latest rejection: %v", sharedErrors.ErrQueryFailed, err)
@@ -359,6 +365,11 @@ func (r *EnrollmentRepository) CancelProgramWithEvent(
 	courseIDs []uuid.UUID,
 	eventPayload map[string]any,
 ) error {
+	log := logger.WithContextAndFields(ctx,
+		zap.String("repository", "EnrollmentRepository"),
+		zap.String("method", "CancelProgramWithEvent"),
+	)
+
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("%w: failed to begin transaction: %v", sharedErrors.ErrTransactionFailed, err)
@@ -381,7 +392,7 @@ func (r *EnrollmentRepository) CancelProgramWithEvent(
 			return fmt.Errorf("%w: failed to decrement enrollment: %v", sharedErrors.ErrQueryFailed, err)
 		}
 		if rowsAffected == 0 {
-			logger.Warn("decrement enrollment affected 0 rows — possible counter inconsistency",
+			log.Warn("decrement enrollment affected 0 rows — possible counter inconsistency",
 				zap.String("course_id", courseID.String()),
 				zap.String("program_id", programID.String()),
 				zap.String("context", "cancel"),

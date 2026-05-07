@@ -33,7 +33,8 @@ func NewEventConsumer(
 }
 
 func (w *EventConsumer) Start(ctx context.Context) error {
-	logger.Info("starting event consumer")
+	log := logger.WithContextAndFields(ctx, zap.String("worker", "EventConsumer"))
+	log.Info("starting event consumer")
 
 	// Setup student events queue
 	studentQueue := "grades-service-student"
@@ -103,11 +104,11 @@ func (w *EventConsumer) Start(ctx context.Context) error {
 		return err
 	}
 
-	logger.Info("event consumer started")
+	log.Info("event consumer started")
 
 	// Block until context is cancelled
 	<-ctx.Done()
-	logger.Info("event consumer stopped")
+	log.Info("event consumer stopped")
 
 	return nil
 }
@@ -117,12 +118,17 @@ func (w *EventConsumer) Start(ctx context.Context) error {
 // ============================================
 
 func (w *EventConsumer) handleStudentEvent(ctx context.Context, body []byte) error {
+	log := logger.WithContextAndFields(ctx,
+		zap.String("worker", "EventConsumer"),
+		zap.String("method", "handleStudentEvent"),
+	)
+
 	// Parse event type
 	var baseEvent struct {
 		EventType string `json:"event_type"`
 	}
 	if err := json.Unmarshal(body, &baseEvent); err != nil {
-		logger.Error("failed to unmarshal base event", zap.Error(err))
+		log.Error("failed to unmarshal base event", zap.Error(err))
 		return err
 	}
 
@@ -130,7 +136,7 @@ func (w *EventConsumer) handleStudentEvent(ctx context.Context, body []byte) err
 	case "student.created":
 		var event dto.StudentCreatedEvent
 		if err := json.Unmarshal(body, &event); err != nil {
-			logger.Error("failed to unmarshal student.created event", zap.Error(err))
+			log.Error("failed to unmarshal student.created event", zap.Error(err))
 			return err
 		}
 		return w.handleStudentCreated(ctx, event)
@@ -138,7 +144,7 @@ func (w *EventConsumer) handleStudentEvent(ctx context.Context, body []byte) err
 	case "student.updated":
 		var event dto.StudentUpdatedEvent
 		if err := json.Unmarshal(body, &event); err != nil {
-			logger.Error("failed to unmarshal student.updated event", zap.Error(err))
+			log.Error("failed to unmarshal student.updated event", zap.Error(err))
 			return err
 		}
 		return w.handleStudentUpdated(ctx, event)
@@ -146,19 +152,24 @@ func (w *EventConsumer) handleStudentEvent(ctx context.Context, body []byte) err
 	case "student.deactivated":
 		var event dto.StudentDeactivatedEvent
 		if err := json.Unmarshal(body, &event); err != nil {
-			logger.Error("failed to unmarshal student.deactivated event", zap.Error(err))
+			log.Error("failed to unmarshal student.deactivated event", zap.Error(err))
 			return err
 		}
 		return w.handleStudentDeactivated(ctx, event)
 
 	default:
-		logger.Warn("unknown student event type", zap.String("event_type", baseEvent.EventType))
+		log.Warn("unknown student event type", zap.String("event_type", baseEvent.EventType))
 		return nil
 	}
 }
 
 func (w *EventConsumer) handleStudentCreated(ctx context.Context, event dto.StudentCreatedEvent) error {
-	logger.Info("handling student.created event", zap.String("student_id", event.Data.ID.String()))
+	log := logger.WithContextAndFields(ctx,
+		zap.String("worker", "EventConsumer"),
+		zap.String("method", "handleStudentCreated"),
+	)
+
+	log.Info("handling student.created event", zap.String("student_id", event.Data.ID.String()))
 
 	_, err := w.cacheRepo.UpsertStudentCache(ctx, db.UpsertStudentCacheParams{
 		ID:            event.Data.ID,
@@ -175,7 +186,12 @@ func (w *EventConsumer) handleStudentCreated(ctx context.Context, event dto.Stud
 }
 
 func (w *EventConsumer) handleStudentUpdated(ctx context.Context, event dto.StudentUpdatedEvent) error {
-	logger.Info("handling student.updated event", zap.String("student_id", event.Data.ID.String()))
+	log := logger.WithContextAndFields(ctx,
+		zap.String("worker", "EventConsumer"),
+		zap.String("method", "handleStudentUpdated"),
+	)
+
+	log.Info("handling student.updated event", zap.String("student_id", event.Data.ID.String()))
 
 	_, err := w.cacheRepo.UpsertStudentCache(ctx, db.UpsertStudentCacheParams{
 		ID:            event.Data.ID,
@@ -192,7 +208,12 @@ func (w *EventConsumer) handleStudentUpdated(ctx context.Context, event dto.Stud
 }
 
 func (w *EventConsumer) handleStudentDeactivated(ctx context.Context, event dto.StudentDeactivatedEvent) error {
-	logger.Info("handling student.deactivated event", zap.String("student_id", event.Data.ID.String()))
+	log := logger.WithContextAndFields(ctx,
+		zap.String("worker", "EventConsumer"),
+		zap.String("method", "handleStudentDeactivated"),
+	)
+
+	log.Info("handling student.deactivated event", zap.String("student_id", event.Data.ID.String()))
 
 	return w.cacheRepo.DeactivateStudentCache(ctx, event.Data.ID)
 }
@@ -202,12 +223,17 @@ func (w *EventConsumer) handleStudentDeactivated(ctx context.Context, event dto.
 // ============================================
 
 func (w *EventConsumer) handleCourseEvent(ctx context.Context, body []byte) error {
+	log := logger.WithContextAndFields(ctx,
+		zap.String("worker", "EventConsumer"),
+		zap.String("method", "handleCourseEvent"),
+	)
+
 	// Parse event type
 	var baseEvent struct {
 		EventType string `json:"event_type"`
 	}
 	if err := json.Unmarshal(body, &baseEvent); err != nil {
-		logger.Error("failed to unmarshal base event", zap.Error(err))
+		log.Error("failed to unmarshal base event", zap.Error(err))
 		return err
 	}
 
@@ -215,24 +241,29 @@ func (w *EventConsumer) handleCourseEvent(ctx context.Context, body []byte) erro
 	case "course.semester.created":
 		var event dto.CourseSemesterCreatedEvent
 		if err := json.Unmarshal(body, &event); err != nil {
-			logger.Error("failed to unmarshal course.semester.created event", zap.Error(err))
+			log.Error("failed to unmarshal course.semester.created event", zap.Error(err))
 			return err
 		}
 		return w.handleCourseSemesterCreated(ctx, event)
 
 	default:
-		logger.Warn("unknown course event type", zap.String("event_type", baseEvent.EventType))
+		log.Warn("unknown course event type", zap.String("event_type", baseEvent.EventType))
 		return nil
 	}
 }
 
 func (w *EventConsumer) handleCourseSemesterCreated(ctx context.Context, event dto.CourseSemesterCreatedEvent) error {
-	logger.Info("handling course.semester.created event", zap.String("course_id", event.SemesterCourseID.String()))
+	log := logger.WithContextAndFields(ctx,
+		zap.String("worker", "EventConsumer"),
+		zap.String("method", "handleCourseSemesterCreated"),
+	)
+
+	log.Info("handling course.semester.created event", zap.String("course_id", event.SemesterCourseID.String()))
 
 	// Marshal assessment schema to JSONB
 	schemaJSON, err := json.Marshal(event.AssessmentSchema)
 	if err != nil {
-		logger.Error("failed to marshal assessment schema", zap.Error(err))
+		log.Error("failed to marshal assessment schema", zap.Error(err))
 		return err
 	}
 
@@ -256,13 +287,18 @@ func (w *EventConsumer) handleCourseSemesterCreated(ctx context.Context, event d
 // ============================================
 
 func (w *EventConsumer) handleEnrollmentEvent(ctx context.Context, body []byte) error {
+	log := logger.WithContextAndFields(ctx,
+		zap.String("worker", "EventConsumer"),
+		zap.String("method", "handleEnrollmentEvent"),
+	)
+
 	var event dto.EnrollmentProgramApprovedEvent
 	if err := json.Unmarshal(body, &event); err != nil {
-		logger.Error("failed to unmarshal enrollment.program_approved event", zap.Error(err))
+		log.Error("failed to unmarshal enrollment.program_approved event", zap.Error(err))
 		return err
 	}
 
-	logger.Info("handling enrollment.program_approved event",
+	log.Info("handling enrollment.program_approved event",
 		zap.String("student_id", event.Data.StudentID.String()),
 		zap.Int("courses", len(event.Data.CourseIDs)),
 	)
@@ -278,7 +314,7 @@ func (w *EventConsumer) handleEnrollmentEvent(ctx context.Context, body []byte) 
 			IsAttendanceFailed: utils.BoolToPgBool(false),
 		})
 		if err != nil {
-			logger.Error("failed to create registration",
+			log.Error("failed to create registration",
 				zap.Error(err),
 				zap.String("student_id", event.Data.StudentID.String()),
 				zap.String("course_id", courseID.String()),
@@ -291,7 +327,7 @@ func (w *EventConsumer) handleEnrollmentEvent(ctx context.Context, body []byte) 
 
 	// If all registrations failed (e.g. FK constraint: student/course not in cache yet), requeue for retry
 	if successCount == 0 && lastErr != nil {
-		logger.Warn("all registrations failed, will retry",
+		log.Warn("all registrations failed, will retry",
 			zap.String("student_id", event.Data.StudentID.String()),
 			zap.Int("total_courses", len(event.Data.CourseIDs)),
 			zap.Error(lastErr),
@@ -307,13 +343,18 @@ func (w *EventConsumer) handleEnrollmentEvent(ctx context.Context, body []byte) 
 // ============================================
 
 func (w *EventConsumer) handleAttendanceEvent(ctx context.Context, body []byte) error {
+	log := logger.WithContextAndFields(ctx,
+		zap.String("worker", "EventConsumer"),
+		zap.String("method", "handleAttendanceEvent"),
+	)
+
 	var event dto.AttendanceSemesterFailedEvent
 	if err := json.Unmarshal(body, &event); err != nil {
-		logger.Error("failed to unmarshal attendance.semester.failed event", zap.Error(err))
+		log.Error("failed to unmarshal attendance.semester.failed event", zap.Error(err))
 		return err
 	}
 
-	logger.Info("handling attendance.semester.failed event",
+	log.Info("handling attendance.semester.failed event",
 		zap.String("student_id", event.Data.StudentID.String()),
 		zap.String("course_id", event.Data.CourseID.String()),
 	)

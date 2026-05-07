@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	sharedErrors "github.com/baaaki/mydreamcampus/shared/errors"
@@ -47,7 +48,7 @@ func (r *CafeteriaRepository) GetAllCafeterias(ctx context.Context) ([]db.Cafete
 func (r *CafeteriaRepository) GetCafeteriaByID(ctx context.Context, id uuid.UUID) (db.Cafeteria, error) {
 	cafeteria, err := r.queries.GetCafeteriaByID(ctx, utils.UUIDToPgtype(id))
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return db.Cafeteria{}, fmt.Errorf("%w", serviceErrors.ErrCafeteriaNotFoundRepo)
 		}
 		return db.Cafeteria{}, fmt.Errorf("%w: failed to get cafeteria: %v", sharedErrors.ErrQueryFailed, err)
@@ -68,7 +69,7 @@ func (r *CafeteriaRepository) CreateCafeteria(ctx context.Context, params db.Cre
 func (r *CafeteriaRepository) UpdateCafeteria(ctx context.Context, params db.UpdateCafeteriaParams) (db.Cafeteria, error) {
 	cafeteria, err := r.queries.UpdateCafeteria(ctx, params)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return db.Cafeteria{}, fmt.Errorf("%w", serviceErrors.ErrCafeteriaNotFoundRepo)
 		}
 		return db.Cafeteria{}, fmt.Errorf("%w: failed to update cafeteria: %v", sharedErrors.ErrQueryFailed, err)
@@ -80,7 +81,7 @@ func (r *CafeteriaRepository) UpdateCafeteria(ctx context.Context, params db.Upd
 func (r *CafeteriaRepository) DeactivateCafeteria(ctx context.Context, id uuid.UUID) error {
 	_, err := r.queries.DeactivateCafeteria(ctx, utils.UUIDToPgtype(id))
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf("%w", serviceErrors.ErrCafeteriaNotFoundRepo)
 		}
 		return fmt.Errorf("%w: failed to deactivate cafeteria: %v", sharedErrors.ErrQueryFailed, err)

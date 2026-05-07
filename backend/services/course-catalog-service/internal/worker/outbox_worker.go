@@ -36,7 +36,8 @@ func NewOutboxWorker(
 
 // Start begins the outbox worker polling loop
 func (w *OutboxWorker) Start(ctx context.Context) {
-	logger.Info("starting outbox worker",
+	log := logger.WithContextAndFields(ctx, zap.String("worker", "OutboxWorker"))
+	log.Info("starting outbox worker",
 		zap.Duration("interval", w.interval),
 		zap.Int32("batch_size", w.batchSize),
 	)
@@ -50,7 +51,7 @@ func (w *OutboxWorker) Start(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			logger.Info("stopping outbox worker")
+			log.Info("stopping outbox worker")
 			return
 		case <-ticker.C:
 			w.processEvents(ctx)
@@ -60,9 +61,14 @@ func (w *OutboxWorker) Start(ctx context.Context) {
 
 // processEvents retrieves and publishes pending events
 func (w *OutboxWorker) processEvents(ctx context.Context) {
+	log := logger.WithContextAndFields(ctx,
+		zap.String("worker", "OutboxWorker"),
+		zap.String("method", "processEvents"),
+	)
+
 	events, err := w.outboxRepo.GetPendingEvents(ctx, w.batchSize)
 	if err != nil {
-		logger.Error("failed to get pending events",
+		log.Error("failed to get pending events",
 			zap.Error(err),
 		)
 		return
@@ -73,7 +79,7 @@ func (w *OutboxWorker) processEvents(ctx context.Context) {
 		return
 	}
 
-	logger.Info("processing outbox events",
+	log.Info("processing outbox events",
 		zap.Int("count", len(events)),
 	)
 
@@ -88,7 +94,7 @@ func (w *OutboxWorker) processEvents(ctx context.Context) {
 		// Parse payload to map for publishing
 		var payload map[string]any
 		if err := json.Unmarshal(event.Payload, &payload); err != nil {
-			logger.Error("failed to unmarshal event payload",
+			log.Error("failed to unmarshal event payload",
 				zap.Error(err),
 				zap.String("event_id", eventIDStr),
 			)
@@ -99,7 +105,7 @@ func (w *OutboxWorker) processEvents(ctx context.Context) {
 		// Publish to RabbitMQ
 		err := w.publisher.Publish(ctx, "course.events", event.RoutingKey, payload)
 		if err != nil {
-			logger.Error("failed to publish event",
+			log.Error("failed to publish event",
 				zap.Error(err),
 				zap.String("event_id", eventIDStr),
 				zap.String("event_type", event.EventType),
@@ -112,7 +118,7 @@ func (w *OutboxWorker) processEvents(ctx context.Context) {
 		// Mark event as processed
 		err = w.outboxRepo.MarkEventProcessed(ctx, eventUUID)
 		if err != nil {
-			logger.Error("failed to mark event as processed",
+			log.Error("failed to mark event as processed",
 				zap.Error(err),
 				zap.String("event_id", eventIDStr),
 			)
@@ -120,14 +126,14 @@ func (w *OutboxWorker) processEvents(ctx context.Context) {
 			continue
 		}
 
-		logger.Info("event published successfully",
+		log.Info("event published successfully",
 			zap.String("event_id", eventIDStr),
 			zap.String("event_type", event.EventType),
 		)
 		successCount++
 	}
 
-	logger.Info("outbox processing completed",
+	log.Info("outbox processing completed",
 		zap.Int("success", successCount),
 		zap.Int("failed", failCount),
 		zap.Int("total", len(events)),

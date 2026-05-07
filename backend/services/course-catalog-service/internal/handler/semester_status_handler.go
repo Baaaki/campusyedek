@@ -127,7 +127,10 @@ type semesterResponse struct {
 
 // CreateSemester handles POST /admin/semesters
 func (h *SemesterStatusHandler) CreateSemester(c *gin.Context) {
-	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	handlerLogger := logger.WithContextAndFields(ctx,
 		zap.String("handler", "SemesterStatusHandler"),
 		zap.String("method", "CreateSemester"),
 	)
@@ -155,7 +158,7 @@ func (h *SemesterStatusHandler) CreateSemester(c *gin.Context) {
 		return
 	}
 
-	semester, err := h.repo.CreateSemester(c.Request.Context(), req.Name, req.HardDeadline)
+	semester, err := h.repo.CreateSemester(ctx, req.Name, req.HardDeadline)
 	if err != nil {
 		handlerLogger.Error("failed to create semester", zap.Error(err))
 		if isUniqueViolation(err) {
@@ -170,7 +173,7 @@ func (h *SemesterStatusHandler) CreateSemester(c *gin.Context) {
 
 	// Audit log
 	if h.auditLogger != nil {
-		h.auditLogger.Log(c.Request.Context(), audit.AuditEvent{
+		h.auditLogger.Log(ctx, audit.AuditEvent{
 			ActorID:      getActorID(c),
 			ActorRole:    "admin",
 			Action:       "semester.created",
@@ -193,12 +196,12 @@ func (h *SemesterStatusHandler) CreateSemester(c *gin.Context) {
 	var periodErrors []string
 
 	if req.Periods != nil {
-		periodErrors = h.distributePeriods(c.Request.Context(), req.Name, req.HardDeadline, req.Periods)
+		periodErrors = h.distributePeriods(ctx, req.Name, req.HardDeadline, req.Periods)
 	}
 
 	// Distribute closed days to meal service
 	if len(req.ClosedDays) > 0 {
-		if err := h.distributeClosedDays(c.Request.Context(), req.ClosedDays); err != nil {
+		if err := h.distributeClosedDays(ctx, req.ClosedDays); err != nil {
 			handlerLogger.Warn("failed to distribute closed days to meal service", zap.Error(err))
 			periodErrors = append(periodErrors, fmt.Sprintf("meal (closed_days): %v", err))
 		}
@@ -353,9 +356,17 @@ func (h *SemesterStatusHandler) distributeClosedDays(ctx context.Context, closed
 
 // ListSemesters handles GET /admin/semesters
 func (h *SemesterStatusHandler) ListSemesters(c *gin.Context) {
-	semesters, err := h.repo.ListSemesters(c.Request.Context())
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	log := logger.WithContextAndFields(ctx,
+		zap.String("handler", "SemesterStatusHandler"),
+		zap.String("method", "ListSemesters"),
+	)
+
+	semesters, err := h.repo.ListSemesters(ctx)
 	if err != nil {
-		logger.Error("failed to list semesters", zap.Error(err))
+		log.Error("failed to list semesters", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list semesters", "code": "INTERNAL_ERROR"})
 		return
 	}
@@ -373,7 +384,10 @@ func (h *SemesterStatusHandler) ListSemesters(c *gin.Context) {
 
 // GetActiveSemester handles GET /admin/semesters/active
 func (h *SemesterStatusHandler) GetActiveSemester(c *gin.Context) {
-	semester, err := h.repo.GetActiveSemester(c.Request.Context())
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	semester, err := h.repo.GetActiveSemester(ctx)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "no active semester found", "code": "NOT_FOUND"})
 		return
@@ -394,7 +408,10 @@ func (h *SemesterStatusHandler) GetActiveSemester(c *gin.Context) {
 // as a safety net against race conditions.
 // See: docs/semester-wizard-plan.md "Tek Aktif Dönem Kuralı"
 func (h *SemesterStatusHandler) ActivateSemester(c *gin.Context) {
-	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	handlerLogger := logger.WithContextAndFields(ctx,
 		zap.String("handler", "SemesterStatusHandler"),
 		zap.String("method", "ActivateSemester"),
 	)
@@ -407,7 +424,7 @@ func (h *SemesterStatusHandler) ActivateSemester(c *gin.Context) {
 
 	// INVARIANT: Only one semester can be active at any given time.
 	// Check before attempting activation to provide a clear, user-friendly error message.
-	hasActive, err := h.repo.HasActiveSemester(c.Request.Context())
+	hasActive, err := h.repo.HasActiveSemester(ctx)
 	if err != nil {
 		handlerLogger.Error("failed to check active semester", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to check active semester", "code": "INTERNAL_ERROR"})
@@ -420,8 +437,6 @@ func (h *SemesterStatusHandler) ActivateSemester(c *gin.Context) {
 		})
 		return
 	}
-
-	ctx := c.Request.Context()
 
 	tx, err := h.pool.Begin(ctx)
 	if err != nil {
@@ -485,7 +500,7 @@ func (h *SemesterStatusHandler) ActivateSemester(c *gin.Context) {
 	resp := toSemesterResponse(semester)
 
 	if h.auditLogger != nil {
-		h.auditLogger.Log(c.Request.Context(), audit.AuditEvent{
+		h.auditLogger.Log(ctx, audit.AuditEvent{
 			ActorID:      getActorID(c),
 			ActorRole:    "admin",
 			Action:       "semester.activated",
@@ -545,7 +560,10 @@ func buildCourseSemesterCreatedPayload(course db.ListSemesterCoursesForActivatio
 
 // CompleteSemester handles PUT /admin/semesters/:id/complete
 func (h *SemesterStatusHandler) CompleteSemester(c *gin.Context) {
-	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	handlerLogger := logger.WithContextAndFields(ctx,
 		zap.String("handler", "SemesterStatusHandler"),
 		zap.String("method", "CompleteSemester"),
 	)
@@ -556,7 +574,7 @@ func (h *SemesterStatusHandler) CompleteSemester(c *gin.Context) {
 		return
 	}
 
-	semester, err := h.repo.CompleteSemester(c.Request.Context(), id)
+	semester, err := h.repo.CompleteSemester(ctx, id)
 	if err != nil {
 		handlerLogger.Error("failed to complete semester", zap.Error(err))
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -569,7 +587,7 @@ func (h *SemesterStatusHandler) CompleteSemester(c *gin.Context) {
 	resp := toSemesterResponse(semester)
 
 	if h.auditLogger != nil {
-		h.auditLogger.Log(c.Request.Context(), audit.AuditEvent{
+		h.auditLogger.Log(ctx, audit.AuditEvent{
 			ActorID:      getActorID(c),
 			ActorRole:    "admin",
 			Action:       "semester.completed",
@@ -588,9 +606,12 @@ func (h *SemesterStatusHandler) CompleteSemester(c *gin.Context) {
 // GetSemesterInfo handles GET /internal/semesters/:name/info
 // Returns semester info including hard_deadline for enforcement by other services.
 func (h *SemesterStatusHandler) GetSemesterInfo(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
 	name := c.Param("name")
 
-	info, err := h.repo.GetSemesterInfo(c.Request.Context(), name)
+	info, err := h.repo.GetSemesterInfo(ctx, name)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "semester not found", "code": "NOT_FOUND"})
 		return
@@ -606,9 +627,12 @@ func (h *SemesterStatusHandler) GetSemesterInfo(c *gin.Context) {
 
 // IsSemesterActive handles GET /internal/semesters/:name/status
 func (h *SemesterStatusHandler) IsSemesterActive(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
 	name := c.Param("name")
 
-	active, err := h.repo.IsSemesterActive(c.Request.Context(), name)
+	active, err := h.repo.IsSemesterActive(ctx, name)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"active": false, "error": "semester not found"})
 		return
@@ -661,7 +685,10 @@ func getActorID(c *gin.Context) string {
 
 // DeletePlannedSemester handles DELETE /admin/semesters/:id
 func (h *SemesterStatusHandler) DeletePlannedSemester(c *gin.Context) {
-	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	handlerLogger := logger.WithContextAndFields(ctx,
 		zap.String("handler", "SemesterStatusHandler"),
 		zap.String("method", "DeletePlannedSemester"),
 	)
@@ -672,7 +699,6 @@ func (h *SemesterStatusHandler) DeletePlannedSemester(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
 	queries := db.New(h.pool)
 
 	// Get semester
@@ -771,7 +797,10 @@ func (h *SemesterStatusHandler) DeletePlannedSemester(c *gin.Context) {
 
 // UpdatePlannedSemester handles PUT /admin/semesters/:id
 func (h *SemesterStatusHandler) UpdatePlannedSemester(c *gin.Context) {
-	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	handlerLogger := logger.WithContextAndFields(ctx,
 		zap.String("handler", "SemesterStatusHandler"),
 		zap.String("method", "UpdatePlannedSemester"),
 	)
@@ -788,7 +817,6 @@ func (h *SemesterStatusHandler) UpdatePlannedSemester(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
 	queries := db.New(h.pool)
 
 	// Get semester

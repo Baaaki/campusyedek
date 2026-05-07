@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/baaaki/mydreamcampus/enrollment-service/internal/db"
@@ -35,7 +36,7 @@ func (r *StudentRepository) UpsertStudent(ctx context.Context, params db.UpsertS
 func (r *StudentRepository) GetStudentByID(ctx context.Context, id uuid.UUID) (db.StudentsCache, error) {
 	student, err := r.queries.GetStudentByID(ctx, utils.UUIDToPgtype(id))
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return db.StudentsCache{}, fmt.Errorf("%w: student not found", sharedErrors.ErrNotFound)
 		}
 		return db.StudentsCache{}, fmt.Errorf("%w: failed to get student: %v", sharedErrors.ErrQueryFailed, err)

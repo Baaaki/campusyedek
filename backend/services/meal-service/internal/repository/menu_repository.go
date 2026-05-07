@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	sharedErrors "github.com/baaaki/mydreamcampus/shared/errors"
@@ -35,7 +36,7 @@ func (r *MenuRepository) UpsertMonthlyMenu(ctx context.Context, params db.Upsert
 func (r *MenuRepository) GetMonthlyMenu(ctx context.Context, params db.GetMonthlyMenuParams) (db.MonthlyMenu, error) {
 	menu, err := r.queries.GetMonthlyMenu(ctx, params)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return db.MonthlyMenu{}, fmt.Errorf("%w", sharedErrors.ErrNotFoundRepo)
 		}
 		return db.MonthlyMenu{}, fmt.Errorf("%w: failed to get monthly menu: %v", sharedErrors.ErrQueryFailed, err)

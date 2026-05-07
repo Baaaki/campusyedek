@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/baaaki/mydreamcampus/enrollment-service/internal/db"
@@ -39,7 +40,7 @@ func (r *CourseRepository) GetAvailableCourses(ctx context.Context, department s
 func (r *CourseRepository) GetCourseByID(ctx context.Context, id uuid.UUID) (db.SemesterCoursesCache, error) {
 	course, err := r.queries.GetCourseByID(ctx, utils.UUIDToPgtype(id))
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return db.SemesterCoursesCache{}, fmt.Errorf("%w: course not found", sharedErrors.ErrNotFound)
 		}
 		return db.SemesterCoursesCache{}, fmt.Errorf("%w: failed to get course: %v", sharedErrors.ErrQueryFailed, err)

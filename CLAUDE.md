@@ -1,44 +1,117 @@
-# MyDreamCampus - Gelistirme Rehberi
+# MyDreamCampus — AI Asistanı Talimatları
 
-Universite yonetim sistemi. Full-stack monorepo: Go mikroservisler + React web + React Native mobil.
+Universite yonetim sistemi. Full-stack monorepo: Go mikroservisler + React+Vite web + React Native (Expo) mobil.
 
-## Proje Yapisi
-
-```
-mydreamcampus/
-├── backend/                # Go mikroservisler monorepo
-│   ├── services/           # 9 mikroservis
-│   ├── shared/             # Ortak Go paketleri
-│   ├── infrastructure/     # Docker Compose, Traefik, DB, RabbitMQ, Redis, Loki
-│   └── go.work             # Go workspace
-├── frontend/               # React + Vite web uygulamasi
-├── mobile/                 # React Native + Expo mobil uygulama
-└── old-frontend/           # Eski Next.js frontend (deprecated)
-```
-
-### Detayli Rehberler
-
-- **Backend**: `backend/skills.md` (hizli referans)
-- **Frontend**: `frontend/skills.md`
-- **Mobile**: `mobile/skills.md`
+> Bu dosya **AI'a** talimattir. Kullanici dokumanlari icin bkz. `README.md`.
 
 ---
 
-## Genel Kurallar
+## 1. Cakisma Hiyerarsisi
 
-### Docker
-- Docker komutlarini dogrudan CALISTIRMA — kullaniciya komutu goster, kendisi calistirsin
-- Docker komutlari `sudo` gerektirir (kullanici docker grubunda degil)
-- Ornek: `sudo docker compose up -d postgres-auth rabbitmq redis`
+Cakisma durumunda **yukaridan asagiya** dogru oncelik (1 en yuksek):
 
-### Dil
-- Konusma dili: Turkce
-- Kod ve degisken isimleri: Ingilizce
+1. **Kullanici prompt'u** — en yuksek oncelik
+2. **Ilgili `skills.md`** — `backend/skills.md`, `frontend/skills.md`, `mobile/skills.md`
+3. **Bu dosya (CLAUDE.md)** — proje genel kurallari
+4. **Memory** — gecmis konusmalardan sabitler
 
-### Git Commit Formati
+---
+
+## 2. Zorunlu Okuma Kosullari
+
+Gorev baslamadan **mutlaka oku**:
+
+| Eger suraya dokunacaksan… | Once oku |
+|---|---|
+| `backend/services/**` | `backend/skills.md` |
+| `backend/shared/**` | `backend/skills.md` |
+| `frontend/src/**` | `frontend/skills.md` |
+| `mobile/app/**`, `mobile/services/**`, `mobile/hooks/**` | `mobile/skills.md` |
+| Migration / SQL / sqlc | `backend/skills.md` "Migration" bolumu |
+
+Birden fazla katmanda degisiklik varsa **hepsini** oku.
+
+---
+
+## 3. Konusma Dili & Kod Dili
+
+- **Konusma dili (kullaniciyla)**: Turkce
+- **Kod, degisken, dosya adi, commit mesaji**: Ingilizce
+- **Kullaniciya hata mesaji (UI text)**: Turkce
+- **Log mesaji**: Ingilizce
+
+**YAPMA:** Turkce degisken adi (`kullaniciAdi` ❌, `username` ✅).
+**YAPMA:** Ingilizce kullaniciya hata mesaji (`"User not found"` ❌, `"Kullanici bulunamadi"` ✅ — UI'da).
+
+---
+
+## 4. Paket Yoneticisi (kritik — yanlis kullanma)
+
+| Dizin | Komut | YAPMA | Neden |
+|---|---|---|---|
+| `frontend/` | `bun add`, `bun run`, `bun tsc`, `bunx --bun <x>` | `npm`, `npx`, `yarn` | `bun.lock` source-of-truth; `package-lock.json` yok, npm bagimliliklari farkli cozuyor |
+| `mobile/` | `npm install`, `npm run`, `npx expo`, `npx jest` | `bun` (eskiden vardi, kaldirildi) | Expo prebuild scriptleri npm assumption ile yazilmis, `package-lock.json` source |
+| `backend/` | `go mod`, `make sqlc`, `make migrate-up` | dogrudan `goose`, `sqlc generate` | Makefile env ve `sqlc.yaml`/`dbstring` cozumlemesi yapiyor; ciplak komut config bulamaz |
+
+---
+
+## 5. Docker / sudo Kurali
+
+- Docker komutlari `sudo` gerektiriyor (kullanici `docker` grubunda degil).
+- **Sandbox `sudo` calistirmaz** — komutu **kullaniciya kopyala-yapistir** olarak goster, kendin calistirma.
+
+```bash
+# Bunu sen calistirma — kullaniciya goster:
+sudo docker compose -f backend/infrastructure/docker-compose.yml up -d
+sudo docker exec mydreamcampus-postgres-auth psql -U postgres -d mydreamcampus_auth -c "SELECT email FROM users;"
+sudo docker logs -f mydreamcampus-postgres-auth
+```
+
+---
+
+## 6. Onaysiz Yapilabilecekler vs. Sorulacaklar
+
+### SORMA, dogrudan uygula:
+- HTTP status code secimi (REST standardi: 200/201/204/400/401/403/404/409/422/500)
+- Sifre hash (Argon2id), JWT (HS256) — sabit
+- Migration **yazma** (dosya olusturma)
+- sqlc query yazma + `make sqlc` calistirma
+- DTO/Repository/Service/Handler iskeleti (skills.md sablonlarini izle)
+- Test isimlendirme: `TestXxx_Scenario_ExpectedResult`
+- Commit atma (atomic, feature bittiginde)
+- Hata mesaji standardi (`shared/errors.AppError`)
+
+### SOR, dogrudan UYGULAMA:
+- **Yeni kutuphane** ekleme (ornek: validator icin go-playground vs ozzo)
+- **Yeni servis** olusturma (port, scope, event semasi)
+- **Yeni event** semasi veya mevcut event payload degisikligi (geriye uyumsuzluk)
+- **Migration CALISTIRMA** (`make migrate-up`) — yazma degil, calistirma sor
+- **Sema breaking change** (kolon silme, NOT NULL ekleme, type degisikligi)
+- **Frontend route silme** veya yeniden adlandirma
+- Onemli refactor (3+ dosya etkileyen, davranis degisikligi)
+- `go.mod` / `package.json` dependency guncelleme (patch haric)
+
+---
+
+## 7. Git Commit Formati
+
 ```
 <type>(<scope>): <description>
+```
 
+| Type | Ne zaman |
+|---|---|
+| `feat` | Yeni ozellik |
+| `fix` | Bug fix |
+| `chore` | Build, infra, tooling |
+| `refactor` | Davranis degismeden yeniden yazim |
+| `docs` | Dokumantasyon |
+| `test` | Sadece test ekleme |
+
+**Scope:** `auth`, `staff`, `student`, `catalog`, `enrollment`, `attendance`, `grades`, `meal`, `payment`, `shared`, `frontend`, `mobile`, `infra`
+
+**Ornekler:**
+```
 feat(auth): add login and register endpoints
 fix(shared): resolve logger initialization bug
 chore(infra): update traefik configuration
@@ -46,45 +119,162 @@ feat(frontend): add student dashboard page
 feat(mobile): implement attendance screen
 ```
 
-Her ozellik tamamlandiginda HEMEN commit at. Atomic commit'ler tercih et.
+**Kural:** Her ozellik tamamlanınca **HEMEN** commit. Atomic — bir commit bir mantiksal degisiklik.
+
+**YAPMA:**
+- `feat: stuff` (scope yok, aciklama yok)
+- `update files` (type yok)
+- 10 dosya tek commit'te birden cok ozellik
+- `--amend` ile push edilmis commit'i degistirme
+- `--no-verify` (hook bypass)
 
 ---
 
-## Mentoring Ilkeleri
+## 8. Is Bittiginde Checklist (Gorev Kapatmadan Once)
 
-### Rol: Senior Developer Coach
-- Best practice'leri dogrudan goster, soru SORMA
-- Acik standart varsa (Argon2 > MD5, HTTP status code'lar) direkt uygula
-- Gercek mimari secimlerde kullaniciya sor (trade-off'lar, kutuphane tercihleri)
+```
+Backend feature:
+- [ ] Migration yazildi + `make migrate-up` test edildi (kullanici calistirir)
+- [ ] sqlc query yazildi + `make sqlc` calisti
+- [ ] Repository / Service / Handler / DTO yazildi
+- [ ] Route `cmd/main.go`'ya baglandi
+- [ ] Event publish ediliyorsa, consumer service'lerin DTO'lari guncellendi
+- [ ] Service-level test yazildi (kritik path'ler — happy + 1 error)
+- [ ] `go build ./...` hatasiz
+- [ ] Atomic commit atildi
+
+Frontend feature:
+- [ ] API service fonksiyonu yazildi (`src/lib/services/`)
+- [ ] TanStack Query hook'u var (loading/error state)
+- [ ] Type tanimi `src/lib/types.ts`'de
+- [ ] Sayfa `src/routes.tsx`'e baglandi
+- [ ] `bun tsc --noEmit` hatasiz
+- [ ] Tarayicida acilip golden path test edildi
+- [ ] Atomic commit atildi
+
+Mobile feature:
+- [ ] Service fonksiyonu (`mobile/services/`)
+- [ ] Hook (`mobile/hooks/`) — TanStack Query
+- [ ] Ekran `mobile/app/` altinda (Expo Router)
+- [ ] `npx tsc --noEmit` hatasiz
+- [ ] iOS veya Android'de manuel test edildi (loading/error/empty)
+- [ ] Atomic commit atildi
+```
 
 ---
 
-## Kullanici Icin Claude Code Ipuclari
+## 9. Failure Mode'lar
 
-### /simplify — Kod Kalite Kontrolu
-Bir ozellik yazdiktan sonra `/simplify` calistir. Degisiklikleri 3 paralel incelemeye sokar:
-- **Tekrar kullanim**: Ayni kod baska yerde var mi? Shared'a tasinabilir mi?
-- **Kalite**: Bug riski, edge case, error handling eksigi var mi?
-- **Verimlilik**: Gereksiz dongu, fazla allocation, optimize edilebilecek query var mi?
+### Test basarisiz olursa
+**YAPMA:** Test'i `t.Skip()` veya `.skip()` ile atla.
+**YAP:** Hatayi oku, fix et veya kullaniciya rapor et. Commit atma.
 
-Sorun bulursa dogrudan duzeltir.
+### Migration basarisiz olursa
+**YAPMA:** Tablo manuel `DROP` etme, migration tablosunu `DELETE` etme.
+**YAP:** Kullaniciya hatayi goster, `migrate-down` oner.
 
-### Subagent — Genis Kapsamli Arastirma
-Cok dosya okumayi gerektiren arastirmalarda context'in dolmasini onlemek icin subagent kullan.
+### Type error (frontend/mobile)
+**YAPMA:** `as any`, `@ts-ignore`, `// @ts-expect-error` kullanma.
+**YAP:** Type tanimini duzelt. `as unknown as X` dokum gerekiyorsa kullaniciya sor.
 
-**Ne zaman:** Birden fazla serviste bir pattern aramak, karsilastirma yapmak, genis analiz.
-**Nasil:** Mesajinda "subagent kullanarak arastir" veya "agent ile incele" yaz.
+### sqlc generate hata verirse
+**YAPMA:** Generated dosyalari manuel duzenleme.
+**YAP:** Query SQL'ini duzelt, tekrar `make sqlc`.
 
-Ornekler:
-- "Subagent kullanarak tum servislerdeki event consumer'lari karsilastir"
-- "Agent ile shared/ altindaki tum middleware'lerin kullanim yerlerini bul"
-- "Bunu arastirmak icin agent kullan, sonucu ozetle"
-
-**Ne zaman kullanma:** Tek dosya okumak, basit sorular — bunlar icin gereksiz overhead.
+### Lint/format hata
+**YAP:** Otomatik duzeltilebilenleri duzelt (`gofmt`, `bun tsc`). Logic degisimi gerekirse kullaniciya sor.
 
 ---
 
-## Referanslar
+## 10. Tone & Output
+
+- Cevaplar **kisa** olsun. Diff varsa diff'i konus, kodu tekrar yazma.
+- Turkce aciklamalarda **emoji kullanma**.
+- Log/yorum yaziminda **NE** degil **NEDEN** acikla. "fetches user" ❌ — "timing-safe: dummy verify against enumeration" ✅.
+- Her yerde yorum **ekleme**. Sadece sart oldugunda (gizli kisit, edge case, workaround).
+- Kullaniciya rapor verirken: once sonuc, sonra detay. Tersi degil.
+
+---
+
+## 11. Subagent Kullanimi
+
+**Ne zaman kullan:**
+- 3+ servisi tarayan arastirma
+- Tum kod tabaninda pattern arama
+- Karsilastirma analizi (servis A vs servis B'deki yaklasim)
+
+**Ne zaman KULLANMA:**
+- Tek dosya okuma
+- Bilinen yoldaki dosyayi okuma
+- 1-2 grep yeterli olan arama
+
+Kullanici "agent kullan" derse `Agent` tool'u ile `Explore` veya `general-purpose` subagent'i cagir.
+
+---
+
+## 12. Mimari Kararlar (Sabit, Tartisilmaz)
+
+Bu kararlar verilmis — yeniden sorma:
+
+| Konu | Karar |
+|---|---|
+| Inter-service iletisim | **Tercih: RabbitMQ event-driven** (notify, side-effect, eventual consistency). **Sync HTTP kabul:** read-only lookup, anlik validasyon, fan-out orkestrasyon — `internal/...` route + `X-Internal-Secret` header zorunlu. **Client -> servis** HTTP (Traefik uzerinden). JWT'yi her servis kendi `JWTAuth` middleware'i ile dogrular — auth servisine HTTP RPC yok. |
+| Database | PostgreSQL 18+, her servise ayri DB |
+| ORM/Query | sqlc + pgx/v5 (raw SQL yok, GORM yok) |
+| Migration | goose |
+| HTTP framework (Go) | Gin v1.11 |
+| Auth | JWT HS256 + Argon2id + Redis blacklist |
+| Frontend routing | react-router v7 (Next.js YOK) |
+| Mobile routing | Expo Router v6 (file-based) |
+| Frontend HTTP | ky |
+| Mobile HTTP | axios |
+| State (web+mobile) | TanStack Query (server state), Context (UI state) |
+| Logging | Zap (backend), console (frontend, debug icin) |
+| Outbox pattern | Tum event publish'lerde zorunlu |
+| API gateway | Traefik v3 (port 80) |
+
+---
+
+## 13. Servis Portlari (referans)
+
+| Servis | HTTP | DB |
+|---|---|---|
+| auth | 8001 | 5432 |
+| staff | 8002 | 5433 |
+| student | 8003 | 5434 |
+| course-catalog | 8004 | 5435 |
+| enrollment | 8005 | 5436 |
+| attendance | 8006 | 5437 |
+| grades | 8007 | 5438 |
+| meal | 8008 | 5439 |
+| payment | 50051 (gRPC) | 5440 |
+
+Frontend dev: `3000`. Traefik gateway: `80`. Tum `/api/*` Traefik uzerinden.
+
+---
+
+## 14. Dokunma — Generated / Korunan Dosyalar
+
+Bu yollardaki dosyalari **manuel duzenleme**. Kaynak dosyayi guncelle ve generator'i tekrar calistir.
+
+| Yol | Kaynak | Regenerate |
+|---|---|---|
+| `backend/services/*/internal/db/*.go` | `sql/queries/*.sql` | `make sqlc` |
+| `backend/services/*/sql/migrations/*.sql` (uygulanmis) | — | Yeni migration ekle, eskisini degistirme |
+| `frontend/src/lib/api-types.ts` | Backend OpenAPI | `bun run gen:api-types` |
+| `frontend/src/components/ui/*` | shadcn CLI | `bunx --bun shadcn@latest add <c>` |
+| `mobile/types/api-types.ts` | Backend OpenAPI | `npm run gen:api-types` |
+| `*.lock`, `*.lockb`, `go.sum`, `bun.lock`, `package-lock.json` | Paket yoneticisi | Komutu calistir, manuel dokunma |
+
+---
+
+## 15. Detayli Rehberler
+
+- Backend: [`backend/skills.md`](backend/skills.md)
+- Frontend: [`frontend/skills.md`](frontend/skills.md)
+- Mobile: [`mobile/skills.md`](mobile/skills.md)
+
+## 16. Dis Referanslar
 
 - [Uber Go Style Guide](https://github.com/uber-go/guide/blob/master/style.md)
 - [sqlc Docs](https://docs.sqlc.dev/en/latest/)

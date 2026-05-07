@@ -467,6 +467,11 @@ func (s *CatalogService) UpdateCourse(ctx context.Context, courseCode string, re
 
 // validatePrerequisites validates prerequisite courses
 func (s *CatalogService) validatePrerequisites(ctx context.Context, prerequisites []dto.Prerequisite, courseClassLevel int16) error {
+	log := logger.WithContextAndFields(ctx,
+		zap.String("service", "CatalogService"),
+		zap.String("method", "validatePrerequisites"),
+	)
+
 	if len(prerequisites) == 0 {
 		return nil
 	}
@@ -488,7 +493,7 @@ func (s *CatalogService) validatePrerequisites(ctx context.Context, prerequisite
 
 	// Check if all prerequisites were found
 	if len(courses) != len(prerequisites) {
-		logger.Warn("some prerequisites not found in catalog",
+		log.Warn("some prerequisites not found in catalog",
 			zap.Int("expected", len(prerequisites)),
 			zap.Int("found", len(courses)),
 		)
@@ -504,7 +509,7 @@ func (s *CatalogService) validatePrerequisites(ctx context.Context, prerequisite
 	for _, prereq := range prerequisites {
 		course, exists := courseMap[prereq.ID]
 		if !exists {
-			logger.Warn("prerequisite not found",
+			log.Warn("prerequisite not found",
 				zap.String("prerequisite_id", prereq.ID.String()),
 			)
 			return catalogErrors.ErrInvalidPrerequisite
@@ -512,7 +517,7 @@ func (s *CatalogService) validatePrerequisites(ctx context.Context, prerequisite
 
 		// Validate course_code matches
 		if course.CourseCode != prereq.CourseCode {
-			logger.Warn("prerequisite course_code mismatch",
+			log.Warn("prerequisite course_code mismatch",
 				zap.String("expected", course.CourseCode),
 				zap.String("provided", prereq.CourseCode),
 			)
@@ -521,7 +526,7 @@ func (s *CatalogService) validatePrerequisites(ctx context.Context, prerequisite
 
 		// Validate course_name matches
 		if course.Name != prereq.CourseName {
-			logger.Warn("prerequisite course_name mismatch",
+			log.Warn("prerequisite course_name mismatch",
 				zap.String("expected", course.Name),
 				zap.String("provided", prereq.CourseName),
 			)
@@ -530,7 +535,7 @@ func (s *CatalogService) validatePrerequisites(ctx context.Context, prerequisite
 
 		// Validate class level: prerequisite class_level must be less than course class_level
 		if course.ClassLevel >= courseClassLevel {
-			logger.Warn("invalid prerequisite class level",
+			log.Warn("invalid prerequisite class level",
 				zap.Int16("prerequisite_class_level", course.ClassLevel),
 				zap.Int16("course_class_level", courseClassLevel),
 			)

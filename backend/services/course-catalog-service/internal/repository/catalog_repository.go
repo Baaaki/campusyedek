@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/baaaki/mydreamcampus/course-catalog-service/internal/db"
@@ -41,7 +42,7 @@ func (r *CatalogRepository) WithTx(tx pgx.Tx) *CatalogRepository {
 func (r *CatalogRepository) GetCourseByCourseCode(ctx context.Context, courseCode string) (db.CourseCatalog, error) {
 	course, err := r.queries.GetCourseByCourseCode(ctx, courseCode)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return db.CourseCatalog{}, fmt.Errorf("%w: course with code %s not found", catalogErrors.ErrCourseNotFoundRepo, courseCode)
 		}
 		return db.CourseCatalog{}, fmt.Errorf("%w: failed to get course by code: %v", sharedErrors.ErrQueryFailed, err)
@@ -53,7 +54,7 @@ func (r *CatalogRepository) GetCourseByCourseCode(ctx context.Context, courseCod
 func (r *CatalogRepository) GetCourseByID(ctx context.Context, id uuid.UUID) (db.CourseCatalog, error) {
 	course, err := r.queries.GetCourseByID(ctx, utils.UUIDToPgtype(id))
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return db.CourseCatalog{}, fmt.Errorf("%w: course with id %s not found", catalogErrors.ErrCourseNotFoundRepo, id)
 		}
 		return db.CourseCatalog{}, fmt.Errorf("%w: failed to get course: %v", sharedErrors.ErrQueryFailed, err)
@@ -99,7 +100,8 @@ func (r *CatalogRepository) CreateCourse(ctx context.Context, params db.CreateCo
 	course, err := r.queries.CreateCourse(ctx, params)
 	if err != nil {
 		// Check for duplicate course_code constraint violation
-		if pgxErr, ok := err.(*pgconn.PgError); ok {
+		var pgxErr *pgconn.PgError
+		if errors.As(err, &pgxErr) {
 			if pgxErr.Code == "23505" { // unique_violation
 				return db.CourseCatalog{}, fmt.Errorf("%w: course code already exists", catalogErrors.ErrCourseExistsRepo)
 			}
@@ -113,7 +115,7 @@ func (r *CatalogRepository) CreateCourse(ctx context.Context, params db.CreateCo
 func (r *CatalogRepository) UpdateCourse(ctx context.Context, params db.UpdateCourseParams) (db.CourseCatalog, error) {
 	course, err := r.queries.UpdateCourse(ctx, params)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return db.CourseCatalog{}, fmt.Errorf("%w: course not found for update", catalogErrors.ErrCourseNotFoundRepo)
 		}
 		return db.CourseCatalog{}, fmt.Errorf("%w: failed to update course: %v", sharedErrors.ErrQueryFailed, err)

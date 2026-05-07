@@ -29,43 +29,50 @@ func NewBufferFlusher(
 }
 
 func (w *BufferFlusher) Start(ctx context.Context) {
+	log := logger.WithContextAndFields(ctx, zap.String("worker", "BufferFlusher"))
+
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
-	logger.Info("Buffer flusher started")
+	log.Info("Buffer flusher started")
 
 	for {
 		select {
 		case <-ctx.Done():
-			logger.Info("Buffer flusher stopped")
+			log.Info("Buffer flusher stopped")
 			return
 		case <-ticker.C:
 			if err := w.flushBuffers(ctx); err != nil {
-				logger.Error("failed to flush buffers", zap.Error(err))
+				log.Error("failed to flush buffers", zap.Error(err))
 			}
 		}
 	}
 }
 
 func (w *BufferFlusher) flushBuffers(ctx context.Context) error {
+	log := logger.WithContextAndFields(ctx,
+		zap.String("worker", "BufferFlusher"),
+		zap.String("method", "flushBuffers"),
+	)
+
 	// Get all session buffer keys from Redis (pattern: attendance:buffer:*)
 	bufferKeys, err := w.redisService.GetAllBufferKeys(ctx)
 	if err != nil {
-		logger.Error("failed to get buffer keys", zap.Error(err))
+		log.Error("failed to get buffer keys", zap.Error(err))
 		return err
 	}
 
 	if len(bufferKeys) == 0 {
-		logger.Debug("no buffers to flush")
+		log.Debug("no buffers to flush")
 		return nil
 	}
 
-	logger.Info("flushing buffers", zap.Int("buffer_count", len(bufferKeys)))
+	log.Info("flushing buffers", zap.Int("buffer_count", len(bufferKeys)))
 
 	// Process each buffer
 	for _, key := range bufferKeys {
 		if err := w.flushSingleBuffer(ctx, key); err != nil {
-			logger.Error("failed to flush buffer",
+			log.Error("failed to flush buffer",
 				zap.String("key", key),
 				zap.Error(err),
 			)
@@ -74,11 +81,16 @@ func (w *BufferFlusher) flushBuffers(ctx context.Context) error {
 		}
 	}
 
-	logger.Debug("buffer flush cycle completed")
+	log.Debug("buffer flush cycle completed")
 	return nil
 }
 
 func (w *BufferFlusher) flushSingleBuffer(ctx context.Context, bufferKey string) error {
+	log := logger.WithContextAndFields(ctx,
+		zap.String("worker", "BufferFlusher"),
+		zap.String("method", "flushSingleBuffer"),
+	)
+
 	// Extract sessionID from key (format: attendance:buffer:SESSION_ID)
 	parts := strings.Split(bufferKey, ":")
 	if len(parts) != 3 {
@@ -96,7 +108,7 @@ func (w *BufferFlusher) flushSingleBuffer(ctx context.Context, bufferKey string)
 		return nil
 	}
 
-	logger.Info("flushing buffer",
+	log.Info("flushing buffer",
 		zap.String("buffer", bufferKey),
 		zap.Int("record_count", len(bufferData)),
 	)
@@ -109,7 +121,7 @@ func (w *BufferFlusher) flushSingleBuffer(ctx context.Context, bufferKey string)
 	for studentID, jsonData := range bufferData {
 		var record db.CreateAttendanceRecordQRParams
 		if err := json.Unmarshal([]byte(jsonData), &record); err != nil {
-			logger.Error("failed to unmarshal buffered record",
+			log.Error("failed to unmarshal buffered record",
 				zap.String("student_id", studentID),
 				zap.Error(err),
 			)
@@ -123,7 +135,7 @@ func (w *BufferFlusher) flushSingleBuffer(ctx context.Context, bufferKey string)
 	// Single batch insert — all-or-nothing. ON CONFLICT DO NOTHING makes retries safe.
 	if len(records) > 0 {
 		if err := w.attendanceRepo.BatchCreateAttendanceRecordsQR(ctx, records); err != nil {
-			logger.Error("failed to batch insert buffered records",
+			log.Error("failed to batch insert buffered records",
 				zap.String("buffer", bufferKey),
 				zap.Int("record_count", len(records)),
 				zap.Error(err),
@@ -141,14 +153,14 @@ func (w *BufferFlusher) flushSingleBuffer(ctx context.Context, bufferKey string)
 	toDelete := append(parsedFields, corruptFields...)
 	if len(toDelete) > 0 {
 		if err := w.redisService.HDelBufferFields(ctx, sessionID, toDelete); err != nil {
-			logger.Error("failed to hdel flushed fields",
+			log.Error("failed to hdel flushed fields",
 				zap.String("buffer", bufferKey),
 				zap.Error(err),
 			)
 		}
 	}
 
-	logger.Info("buffer flushed successfully",
+	log.Info("buffer flushed successfully",
 		zap.String("buffer", bufferKey),
 		zap.Int("success_count", len(records)),
 		zap.Int("corrupt_count", len(corruptFields)),

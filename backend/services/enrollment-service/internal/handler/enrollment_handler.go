@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"context"
 	"net/http"
+	"time"
 
 	"github.com/baaaki/mydreamcampus/enrollment-service/internal/dto"
 	"github.com/baaaki/mydreamcampus/enrollment-service/internal/service"
@@ -11,6 +13,8 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
+
+const requestTimeout = 10 * time.Second
 
 type EnrollmentHandler struct {
 	enrollmentService *service.EnrollmentService
@@ -36,7 +40,10 @@ func NewEnrollmentHandler(enrollmentService *service.EnrollmentService) *Enrollm
 // @Failure 500 {object} gin.H
 // @Router /enrollment/available-courses [get]
 func (h *EnrollmentHandler) GetAvailableCourses(c *gin.Context) {
-	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	handlerLogger := logger.WithContextAndFields(ctx,
 		zap.String("handler", "EnrollmentHandler"),
 		zap.String("method", "GetAvailableCourses"),
 	)
@@ -69,7 +76,7 @@ func (h *EnrollmentHandler) GetAvailableCourses(c *gin.Context) {
 		zap.String("semester", semester),
 	)
 
-	response, err := h.enrollmentService.GetAvailableCourses(c.Request.Context(), studentID, semester)
+	response, err := h.enrollmentService.GetAvailableCourses(ctx, studentID, semester)
 	if err != nil {
 		handlerLogger.Error("failed to get available courses", zap.Error(err))
 		h.handleError(c, err)
@@ -97,7 +104,10 @@ func (h *EnrollmentHandler) GetAvailableCourses(c *gin.Context) {
 // @Failure 500 {object} gin.H
 // @Router /enrollment/programs [post]
 func (h *EnrollmentHandler) CreateEnrollmentProgram(c *gin.Context) {
-	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	handlerLogger := logger.WithContextAndFields(ctx,
 		zap.String("handler", "EnrollmentHandler"),
 		zap.String("method", "CreateEnrollmentProgram"),
 	)
@@ -133,7 +143,7 @@ func (h *EnrollmentHandler) CreateEnrollmentProgram(c *gin.Context) {
 		zap.Int("course_count", len(req.CourseIDs)),
 	)
 
-	response, err := h.enrollmentService.CreateEnrollmentProgram(c.Request.Context(), req)
+	response, err := h.enrollmentService.CreateEnrollmentProgram(ctx, req)
 	if err != nil {
 		handlerLogger.Error("failed to create enrollment program", zap.Error(err))
 		h.handleError(c, err)
@@ -160,7 +170,10 @@ func (h *EnrollmentHandler) CreateEnrollmentProgram(c *gin.Context) {
 // @Failure 500 {object} gin.H
 // @Router /enrollment/my-enrollments [get]
 func (h *EnrollmentHandler) GetMyEnrollments(c *gin.Context) {
-	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	handlerLogger := logger.WithContextAndFields(ctx,
 		zap.String("handler", "EnrollmentHandler"),
 		zap.String("method", "GetMyEnrollments"),
 	)
@@ -195,7 +208,7 @@ func (h *EnrollmentHandler) GetMyEnrollments(c *gin.Context) {
 		zap.String("student_id", studentID.String()),
 	)
 
-	response, err := h.enrollmentService.GetMyEnrollments(c.Request.Context(), studentID, semester, status)
+	response, err := h.enrollmentService.GetMyEnrollments(ctx, studentID, semester, status)
 	if err != nil {
 		handlerLogger.Error("failed to get my enrollments", zap.Error(err))
 		h.handleError(c, err)
@@ -223,7 +236,10 @@ func (h *EnrollmentHandler) GetMyEnrollments(c *gin.Context) {
 // @Failure 500 {object} gin.H
 // @Router /enrollment/latest-rejection [get]
 func (h *EnrollmentHandler) GetLatestRejection(c *gin.Context) {
-	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	handlerLogger := logger.WithContextAndFields(ctx,
 		zap.String("handler", "EnrollmentHandler"),
 		zap.String("method", "GetLatestRejection"),
 	)
@@ -255,7 +271,7 @@ func (h *EnrollmentHandler) GetLatestRejection(c *gin.Context) {
 		zap.String("semester", semester),
 	)
 
-	response, err := h.enrollmentService.GetLatestRejection(c.Request.Context(), studentID, semester)
+	response, err := h.enrollmentService.GetLatestRejection(ctx, studentID, semester)
 	if err != nil {
 		handlerLogger.Error("failed to get latest rejection", zap.Error(err))
 		h.handleError(c, err)
@@ -279,7 +295,10 @@ func (h *EnrollmentHandler) GetLatestRejection(c *gin.Context) {
 // @Failure 500 {object} gin.H
 // @Router /enrollment/my-rejections [get]
 func (h *EnrollmentHandler) GetMyRejections(c *gin.Context) {
-	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	handlerLogger := logger.WithContextAndFields(ctx,
 		zap.String("handler", "EnrollmentHandler"),
 		zap.String("method", "GetMyRejections"),
 	)
@@ -308,7 +327,7 @@ func (h *EnrollmentHandler) GetMyRejections(c *gin.Context) {
 		zap.String("student_id", studentID.String()),
 	)
 
-	response, err := h.enrollmentService.GetMyRejections(c.Request.Context(), studentID, semester)
+	response, err := h.enrollmentService.GetMyRejections(ctx, studentID, semester)
 	if err != nil {
 		handlerLogger.Error("failed to get my rejections", zap.Error(err))
 		h.handleError(c, err)
@@ -337,7 +356,10 @@ func (h *EnrollmentHandler) GetMyRejections(c *gin.Context) {
 // @Failure 500 {object} gin.H
 // @Router /enrollment/advisor/programs/{program_id}/approve [post]
 func (h *EnrollmentHandler) ApproveEnrollmentProgram(c *gin.Context) {
-	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	handlerLogger := logger.WithContextAndFields(ctx,
 		zap.String("handler", "EnrollmentHandler"),
 		zap.String("method", "ApproveEnrollmentProgram"),
 	)
@@ -370,7 +392,7 @@ func (h *EnrollmentHandler) ApproveEnrollmentProgram(c *gin.Context) {
 		zap.String("program_id", programID.String()),
 	)
 
-	response, err := h.enrollmentService.ApproveEnrollmentProgram(c.Request.Context(), programID, advisorID)
+	response, err := h.enrollmentService.ApproveEnrollmentProgram(ctx, programID, advisorID)
 	if err != nil {
 		handlerLogger.Error("failed to approve enrollment program", zap.Error(err))
 		h.handleError(c, err)
@@ -400,7 +422,10 @@ func (h *EnrollmentHandler) ApproveEnrollmentProgram(c *gin.Context) {
 // @Failure 500 {object} gin.H
 // @Router /enrollment/advisor/programs/{program_id}/reject [post]
 func (h *EnrollmentHandler) RejectEnrollmentProgram(c *gin.Context) {
-	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	handlerLogger := logger.WithContextAndFields(ctx,
 		zap.String("handler", "EnrollmentHandler"),
 		zap.String("method", "RejectEnrollmentProgram"),
 	)
@@ -448,7 +473,7 @@ func (h *EnrollmentHandler) RejectEnrollmentProgram(c *gin.Context) {
 		zap.String("reason", req.RejectionReason),
 	)
 
-	err = h.enrollmentService.RejectEnrollmentProgram(c.Request.Context(), programID, advisorID, advisorFullnameStr, req.RejectionReason)
+	err = h.enrollmentService.RejectEnrollmentProgram(ctx, programID, advisorID, advisorFullnameStr, req.RejectionReason)
 	if err != nil {
 		handlerLogger.Error("failed to reject enrollment program", zap.Error(err))
 		h.handleError(c, err)
@@ -477,7 +502,10 @@ func (h *EnrollmentHandler) RejectEnrollmentProgram(c *gin.Context) {
 // @Failure 500 {object} gin.H
 // @Router /enrollment/programs [delete]
 func (h *EnrollmentHandler) CancelMyEnrollment(c *gin.Context) {
-	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	handlerLogger := logger.WithContextAndFields(ctx,
 		zap.String("handler", "EnrollmentHandler"),
 		zap.String("method", "CancelMyEnrollment"),
 	)
@@ -510,7 +538,7 @@ func (h *EnrollmentHandler) CancelMyEnrollment(c *gin.Context) {
 		zap.String("semester", semester),
 	)
 
-	err = h.enrollmentService.CancelMyEnrollment(c.Request.Context(), studentID, semester)
+	err = h.enrollmentService.CancelMyEnrollment(ctx, studentID, semester)
 	if err != nil {
 		handlerLogger.Error("failed to cancel enrollment", zap.Error(err))
 		h.handleError(c, err)
@@ -536,7 +564,10 @@ func (h *EnrollmentHandler) CancelMyEnrollment(c *gin.Context) {
 // @Failure 500 {object} gin.H
 // @Router /enrollment/advisor/pending-programs [get]
 func (h *EnrollmentHandler) GetPendingProgramsByAdvisor(c *gin.Context) {
-	handlerLogger := logger.WithContextAndFields(c.Request.Context(),
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	handlerLogger := logger.WithContextAndFields(ctx,
 		zap.String("handler", "EnrollmentHandler"),
 		zap.String("method", "GetPendingProgramsByAdvisor"),
 	)
@@ -560,7 +591,7 @@ func (h *EnrollmentHandler) GetPendingProgramsByAdvisor(c *gin.Context) {
 		zap.String("advisor_id", advisorID.String()),
 	)
 
-	response, err := h.enrollmentService.GetPendingProgramsByAdvisor(c.Request.Context(), advisorID)
+	response, err := h.enrollmentService.GetPendingProgramsByAdvisor(ctx, advisorID)
 	if err != nil {
 		handlerLogger.Error("failed to get pending programs", zap.Error(err))
 		h.handleError(c, err)
