@@ -273,6 +273,7 @@ Bu yollardaki dosyalari **manuel duzenleme**. Kaynak dosyayi guncelle ve generat
 - Backend: [`backend/skills.md`](backend/skills.md)
 - Frontend: [`frontend/skills.md`](frontend/skills.md)
 - Mobile: [`mobile/skills.md`](mobile/skills.md)
+- Moduler monolith migration plan: [`architecture/README.md`](architecture/README.md) — index. AI yeni oturumda once `architecture/00-ai-rules.md` okur.
 
 ## 16. Dis Referanslar
 

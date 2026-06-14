@@ -1,139 +1,67 @@
 # MyDreamCampus
 
-A full-stack university management platform built with microservices architecture. Handles student enrollment, course scheduling, attendance tracking, grading, and cafeteria operations across web and mobile.
+**MyDreamCampus**, öğrencilerin ders kayıtlarından yoklamalara, not girişlerinden kafeterya işlemlerine kadar tüm üniversite süreçlerini yöneten tam kapsamlı bir platformdur. Hem **Web** hem de **Mobil** uygulama olarak hizmet verir.
 
-## Screenshots
+Bu proje, hem hızlı geliştirme yapılabilmesi hem de ileride kolayca ölçeklenebilmesi için **Modüler Monolit (Modular Monolith)** mimarisiyle sıfırdan, modern teknolojilerle geliştirilmiştir.
 
-> _Placeholders — drop your captures into `docs/screenshots/` and update the paths._
+## Ekran Görüntüleri
 
-| Web | Mobile |
+> _Yer tutucular — proje içi ekran görüntülerini `docs/screenshots/` altına ekleyebilirsiniz._
+
+| Web Arayüzü | Mobil Uygulama |
 |-----|--------|
 | ![Web dashboard](docs/screenshots/web-dashboard.png) | ![Mobile attendance](docs/screenshots/mobile-attendance.png) |
 
-## Architecture
+## Mimari ve Vizyon (Neden Bu Altyapı Seçildi?)
 
-```mermaid
-flowchart LR
-    subgraph Clients
-        Web[Web<br/>React + Vite]
-        Mobile[Mobile<br/>React Native + Expo]
-    end
+Proje, yönetimi ve dağıtımı zor olan parçalı mikroservis mimarisinden, daha sağlam ve yönetilebilir olan **Modüler Monolit** mimariye geçirilmiştir.
 
-    Traefik[Traefik<br/>API Gateway]
+**1. İnsan Kaynakları ve Proje Yönetimi İçin Avantajları:**
+- **Hızlı Geliştirme:** Tek bir kod tabanı sayesinde yeni özellikler çok daha hızlı eklenir, ürün pazara daha çabuk çıkar.
+- **Düşük Maliyet:** Sunucu maliyetleri ve bakım eforu minimuma indirilmiştir. Sistem az kaynakla çok iş yapar.
+- **Mobil ve Web Uyumu:** Tüm platformlar aynı güçlü arka ucu (backend) kullanır, böylece veri tutarsızlığı yaşanmaz.
 
-    subgraph Services[Go Microservices]
-        Auth[auth]
-        Staff[staff]
-        Student[student]
-        Catalog[catalog]
-        Enrollment[enrollment]
-        Attendance[attendance]
-        Grades[grades]
-        Meal[meal]
-        Payment[payment]
-    end
+**2. Yazılım Uzmanları İçin Teknik Detaylar (Geleceğe Hazır Yapı):**
+- **Mantıksal İzolasyon:** Her modül (Auth, Öğrenci, Notlar) kendi paketi içinde tamamen izoledir (`internal/modules/`). "Spagetti kod" oluşumu engellenmiştir.
+- **Veritabanı İzolasyonu:** Tek bir PostgreSQL veritabanı çalışsa da, her modülün kendi şeması (Schema) vardır. Modüller arası sıkı bağ (Foreign Key) kurulmamıştır.
+- **Mikroservise Geçiş (Future-Proof):** Eğer ileride sistem çok büyürse (örn: Ders Kayıt dönemi yoğunluğu), bu mimari sayesinde istenilen modül birkaç saat içinde koparılıp ayrı bir **Mikroservis** olarak dışarı çıkartılabilir. Modüller arası iletişim halihazırda asenkron olarak **RabbitMQ** (Event-Driven) ile sağlanmaktadır.
 
-    RMQ[(RabbitMQ<br/>events)]
-    Redis[(Redis<br/>cache + rate limit)]
-    PG[(Postgres<br/>DB per service)]
-    Obs[Grafana + Loki<br/>observability]
+## Kullanılan Modern Teknolojiler (Tech Stack)
 
-    Web --> Traefik
-    Mobile --> Traefik
-    Traefik --> Services
-    Services <--> RMQ
-    Services --> Redis
-    Services --> PG
-    Services -.logs.-> Obs
-```
+Sistem tamamen sektör standartlarında, güncel ve yüksek performanslı araçlarla inşa edilmiştir:
 
-**9 independent microservices** communicate asynchronously via RabbitMQ using the transactional outbox pattern. Each service owns its database, ensuring data isolation and independent deployability.
+*   **Arka Uç (Backend):** Go 1.26, Gin, PostgreSQL 18, RabbitMQ 4.0, Redis 7.2
+*   **Ön Yüz (Web):** React 19, Vite, Tailwind CSS v4, shadcn/ui
+*   **Mobil Uygulama:** React Native 0.81, Expo 54
+*   **Bildirim Sistemi:** E-posta (MailHog ile test) ve Mobil Anlık Bildirim (Push Notification) altyapısı ayrı bir servis olarak asenkron çalışır.
 
-| Service | Port | Responsibility |
-|---------|------|---------------|
-| auth | 8001 | JWT authentication, session management, rate limiting |
-| staff | 8002 | Personnel management, teacher profiles |
-| student | 8003 | Student records, bulk CSV import, advisor assignment |
-| catalog | 8004 | Course catalog, semester planning, schedule management |
-| enrollment | 8005 | Course registration, prerequisite validation, quota control |
-| attendance | 8006 | QR-based session tracking, attendance finalization |
-| grades | 8007 | Score entry, GPA calculation, transcript generation |
-| meal | 8008 | Cafeteria menus, meal reservations, QR validation |
-| payment | 50051 (gRPC) | Payment processing (internal service) |
+## Yerel Ortamda Çalıştırma (Geliştiriciler İçin)
 
-## Tech Stack
+Projeyi kendi bilgisayarınızda test etmek oldukça basittir. 
 
-**Backend**
-- Go 1.26, Gin, pgx/v5, sqlc, goose
-- PostgreSQL 18, RabbitMQ 4.0, Redis 7.2
-- JWT + Argon2, Zap structured logging
-
-**Frontend**
-- React 19, Vite, Tailwind CSS v4, shadcn/ui
-- TanStack React Query, React Hook Form + Zod
-- React Router v7, ky HTTP client
-
-**Mobile**
-- React Native 0.81, Expo 54, Expo Router
-- TanStack React Query, Axios, expo-secure-store
-
-**Infrastructure**
-- Docker Compose, Traefik v3.2
-- Grafana + Loki + Promtail (observability)
-
-## Key Technical Decisions
-
-- **Event-Driven**: Services publish domain events (e.g. `student.created`, `course.semester.updated`) via RabbitMQ with guaranteed delivery through the outbox pattern
-- **Database per Service**: Each microservice has its own PostgreSQL instance for data isolation
-- **Type-Safe SQL**: sqlc generates compile-time-safe Go code from raw SQL queries
-- **Multi-Tier Rate Limiting**: IP-based, user-based, and endpoint-specific limits via Redis
-- **RBAC**: Role-based access control (admin, teacher, student) enforced at the API gateway level
-- **Idempotent Consumers**: Deduplication on the consumer side prevents duplicate event processing
-- **Dead Letter Queues**: Failed messages are captured for debugging without blocking the pipeline
-
-## Project Structure
-
-```
-mydreamcampus/
-├── backend/
-│   ├── services/           # 9 microservices (each with cmd/, internal/, sql/)
-│   ├── shared/             # Common packages: middleware, rabbitmq, redis, utils, logger
-│   ├── infrastructure/     # Docker Compose, Traefik, Grafana, Loki configs
-│   ├── docs/               # Service API documentation
-│   └── go.work             # Go workspace
-├── frontend/               # React + Vite web application
-├── mobile/                 # React Native (Expo) mobile app
-└── old-frontend/           # Legacy Next.js frontend (deprecated)
-```
-
-## Running Locally
-
-**Prerequisites:** Docker (with the compose plugin), Go 1.26+, Node 20+, Bun, and `air` on `$PATH` for backend hot-reload (`go install github.com/air-verse/air@latest`).
+**Gereksinimler:** Docker, Go 1.26+ ve Node 20+
 
 ```bash
-# Everything you need in one shot (infra + 9 backend services, hot-reload)
-make up
+# 1. Altyapıyı ayağa kaldırın (Veritabanı, Redis, RabbitMQ vb.)
+cd new-backend/infrastructure
+docker compose up -d
 
-# Frontend (new terminal)
-make frontend
+# 2. Ana Uygulamayı (Backend) başlatın
+cd ../monolith
+make run
 
-# Mobile (new terminal)
-make mobile
+# 3. Bildirim Servisini (E-posta ve Push) başlatın (Yeni bir terminalde)
+cd ../services/notification
+go run cmd/main.go
 
-# When you're done
-make down
+# 4. Web Arayüzünü başlatın (Yeni bir terminalde)
+cd ../../../frontend
+npm install
+npm run dev
 ```
 
-Run `make help` to see the full list of targets (`infra`, `backend`, `status`, `logs`, `clean`).
-
-### Endpoints
-
-- Web (Vite dev server): http://localhost:5173
-- API (via Traefik): http://localhost/api/v1/*
-- RabbitMQ management: http://localhost:15672 (`guest` / `guest`)
-
-Each service ships its own `.env.example` under `backend/services/<name>/`. Copy them to `.env` before the first run if you want to override defaults.
-
-## License
-
-MIT
+**Erişim Noktaları:**
+- Web Arayüzü: `http://localhost:3000`
+- Giden E-postaları Görme (MailHog): `http://localhost:8025`
+- Backend API: `http://localhost:8080`
+- RabbitMQ Yönetim Paneli: `http://localhost:15672`
